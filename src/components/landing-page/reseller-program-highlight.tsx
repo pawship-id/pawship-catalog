@@ -27,7 +27,7 @@ export default function ResellerProgramHighlight() {
             <Button
               asChild
               size="lg"
-              className="rounded-xl border border-primary text-white hover:bg-white hover:text-primary font-semibold"
+              className="rounded-xl border border-primary bg-primary/85 text-white hover:bg-primary hover:text-white font-semibold"
             >
               <Link href="/">
                 Join Now

@@ -140,7 +140,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           variant="outline"
           onClick={handleAddToCart}
           disabled={isAddingToCart}
-          className="w-full py-1 bg-primary text-white border-primary rounded-lg font-semibold transition-all duration-200 hover:bg-white hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-1 bg-primary/85 text-white border-primary rounded-lg font-semibold transition-all duration-200 hover:bg-primary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           <ShoppingCart className="w-4 h-4" />
           {isAddingToCart ? "Adding to Cart..." : "Add to Cart"}
