@@ -1,10 +1,14 @@
-import React from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import ProductCard from "./product-card";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 export default function BackInStock() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [cardsPerSlide, setCardsPerSlide] = useState(2); // default
+
   const products = [
     {
       id: "1",
@@ -213,6 +217,42 @@ export default function BackInStock() {
     },
   ];
 
+  // Update cards per slide based on screen size
+  useEffect(() => {
+    const updateCardsPerSlide = () => {
+      if (window.innerWidth >= 1280) {
+        // xl breakpoint
+        setCardsPerSlide(5);
+      } else if (window.innerWidth >= 1024) {
+        // lg breakpoint
+        setCardsPerSlide(4);
+      } else if (window.innerWidth >= 768) {
+        // md breakpoint
+        setCardsPerSlide(3);
+      } else {
+        setCardsPerSlide(2); // default for mobile
+      }
+    };
+
+    updateCardsPerSlide();
+    window.addEventListener("resize", updateCardsPerSlide);
+
+    return () => window.removeEventListener("resize", updateCardsPerSlide);
+  }, []);
+
+  // Reset to first slide when cards per slide changes
+  useEffect(() => {
+    setCurrentSlide(0);
+  }, [cardsPerSlide]);
+
+  const totalSlides = Math.ceil(products.length / cardsPerSlide);
+
+  const getCurrentSlideProducts = () => {
+    const startIndex = currentSlide * cardsPerSlide;
+    const endIndex = startIndex + cardsPerSlide;
+    return products.slice(startIndex, endIndex);
+  };
+
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
@@ -226,9 +266,22 @@ export default function BackInStock() {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-10">
-          {products.map((product) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
+          {getCurrentSlideProducts().map((product) => (
             <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+
+        {/* Slide Indicators */}
+        <div className="flex justify-center space-x-2 mt-6">
+          {Array.from({ length: totalSlides }, (_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition-colors cursor-pointer ${
+                index === currentSlide ? "bg-foreground" : "bg-gray-300"
+              }`}
+            />
           ))}
         </div>
 

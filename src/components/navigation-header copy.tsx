@@ -23,19 +23,12 @@ import {
   Settings,
   Menu,
   X,
-  ChevronRight,
 } from "lucide-react";
 
 export default function NavigationHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedItems, setExpandedItems] = useState<{
-    [key: number]: boolean;
-  }>({});
-  const [expandedSubItems, setExpandedSubItems] = useState<{
-    [key: string]: boolean;
-  }>({});
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -77,20 +70,6 @@ export default function NavigationHeader() {
     { name: "Contact Us", href: "/contact-us" },
     { name: "FAQ", href: "/faq" },
   ];
-
-  const toggleExpandedItem = (index: number) => {
-    setExpandedItems((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
-  };
-
-  const toggleExpandedSubItem = (key: string) => {
-    setExpandedSubItems((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -215,6 +194,57 @@ export default function NavigationHeader() {
               <Search className="h-4 w-4" />
             </Button>
 
+            {/* Profile/Login */}
+            {/* <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center space-x-1"
+                >
+                  <User className="h-4 w-4" />
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-48" align="end">
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center space-x-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Dashboard</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center space-x-2">
+                    <User className="h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/orders" className="flex items-center space-x-2">
+                    <Package className="h-4 w-4" />
+                    <span>Orders</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/wishlist"
+                    className="flex items-center space-x-2"
+                  >
+                    <Heart className="h-4 w-4" />
+                    <span>Wishlist</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/logout" className="flex items-center space-x-2">
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu> */}
             <Button variant="ghost" size="sm" className="relative" asChild>
               <Link href="/">
                 <User className="h-4 w-4" />
@@ -250,78 +280,46 @@ export default function NavigationHeader() {
         {/* Mobile Navigation Menu */}
         {isMenuOpen && (
           <div className="lg:hidden border-t py-4">
-            <nav className="flex flex-col space-y-2">
+            <nav className="flex flex-col space-y-4">
               {navigation.map((item, idx) => (
                 <Fragment key={idx}>
                   {item.subItems ? (
                     <div className="space-y-2">
-                      <button
-                        onClick={() => toggleExpandedItem(idx)}
-                        className="flex items-center justify-between w-full text-left font-medium text-foreground hover:text-primary transition-colors py-2"
-                      >
-                        <span>{item.name}</span>
-                        <ChevronRight
-                          className={`h-4 w-4 transition-transform ${
-                            expandedItems[idx] ? "rotate-90" : ""
-                          }`}
-                        />
-                      </button>
-
-                      {expandedItems[idx] && (
-                        <div className="pl-4 space-y-2">
-                          {item.subItems.map((subItem, subIdx) => (
-                            <div key={subIdx}>
-                              {subItem.subItems ? (
-                                <div className="space-y-2">
-                                  <button
-                                    onClick={() =>
-                                      toggleExpandedSubItem(`${idx}-${subIdx}`)
-                                    }
-                                    className="flex items-center justify-between w-full text-left text-sm text-muted-foreground hover:text-primary py-1"
+                      <p className="font-medium text-foreground">{item.name}</p>
+                      {item.subItems.map((subItem, idx) => (
+                        <div className="pl-4 space-y-2" key={idx}>
+                          {subItem.subItems ? (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-muted-foreground">
+                                {subItem.name}
+                              </p>
+                              <div className="pl-4 space-y-1">
+                                {subItem.subItems.map((subItem, idx) => (
+                                  <Link
+                                    href="/collections/bibs-collar"
+                                    className="block text-xs text-muted-foreground hover:text-primary"
+                                    key={idx}
                                   >
-                                    <span>{subItem.name}</span>
-                                    <ChevronRight
-                                      className={`h-3 w-3 transition-transform ${
-                                        expandedSubItems[`${idx}-${subIdx}`]
-                                          ? "rotate-90"
-                                          : ""
-                                      }`}
-                                    />
-                                  </button>
-
-                                  {expandedSubItems[`${idx}-${subIdx}`] && (
-                                    <div className="pl-4 space-y-1">
-                                      {subItem.subItems.map(
-                                        (nestedItem, nestedIdx) => (
-                                          <Link
-                                            href="/collections/bibs-collar"
-                                            className="block text-xs text-muted-foreground hover:text-primary py-1"
-                                            key={nestedIdx}
-                                          >
-                                            {nestedItem}
-                                          </Link>
-                                        )
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <Link
-                                  href={subItem.href || "/"}
-                                  className="block text-sm text-muted-foreground hover:text-primary py-1"
-                                >
-                                  {subItem.name}
-                                </Link>
-                              )}
+                                    {subItem}
+                                  </Link>
+                                ))}
+                              </div>
                             </div>
-                          ))}
+                          ) : (
+                            <Link
+                              href="/white-labeling"
+                              className="block text-sm text-muted-foreground hover:text-primary"
+                            >
+                              {subItem.name}
+                            </Link>
+                          )}
                         </div>
-                      )}
+                      ))}
                     </div>
                   ) : (
                     <Link
-                      href={item.href || "/"}
-                      className="text-foreground hover:text-primary transition-colors py-2"
+                      href="/"
+                      className="text-foreground hover:text-primary transition-colors relative"
                     >
                       {item.name}
                     </Link>
@@ -330,13 +328,13 @@ export default function NavigationHeader() {
               ))}
             </nav>
 
-            <div className="md:hidden mt-4">
+            <div className="md:hidden mt-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="flex items-center"
+                    className="flex items-center "
                   >
                     <span className="text-sm font-medium">IDR | Indonesia</span>
                     <ChevronDown className="h-4 w-4" />
