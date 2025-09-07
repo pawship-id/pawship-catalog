@@ -19,3 +19,6 @@ export interface Product {
   inStock: TStockStatus;
   sizes: string[];
 }
+
+// type for the landing page of the featured product section
+export type TabType = "All" | "New Arrivals" | "Best Sellers" | "Sale";

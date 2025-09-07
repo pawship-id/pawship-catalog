@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, PawPrint, Quote, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
 
 interface Testimonial {
   id: number;
@@ -78,8 +78,25 @@ const testimonials: Testimonial[] = [
 export default function Testimonial() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [itemsPerSlide, setItemsPerSlide] = useState(3);
 
-  const totalSlides = Math.ceil(testimonials.length / 3);
+  // ✅ Responsif: ganti jumlah item per slide berdasarkan lebar layar
+  useEffect(() => {
+    const updateItemsPerSlide = () => {
+      if (window.innerWidth < 768) {
+        setItemsPerSlide(1); // Mobile
+      } else {
+        setItemsPerSlide(3); // Tablet & Desktop
+      }
+    };
+
+    updateItemsPerSlide(); // run sekali saat mount
+    window.addEventListener("resize", updateItemsPerSlide);
+
+    return () => window.removeEventListener("resize", updateItemsPerSlide);
+  }, []);
+
+  const totalSlides = Math.ceil(testimonials.length / itemsPerSlide);
 
   useEffect(() => {
     if (!isAutoPlaying) return;
@@ -112,13 +129,14 @@ export default function Testimonial() {
   };
 
   const getCurrentTestimonials = () => {
-    const startIndex = currentSlide * 3;
-    return testimonials.slice(startIndex, startIndex + 3);
+    const startIndex = currentSlide * itemsPerSlide;
+    return testimonials.slice(startIndex, startIndex + itemsPerSlide);
   };
 
   return (
-    <section className="py-10">
+    <section className="pt-10 pb-16">
       <div className="container mx-auto px-4">
+        {/* Judul */}
         <div className="text-primary-foreground rounded-3xl">
           <div className="space-y-2 text-center mb-10 text-foreground">
             <h2 className="text-3xl font-bold">What Pawrents Say 🐾</h2>
@@ -127,9 +145,10 @@ export default function Testimonial() {
             </p>
           </div>
 
+          {/* Carousel */}
           <div className="relative mt-10">
             <div className="flex items-center justify-center">
-              {/* Previous Button */}
+              {/* Tombol Prev */}
               {totalSlides > 1 && (
                 <button
                   onClick={goToPrevious}
@@ -140,8 +159,14 @@ export default function Testimonial() {
                 </button>
               )}
 
-              {/* Testimonial Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Cards */}
+              <div
+                className={`grid gap-6 ${
+                  itemsPerSlide === 1
+                    ? "grid-cols-1"
+                    : "grid-cols-1 md:grid-cols-3"
+                }`}
+              >
                 {getCurrentTestimonials().map((testimonial) => (
                   <div
                     key={testimonial.id}
@@ -152,7 +177,6 @@ export default function Testimonial() {
                         <h3 className="font-bold text-foreground text-lg">
                           {testimonial.name}
                         </h3>
-
                         <img
                           src="/images/verified.png"
                           alt=""
@@ -164,19 +188,16 @@ export default function Testimonial() {
                       </p>
                     </div>
 
-                    {/* Star rating */}
+                    {/* Rating */}
                     <div className="flex items-center mb-4">
                       {Array.from({ length: 5 }).map((_, starIndex) => (
                         <Star
                           key={starIndex}
-                          className={`w-5 h-5 ${
-                            starIndex < 5
-                              ? "text-yellow-400 fill-current"
-                              : "text-gray-300"
-                          }`}
+                          className="w-5 h-5 text-yellow-400 fill-current"
                         />
                       ))}
                     </div>
+
                     {/* Quote Icon */}
                     <div className="absolute top-4 right-4 opacity-10">
                       <Quote className="h-12 w-12 text-gray-400" />
@@ -189,7 +210,7 @@ export default function Testimonial() {
                 ))}
               </div>
 
-              {/* Next Button */}
+              {/* Tombol Next */}
               {totalSlides > 1 && (
                 <button
                   onClick={goToNext}
@@ -202,7 +223,7 @@ export default function Testimonial() {
             </div>
           </div>
 
-          {/* Navigation Controls - Outside the cards */}
+          {/* Dots */}
           <div className="flex items-center justify-center mt-8 space-x-4">
             {totalSlides > 1 && (
               <>
@@ -214,7 +235,6 @@ export default function Testimonial() {
                   <ChevronLeft className="h-6 w-6 text-gray-600" />
                 </button>
 
-                {/* Dots Indicator */}
                 <div className="flex space-x-2">
                   {[...Array(totalSlides)].map((_, index) => (
                     <button

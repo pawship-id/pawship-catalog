@@ -40,7 +40,7 @@ export default function FeaturedCategory() {
   ];
 
   return (
-    <section className="py-10">
+    <section className="py-10 bg-secondary">
       <div className="container mx-auto px-4">
         <div className="space-y-4 text-center mb-4">
           <h2 className="text-3xl font-bold text-foreground">
@@ -74,7 +74,7 @@ export default function FeaturedCategory() {
                   asChild
                   variant="outline"
                   size="lg"
-                  className="rounded-lg border-primary text-primary hover:bg-primary hover:text-white font-semibold"
+                  className="rounded-lg border-primary/50 text-primary hover:bg-primary hover:text-white font-semibold"
                 >
                   <Link href="/">
                     Shop Now

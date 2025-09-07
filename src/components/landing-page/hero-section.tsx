@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function HeroSection() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -11,28 +10,39 @@ export default function HeroSection() {
   const heroSlides = [
     {
       title: "Premium Pet Accessories for Your Beloved Companions",
-      description:
-        "Discover our curated collection of stylish and comfortable pet accessories. From trendy collars to cozy costumes, we have everything to keep your furry friends happy and fashionable.",
       image:
-        "/images/banner/happy-dogs-wearing-stylish-collars-and-accessories.png",
-      badge: "New Arrivals",
+        "https://i.pinimg.com/1200x/aa/54/03/aa540372b18064ac77d9d9a9b7134035.jpg",
+      alt: "Discover Premium Pet Products - Happy dog with blue collar in natural setting",
       cta: "Shop Now",
+      position: "left",
+      buttonBg: "bg-white hover:bg-primary",
+      buttonText: "text-primary hover:text-white",
+      bottomPercent: 30,
+      leftPercent: 15,
     },
     {
       title: "Custom Pet Harnesses & Collars",
-      description:
-        "Create personalized accessories that reflect your pet's unique personality. Our custom collection offers endless possibilities for style and comfort.",
-      image: "/images/banner/custom-pet-harness-collection.png",
-      badge: "Custom Made",
+      image:
+        "https://i.pinimg.com/1200x/62/ea/81/62ea8101a217ae67e9dddf832c40554a.jpg",
+      alt: "Seasonal Pet Costumes - Adorable outfits for every occasion",
       cta: "Customize Now",
+      position: "center",
+      buttonBg: "bg-green-600 hover:bg-green-700",
+      buttonText: "text-white",
+      bottomPercent: 20,
+      leftPercent: 50,
     },
     {
       title: "Seasonal Pet Costumes & Outfits",
-      description:
-        "Dress up your furry friends for every occasion with our adorable costume collection. From Halloween to holidays, we have the perfect outfit.",
-      image: "/images/banner/seasonal-pet-costumes.png",
-      badge: "Limited Edition",
+      image:
+        "https://i.pinimg.com/1200x/0f/41/82/0f4182d09adb53e3ef70131ffde3b35e.jpg",
+      alt: "Premium Quality Guarantee - Trusted by pet owners worldwide",
       cta: "Browse Costumes",
+      position: "right",
+      buttonBg: "bg-purple-600 hover:bg-purple-700",
+      buttonText: "text-white",
+      bottomPercent: 25,
+      leftPercent: 80,
     },
   ];
 
@@ -53,99 +63,56 @@ export default function HeroSection() {
     );
   };
 
-  const currentHero = heroSlides[currentSlide];
-
   return (
-    <section className="relative bg-gradient-to-br from-secondary via-background to-accent/20 py-16 md:py-24 overflow-hidden">
-      <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Hero Content */}
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight text-balance">
-                {currentHero.title}
-              </h1>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed text-pretty">
-                {currentHero.description}
-              </p>
-            </div>
+    <section className="relative min-h-[calc(100vh-115px)] md:min-h-[calc(100vh-100px)] lg:min-h-[calc(100vh-100px)] min-w-screen overflow-hidden">
+      {/* Hero Image Carousel */}
+      <div className="absolute inset-0 z-0">
+        <Image
+          src={heroSlides[currentSlide].image || "/placeholder.svg"}
+          alt={heroSlides[currentSlide].alt}
+          fill
+          className="w-full h-full object-cover"
+          priority
+        />
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="text-lg px-8 py-6 group">
-                {currentHero.cta}
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="text-lg px-8 py-6 bg-transparent"
-              >
-                View Collections
-              </Button>
-            </div>
+        {/* Dynamic CTA Button */}
+        <button
+          className={`absolute z-10 px-8 py-4 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:scale-105 -translate-x-1/2 -translate-y-1/2 ${heroSlides[currentSlide].buttonBg} ${heroSlides[currentSlide].buttonText}`}
+          style={{
+            bottom: `${heroSlides[currentSlide].bottomPercent}%`,
+            left: `${heroSlides[currentSlide].leftPercent}%`,
+          }}
+        >
+          {heroSlides[currentSlide].cta}
+        </button>
 
-            <div className="flex items-center gap-2 pt-4">
-              {heroSlides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`w-3 h-3 rounded-full transition-colors ${
-                    index === currentSlide
-                      ? "bg-primary"
-                      : "bg-muted-foreground/30"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
+        {/* Navigation Arrows */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-6 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-background hover:scale-110 transition-all duration-300"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
 
-          {/* Hero Image Carousel */}
-          <div className="relative">
+        <button
+          onClick={nextSlide}
+          className="absolute right-6 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-background hover:scale-110 transition-all duration-300"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+
+        {/* Slide Indicators */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
+          {heroSlides.map((_, index) => (
             <button
-              onClick={prevSlide}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-background transition-colors"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-
-            <button
-              onClick={nextSlide}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-background transition-colors"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-
-            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-accent/30 to-primary/20 p-8">
-              <Image
-                src={currentHero.image || "/placeholder.svg"}
-                alt={`Pawship ${currentHero.badge}`}
-                width={600}
-                height={500}
-                className="w-full h-auto rounded-xl transition-opacity duration-500"
-                priority
-              />
-
-              {/* Floating Elements */}
-              <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg">
-                <span className="text-sm font-medium text-primary">
-                  {currentHero.badge}
-                </span>
-              </div>
-            </div>
-
-            {/* Decorative Elements */}
-            <div className="absolute -top-4 -left-4 w-24 h-24 bg-accent/30 rounded-full blur-xl"></div>
-            <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-primary/20 rounded-full blur-xl"></div>
-          </div>
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 hover:scale-125 ${
+                index === currentSlide ? "bg-white" : "bg-white/50"
+              }`}
+            />
+          ))}
         </div>
-      </div>
-
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-primary rounded-full"></div>
-        <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-accent rounded-full"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-3 h-3 bg-primary rounded-full"></div>
-        <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-accent rounded-full"></div>
       </div>
     </section>
   );
