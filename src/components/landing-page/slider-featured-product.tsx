@@ -269,11 +269,11 @@ export default function SliderFeaturedProduct() {
       case "All":
         return "/catalog";
       case "New Arrivals":
-        return "/new-arrivals";
+        return "/catalog/new-arrivals";
       case "Best Sellers":
-        return "/best-sellers";
+        return "/catalog/best-sellers";
       case "Sale":
-        return "/sale";
+        return "/catalog/sale";
       default:
         return "/";
     }
