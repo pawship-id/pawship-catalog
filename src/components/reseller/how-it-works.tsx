@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import {
   UserPlus,
@@ -6,9 +7,11 @@ import {
   Rocket,
   ShoppingCart,
   X,
+  Send,
 } from "lucide-react";
+import StepCard from "./step-card";
 
-const HowItWorks = () => {
+export default function HowItWorks() {
   const steps = [
     {
       id: 1,
@@ -84,9 +87,7 @@ Country: ${formData.country}
 Email: ${formData.email}
 Phone: ${formData.phoneNumber}`;
 
-    const whatsappUrl = `https://wa.me/1234567890?text=${encodeURIComponent(
-      message
-    )}`;
+    const whatsappUrl = `https://wa.me/+62?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
     setShowForm(false);
   };
@@ -104,44 +105,11 @@ Phone: ${formData.phoneNumber}`;
         <div className="max-w-4xl mx-auto">
           <div className="space-y-8">
             {steps.map((step) => (
-              <div
+              <StepCard
                 key={step.id}
-                className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <div className="flex items-start gap-6">
-                  <div className="flex-shrink-0">
-                    <div className="w-16 h-16 bg-gradient-to-br from-[#F79985] to-[#FCBE87] rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                      {step.id}
-                    </div>
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-4">
-                      <step.icon className="w-6 h-6 text-[#F79985]" />
-                      <h3 className="text-2xl font-bold text-gray-800">
-                        {step.title}
-                      </h3>
-                    </div>
-
-                    <p className="text-lg text-gray-600 mb-4 leading-relaxed">
-                      {step.description}
-                    </p>
-
-                    {/* <p className="text-gray-500 leading-relaxed mb-6">
-                      {step.details}
-                    </p> */}
-
-                    {step.cta && (
-                      <button
-                        onClick={() => setShowForm(true)}
-                        className="bg-gradient-to-r from-[#F79985] to-[#FCBE87] text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
-                      >
-                        {step.cta}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                step={step}
+                onApply={() => setShowForm(true)}
+              />
             ))}
           </div>
         </div>
@@ -161,7 +129,11 @@ Phone: ${formData.phoneNumber}`;
               Apply for Reseller Account
             </h3>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4"
+              autoComplete="off"
+            >
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Store Name
@@ -169,6 +141,7 @@ Phone: ${formData.phoneNumber}`;
                 <input
                   type="text"
                   name="storeName"
+                  autoFocus
                   value={formData.storeName}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-salmon-500 focus:border-transparent"
@@ -232,8 +205,9 @@ Phone: ${formData.phoneNumber}`;
                 />
               </div>
 
-              <button className="w-full bg-salmon-600 hover:bg-salmon-700 text-white font-semibold py-3 rounded-lg transition-colors duration-300">
+              <button className="w-full bg-gradient-to-r from-[#F79985] to-[#FCBE87] hover:scale-105 text-white font-semibold py-3 rounded-lg text-base transition-colors duration-300">
                 Send to WhatsApp
+                <Send className="inline h-5 w-5 ml-2 rotate-5" />
               </button>
             </form>
           </div>
@@ -241,6 +215,4 @@ Phone: ${formData.phoneNumber}`;
       )}
     </section>
   );
-};
-
-export default HowItWorks;
+}
