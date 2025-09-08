@@ -8,12 +8,20 @@ interface CatalogBySlugProps {
 export default async function CatalogBySlugPage({
   params,
 }: CatalogBySlugProps) {
-  const { slug } = await params;
+  let { slug } = await params;
 
-  const page = slug
+  // decode to return to "Bibs/Collar"
+  const decodedSlug = decodeURIComponent(slug);
+
+  let page = decodedSlug
     .split("-")
     .map((item) => item[0].toUpperCase() + item.substring(1))
     .join(" ");
+
+  // collection of featured products on the landing page
+  const collections = ["All", "New Arrivals", "Best Sellers", "Sale"];
+
+  const type = collections.includes(page) ? "tag" : "category";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
@@ -45,7 +53,7 @@ export default async function CatalogBySlugPage({
       </section>
 
       {/* Content */}
-      <MainContent slugData={page} />
+      <MainContent slugData={page} type={type} />
     </div>
   );
 }

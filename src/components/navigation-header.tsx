@@ -17,13 +17,10 @@ import {
   ShoppingCart,
   User,
   ChevronDown,
-  Heart,
-  Package,
-  LogOut,
-  Settings,
   Menu,
   X,
   ChevronRight,
+  Heart,
 } from "lucide-react";
 
 export default function NavigationHeader() {
@@ -45,23 +42,40 @@ export default function NavigationHeader() {
       subItems: [
         {
           name: "Collections",
-          subItems: ["Bibs/Collar", "Harness", "Costume", "Basic"],
+          subItems: [
+            {
+              name: "Bibs/Collar",
+              href: `/catalog/${encodeURIComponent("bibs/collar")}`, // encode to "bibs%2Fcollar"
+            },
+            {
+              name: "Harness",
+              href: "/catalog/harness",
+            },
+            {
+              name: "Costume",
+              href: "/catalog/custome",
+            },
+            {
+              name: "Basic",
+              href: "/catalog/basic",
+            },
+          ],
         },
         {
           name: "New Arrivals",
-          href: "/",
+          href: "/catalog/new-arrivals",
         },
         {
           name: "Limited Stocks",
-          href: "/",
+          href: "/catalog/limited-stocks",
         },
         {
           name: "Best Sellers",
-          href: "/",
+          href: "/catalog/best-sellers",
         },
         {
           name: "Sale",
-          href: "/",
+          href: "/catalog/sale",
         },
       ],
     },
@@ -69,8 +83,8 @@ export default function NavigationHeader() {
       name: "Reseller",
       href: "/reseller",
       subItems: [
-        { name: "Partners Program", href: "/" },
-        { name: "White Labeling", href: "/" },
+        { name: "Partners Program", href: "/reseller" },
+        { name: "White Labeling", href: "/reseller/white-labeling" },
       ],
     },
     { name: "About Us", href: "/about-us" },
@@ -150,8 +164,8 @@ export default function NavigationHeader() {
                               >
                                 {subItem.subItems.map((subItem, idx) => (
                                   <DropdownMenuItem asChild key={idx}>
-                                    <Link href="/collections/bibs-collar">
-                                      {subItem}
+                                    <Link href={subItem.href}>
+                                      {subItem.name}
                                     </Link>
                                   </DropdownMenuItem>
                                 ))}
@@ -159,9 +173,7 @@ export default function NavigationHeader() {
                             </DropdownMenu>
                           ) : (
                             <DropdownMenuItem asChild key={idx}>
-                              <Link href="/collections/costume">
-                                {subItem.name}
-                              </Link>
+                              <Link href={subItem.href}>{subItem.name}</Link>
                             </DropdownMenuItem>
                           )}
                         </Fragment>
@@ -218,6 +230,12 @@ export default function NavigationHeader() {
             <Button variant="ghost" size="sm" className="relative" asChild>
               <Link href="/">
                 <User className="h-4 w-4" />
+              </Link>
+            </Button>
+
+            <Button variant="ghost" size="sm" className="relative" asChild>
+              <Link href="/">
+                <Heart className="h-4 w-4" />
               </Link>
             </Button>
 
@@ -294,11 +312,11 @@ export default function NavigationHeader() {
                                       {subItem.subItems.map(
                                         (nestedItem, nestedIdx) => (
                                           <Link
-                                            href="/collections/bibs-collar"
+                                            href={nestedItem.href}
                                             className="block text-xs text-muted-foreground hover:text-primary py-1"
                                             key={nestedIdx}
                                           >
-                                            {nestedItem}
+                                            {nestedItem.name}
                                           </Link>
                                         )
                                       )}

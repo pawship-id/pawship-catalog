@@ -18,11 +18,16 @@ const mockProducts = products;
 
 interface MainContentProps {
   slugData: string;
+  type: "tag" | "category";
 }
 
-export default function MainContent({ slugData }: MainContentProps) {
+export default function MainContent({ slugData, type }: MainContentProps) {
   const [products, setProducts] = useState(
-    mockProducts.filter((product) => product.tag === slugData)
+    mockProducts.filter((product) =>
+      type === "tag"
+        ? product.tag.toLowerCase() === slugData.toLowerCase()
+        : product.category.toLowerCase() === slugData.toLowerCase()
+    )
   );
 
   const [filteredProducts, setFilteredProducts] = useState(mockProducts);

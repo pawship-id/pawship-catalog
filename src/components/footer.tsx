@@ -20,9 +20,9 @@ export function Footer() {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <img
-                src="/images/transparent-logo-2.png"
+                src="/images/transparent-logo.png"
                 alt="Paw Ship Logo"
-                className="h-13 w-auto"
+                className="h-18 w-auto"
               />
             </div>
             <p className="text-background/80 text-sm">
@@ -94,16 +94,21 @@ export function Footer() {
             <ul className="space-y-2">
               {[
                 {
-                  name: "Clothing & Accessories",
-                  href: "/catalog?category=clothing",
+                  name: "Bibs/Collar",
+                  href: `/catalog/${encodeURIComponent("bibs/collar")}`, // encode to "bibs%2Fcollar"
                 },
                 {
-                  name: "Toys & Entertainment",
-                  href: "/catalog?category=toys",
+                  name: "Harness",
+                  href: "/catalog/harness",
                 },
-                { name: "Health & Care", href: "/catalog?category=health" },
-                { name: "Food & Treats", href: "/catalog?category=food" },
-                { name: "Reseller Program", href: "/reseller" },
+                {
+                  name: "Costume",
+                  href: "/catalog/custome",
+                },
+                {
+                  name: "Basic",
+                  href: "/catalog/basic",
+                },
               ].map((link) => (
                 <li key={link.name}>
                   <Link
@@ -157,7 +162,7 @@ export function Footer() {
 
         <div className="border-t border-background/20 mt-12 pt-8 text-center">
           <p className="text-background/60 text-sm">
-            © 2024 Paw Ship. All rights reserved. | Privacy Policy | Terms of
+            © 2025 Pawship. All rights reserved. | Privacy Policy | Terms of
             Service
           </p>
         </div>

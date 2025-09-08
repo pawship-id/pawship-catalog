@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavigationHeader from "@/components/navigation-header";
 import { Footer } from "@/components/footer";
-import { MessageCircle } from "lucide-react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -12,6 +12,7 @@ export default function FeaturedCategory() {
         "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Provident adipisci corporis tenetur aliquid dicta iusto sit eius libero?",
       image:
         "https://i.pinimg.com/736x/4d/e8/6b/4de86bb1f0c6c5914bfdad4dd5782236.jpg",
+      href: `/catalog/${encodeURIComponent("bibs/collar")}`,
     },
     {
       id: "2",
@@ -20,6 +21,7 @@ export default function FeaturedCategory() {
         "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Provident adipisci corporis tenetur aliquid dicta iusto sit eius libero?",
       image:
         "https://i.pinimg.com/1200x/3c/15/fa/3c15fad23ce1126c34d65740a2ebc97c.jpg",
+      href: "/catalog/harness",
     },
     {
       id: "3",
@@ -28,6 +30,7 @@ export default function FeaturedCategory() {
         "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Provident adipisci corporis tenetur aliquid dicta iusto sit eius libero?",
       image:
         "https://i.pinimg.com/736x/a5/1e/18/a51e18e9073699372ed86a4e9a0621a4.jpg",
+      href: "/catalog/custome",
     },
     {
       id: "4",
@@ -36,6 +39,7 @@ export default function FeaturedCategory() {
         "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Provident adipisci corporis tenetur aliquid dicta iusto sit eius libero?",
       image:
         "https://i.pinimg.com/736x/64/09/10/640910da9da9562b7647e25446b6ec39.jpg",
+      href: "/catalog/basic",
     },
   ];
 
@@ -76,7 +80,7 @@ export default function FeaturedCategory() {
                   size="lg"
                   className="rounded-lg border-primary/50 text-primary hover:bg-primary hover:text-white font-semibold"
                 >
-                  <Link href="/">
+                  <Link href={category.href}>
                     Shop Now
                     <span>
                       <ArrowRight className="h-4 w-6" />

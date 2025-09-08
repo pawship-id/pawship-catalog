@@ -340,7 +340,7 @@ export const products: Product[] = [
     price: { IDR: 140000, SGD: 13, USD: 9 },
     originalPrice: null,
     tag: "Best Sellers",
-    category: "Custom",
+    category: "Custome",
     sizes: ["S", "M", "L"],
     inStock: "Ready",
     images: [
@@ -406,7 +406,7 @@ export const products: Product[] = [
     price: { IDR: 139000, SGD: 13, USD: 9 },
     originalPrice: null,
     tag: "Best Sellers",
-    category: "Custom",
+    category: "Custome",
     sizes: ["S", "M", "XL"],
     inStock: "Pre-Order",
     images: [
