@@ -2,11 +2,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Filter, ChevronRight, ChevronLeft, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { ProductGrid } from "../../components/catalog/product-grid";
+import ProductGrid from "../../components/catalog/product-grid";
 import { Product, TCurrency } from "@/lib/types/product";
 import { products } from "@/lib/data/products";
-import FilterSidebar from "@/components/catalog/filter-sidebar";
 import SortDropdown from "@/components/catalog/sort-dropdown";
+import FilterSidebar from "@/components/catalog/filter-sidebar";
 
 type TSelectedFilter = {
   categories: string[];
@@ -221,7 +221,7 @@ export default function CatalogProductPage() {
 
           {/* Mobile Filter Sidebar */}
           {isFilterOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden">
+            <div className="fixed inset-0 bg-black/50 z-50 lg:hidden">
               <div className="fixed left-0 top-0 h-full w-80 bg-white overflow-y-auto">
                 <div className="p-4 border-b">
                   <button
@@ -244,7 +244,21 @@ export default function CatalogProductPage() {
 
           {/* Product Grid */}
           <div className="flex-1">
-            <ProductGrid products={currentProducts} currency={currency} />
+            {currentProducts.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-6xl mb-4">🐾</div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  No products found
+                </h3>
+                <p className="text-muted-foreground">
+                  Try adjusting your search or filters
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-3  gap-6">
+                <ProductGrid products={currentProducts} currency={currency} />
+              </div>
+            )}
 
             {totalPages > 1 && (
               <div className="mt-16 flex items-center justify-center space-x-2">

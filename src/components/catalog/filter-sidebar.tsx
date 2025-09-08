@@ -20,11 +20,13 @@ type TSection = "categories" | "sizes" | "priceRange" | "stocks";
 interface FilterSidebarProps {
   selectedFilters: TSelectedFilter;
   onFiltersChange: React.Dispatch<React.SetStateAction<TSelectedFilter>>;
+  catagoryTab?: boolean;
 }
 
 export default function FilterSidebar({
   selectedFilters,
   onFiltersChange,
+  catagoryTab = true,
 }: FilterSidebarProps) {
   const [expandedSections, setExpandedSections] = useState({
     categories: true,
@@ -113,44 +115,48 @@ export default function FilterSidebar({
 
       <div className="p-6 space-y-6">
         {/* Categories */}
-        <div className="space-y-3">
-          <button
-            onClick={() => toggleSection("categories")}
-            className="flex items-center justify-between w-full text-left"
-          >
-            <h4 className="text-lg font-semibold text-gray-800 flex items-center space-x-2">
-              <ShoppingBag className="text-purple-500" size={20} />
-              <span>Categories</span>
-            </h4>
-            <ChevronDown
-              className={`text-gray-500 transition-transform duration-200 ${
-                expandedSections.categories ? "rotate-180" : ""
-              }`}
-              size={18}
-            />
-          </button>
+        {catagoryTab && (
+          <div className="space-y-3">
+            <button
+              onClick={() => toggleSection("categories")}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <h4 className="text-lg font-semibold text-gray-800 flex items-center space-x-2">
+                <ShoppingBag className="text-purple-500" size={20} />
+                <span>Categories</span>
+              </h4>
+              <ChevronDown
+                className={`text-gray-500 transition-transform duration-200 ${
+                  expandedSections.categories ? "rotate-180" : ""
+                }`}
+                size={18}
+              />
+            </button>
 
-          {expandedSections.categories && (
-            <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
-              {categories.map((category) => (
-                <label
-                  key={category}
-                  className="flex items-center space-x-3 cursor-pointer group"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedFilters.categories.includes(category)}
-                    onChange={() => handleFilterChange("categories", category)}
-                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
-                  />
-                  <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
-                    {category}
-                  </span>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
+            {expandedSections.categories && (
+              <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                {categories.map((category) => (
+                  <label
+                    key={category}
+                    className="flex items-center space-x-3 cursor-pointer group"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedFilters.categories.includes(category)}
+                      onChange={() =>
+                        handleFilterChange("categories", category)
+                      }
+                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    />
+                    <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
+                      {category}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Price */}
         <div className="space-y-3">
