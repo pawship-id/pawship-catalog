@@ -93,13 +93,14 @@ Phone: ${formData.phoneNumber}`;
   };
 
   return (
-    <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
+    <section className="py-16 bg-secondary">
       <div className="container mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-foreground mb-6">
-            How it Works
-          </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-[#F79985] to-[#FCBE87] mx-auto"></div>
+        <div className="space-y-4 text-center mb-10">
+          <h2 className="text-3xl font-bold text-foreground">How it Works</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            From idea to delivery, here’s how we bring your brand vision to life
+            — step by step.
+          </p>
         </div>
 
         <div className="max-w-4xl mx-auto">

@@ -14,18 +14,21 @@ export default function ResellingTypes() {
   };
 
   return (
-    <section className="py-16 bg-secondary">
+    <section className="pt-10 pb-20">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-5">
-          <h2 className="text-3xl font-bold text-foreground mb-6">
+        <div className="space-y-4 text-center mb-10">
+          <h2 className="text-3xl font-bold text-foreground">
             Reselling Types
           </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-[#F79985] to-[#FCBE87] mx-auto"></div>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Choose the reselling model that best fits your goals — from simple
+            entry-level options to full brand customization.
+          </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto py-8">
+        <div className="grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
           {/* Starter Package */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border-t-4 border-primary/90 flex flex-col h-full">
+          <div className="bg-white border-1 border-gray-200 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col h-full hover:-translate-y-1">
             <div className="flex items-center mb-4">
               <Package className="h-8 w-8 text-primary/80 mr-3" />
               <h3 className="text-2xl font-bold text-gray-800">
@@ -64,7 +67,7 @@ export default function ResellingTypes() {
           </div>
 
           {/* White-Labeling */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border-t-4 border-primary/90 relative overflow-hidden flex flex-col h-full">
+          <div className="bg-secondary border-2 border-primary/30 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden flex flex-col h-full hover:-translate-y-1">
             <div className="flex items-center mb-4">
               <Star className="h-8 w-8 text-primary/80 mr-3" />
               <h3 className="text-2xl font-bold text-gray-800">
@@ -77,19 +80,19 @@ export default function ResellingTypes() {
 
             <ul className="space-y-3 mb-8 flex-grow">
               <li className="flex items-center text-gray-700">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
                 Create your own design with our team
               </li>
               <li className="flex items-center text-gray-700">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
                 Exclusive reseller pricing
               </li>
               <li className="flex items-center text-gray-700">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
                 MOQ starts from 35 pcs
               </li>
               <li className="flex items-center text-gray-700">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
                 Designs stay exclusive to your brand
               </li>
             </ul>
