@@ -22,7 +22,7 @@ export default function ResellerBenefit() {
   ];
   return (
     <>
-      <section className="py-10">
+      <section className="pt-20 pb-10">
         <div className="container mx-auto px-4">
           <div
             className="text-primary-foreground rounded-3xl p-15"
