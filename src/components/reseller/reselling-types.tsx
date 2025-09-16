@@ -60,7 +60,7 @@ export default function ResellingTypes() {
 
             <Button
               onClick={handleWhatsAppRedirect}
-              className="w-full bg-gradient-to-r from-[#FBBD86] to-primary text-white py-6 rounded-lg font-bold transform hover:scale-105 transition-all duration-300 shadow-lg mt-auto"
+              className="w-full bg-gradient-to-r from-[#FBBD86] to-primary text-white py-6 rounded-lg font-bold transform hover:scale-105 transition-all duration-300 shadow-lg mt-auto cursor-pointer"
             >
               Join Now!
             </Button>

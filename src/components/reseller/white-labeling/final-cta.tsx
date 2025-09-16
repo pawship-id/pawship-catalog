@@ -43,7 +43,7 @@ export default function FinalCTA({ onSetShowForm }: FinalCTAProps) {
             <Button
               onClick={() => onSetShowForm(true)}
               size="lg"
-              className="rounded-lg bg-primary/90 hover:bg-primary text-white text-base font-semibold px-5 py-6"
+              className="rounded-lg bg-primary/90 hover:bg-primary text-white text-base font-semibold px-5 py-6 cursor-pointer"
             >
               <ArrowRight className="w-5 h-5 mr-2" />
               Book a Consultation

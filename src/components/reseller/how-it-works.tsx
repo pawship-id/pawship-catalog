@@ -1,64 +1,52 @@
 "use client";
 import React, { useState } from "react";
-import {
-  UserPlus,
-  CheckCircle,
-  ShoppingBag,
-  Rocket,
-  ShoppingCart,
-  X,
-  Send,
-} from "lucide-react";
+import { X, Send, UserPlus, ArrowRight } from "lucide-react";
 import StepCard from "./step-card";
+import { Button } from "../ui/button";
 
 export default function HowItWorks() {
   const steps = [
     {
       id: 1,
-      icon: UserPlus,
       title: "Apply for Reseller Account",
       description:
         "Sign up and get your reseller credentials. We'll verify and onboard you.",
-      details:
-        "Fill in our registration form with your store details including store name, owner name, country, email, and phone number. Once submitted, you'll receive a WhatsApp message: 'Hi I'm interested to be your reseller!' and we'll guide you through the verification process.",
-      cta: "Apply Now",
+      image:
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTnDMdLG5I9N686f1aW8pEber0-CJN2PhWKUA&s",
     },
     {
       id: 2,
-      icon: CheckCircle,
       title: "Get Approved",
       description:
         "Receive details of your discount tier, MOQ, and reseller benefits",
-      details:
-        "After verification, you'll receive your personalized reseller agreement including your discount tier (up to 30% off), minimum order quantities, payment terms, and exclusive reseller benefits. This typically takes 1-2 business days.",
+      image:
+        "https://image.made-in-china.com/2f0j00FYEbKNQcnWkq/School-Style-New-Design-Cute-Dog-Clothes-Princess-Dog-Dresses-Pet-Products.webp",
     },
     {
       id: 3,
-      icon: ShoppingBag,
       title: "Explore Catalog with Reseller Prices",
       description:
         "Log in anytime to view catalog, updated price lists, and reseller-only discounts directly on our website.",
-      details:
-        "Access our exclusive reseller portal where you can browse our complete catalog with your personalized pricing, view product specifications, check stock availability, and download high-quality product images for your marketing.",
+      image:
+        "https://image.made-in-china.com/202f0j00ZOYltruPTTgf/Cute-Print-Small-Dog-Hoodie-Coat-Winter-Warm-Dog-Clothes.webp",
     },
     {
       id: 4,
-      icon: ShoppingCart,
       title: "Place your Order",
       description:
         "Order products with reseller pricing, stock up, and grow your business with us.",
-      details:
-        "Order products with reseller pricing, receive your shipment with all necessary documentation and marketing materials, then start building your pet accessories business with our ongoing support.",
+      image:
+        "https://s.alicdn.com/@sc04/kf/Hc234b60631fc4dc48787790e68b57e09e.jpg_300x300.jpg",
     },
     {
       id: 5,
-      icon: Rocket,
       title: "Start Selling",
       description: "Place your order, receive your goods and start selling!",
-      details:
-        "Order products with reseller pricing, receive your shipment with all necessary documentation and marketing materials, then start building your pet accessories business with our ongoing support.",
+      image:
+        "https://down-id.img.susercontent.com/file/id-11134207-7r98x-lw40kvdsbfl83b",
     },
   ];
+
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     storeName: "",
@@ -103,16 +91,24 @@ Phone: ${formData.phoneNumber}`;
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto">
-          <div className="space-y-8">
-            {steps.map((step) => (
-              <StepCard
-                key={step.id}
-                step={step}
-                onApply={() => setShowForm(true)}
-              />
-            ))}
+        <div className="relative">
+          <div className="overflow-x-auto pb-6 scrollbar-hide">
+            <div className="flex gap-6 w-max">
+              {steps.map((step, idx) => (
+                <StepCard key={idx} step={step} />
+              ))}
+            </div>
           </div>
+        </div>
+
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center w-full max-w-xs sm:max-w-none sm:w-auto cursor-pointer hover:scale-105"
+          >
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="text-sm sm:text-base">Apply Now</span>
+          </button>
         </div>
       </div>
 
@@ -214,6 +210,17 @@ Phone: ${formData.phoneNumber}`;
           </div>
         </div>
       )}
+
+      {/* Custom Scrollbar Styles */}
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none; /* Internet Explorer 10+ */
+          scrollbar-width: none; /* Firefox */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none; /* Safari and Chrome */
+        }
+      `}</style>
     </section>
   );
 }

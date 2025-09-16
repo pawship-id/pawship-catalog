@@ -1,5 +1,6 @@
 "use client";
 import CTAForm from "@/components/reseller/cta-form";
+import StepCard from "@/components/reseller/step-card";
 import FinalCTA from "@/components/reseller/white-labeling/final-cta";
 import Testimonial from "@/components/reseller/white-labeling/testimonial";
 import { Badge } from "@/components/ui/badge";
@@ -7,15 +8,10 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
   CheckCircle,
-  Factory,
-  MessageSquare,
   Package,
   Palette,
-  PencilRuler,
   Sparkles,
   Star,
-  TrendingUp,
-  Truck,
   Zap,
 } from "lucide-react";
 import React, { useState } from "react";
@@ -54,38 +50,43 @@ export default function WhiteLabellingPage() {
   const steps = [
     {
       id: 1,
-      icon: MessageSquare,
       title: "Consultation",
       description:
         "Share your vision, target market, and style preferences with our team.",
+      image:
+        "https://images.pexels.com/photos/1181406/pexels-photo-1181406.jpeg?auto=compress&cs=tinysrgb&w=800", // diskusi fashion dengan klien
     },
     {
       id: 2,
-      icon: PencilRuler,
       title: "Design & Sampling",
       description:
         "We create tailored designs or adapt from our catalog. You’ll receive samples to review before production.",
+      image:
+        "https://images.pexels.com/photos/3738087/pexels-photo-3738087.jpeg?auto=compress&cs=tinysrgb&w=800", // desainer menggambar sketsa baju
     },
     {
       id: 3,
-      icon: Factory,
       title: "Production",
       description:
         "Once approved, our expert team manufactures your collection with your brand tag.",
+      image:
+        "https://images.pexels.com/photos/4483611/pexels-photo-4483611.jpeg?auto=compress&cs=tinysrgb&w=800", // proses jahit baju di pabrik
     },
     {
       id: 4,
-      icon: Truck,
       title: "Delivery",
       description:
         "Receive your branded products, ready to sell to your customers.",
+      image:
+        "https://images.pexels.com/photos/6169026/pexels-photo-6169026.jpeg?auto=compress&cs=tinysrgb&w=800", // box pakaian siap dikirim
     },
     {
       id: 5,
-      icon: TrendingUp,
       title: "Grow Together",
       description:
         "Continue scaling your brand with new drops, seasonal collections, or custom collaborations.",
+      image:
+        "https://images.pexels.com/photos/7679720/pexels-photo-7679720.jpeg?auto=compress&cs=tinysrgb&w=800", // brand fashion berkembang, pakaian dipajang di toko
     },
   ];
 
@@ -194,38 +195,20 @@ export default function WhiteLabellingPage() {
             </p>
           </div>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="space-y-8">
-              {steps.map((step, idx) => {
-                let Icon = step.icon;
-                return (
-                  <div
-                    key={idx}
-                    className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300"
-                  >
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-15 h-15 bg-gradient-to-r from-[#F79985] to-[#FCBE87] rounded-full flex items-center justify-center">
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-                      </div>
-                      <div className="flex-1 text-center sm:text-left">
-                        <h3 className="text-xl font-semibold text-foreground mb-2">
-                          {step.id}. {step.title}
-                        </h3>
-                        <p className="text-gray-600 mb-4">{step.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="relative">
+            <div className="overflow-x-auto pb-6 scrollbar-hide">
+              <div className="flex gap-6 w-max">
+                {steps.map((step, idx) => (
+                  <StepCard key={idx} step={step} />
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-center mt-10">
+          <div className="flex justify-center mt-6">
             <button
               onClick={() => handleJoinNow()}
-              className="bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white px-4 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center w-full max-w-xs sm:max-w-none sm:w-auto"
+              className="bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center w-full max-w-xs sm:max-w-none sm:w-auto cursor-pointer hover:scale-105"
             >
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               <span className="text-sm sm:text-base">
@@ -279,7 +262,7 @@ export default function WhiteLabellingPage() {
 
               <Button
                 onClick={() => handleJoinNow("reseller")}
-                className="w-full bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white py-6 rounded-lg font-bold transform hover:scale-105 transition-all duration-300 shadow-lg mt-auto"
+                className="w-full bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white py-6 rounded-lg font-bold transform hover:scale-105 transition-all duration-300 shadow-lg mt-auto cursor-pointer"
               >
                 Join Now!
               </Button>
@@ -321,7 +304,7 @@ export default function WhiteLabellingPage() {
 
               <Button
                 onClick={() => handleJoinNow("whitelabel")}
-                className="w-full bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white py-6 rounded-lg font-bold transform hover:scale-105 transition-all duration-300 shadow-lg mt-auto"
+                className="w-full bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white py-6 rounded-lg font-bold transform hover:scale-105 transition-all duration-300 shadow-lg mt-auto cursor-pointer"
               >
                 Join Now!
               </Button>
@@ -344,6 +327,17 @@ export default function WhiteLabellingPage() {
           servicesInput={servicesInput}
         />
       )}
+
+      {/* Custom Scrollbar Styles */}
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none; /* Internet Explorer 10+ */
+          scrollbar-width: none; /* Firefox */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none; /* Safari and Chrome */
+        }
+      `}</style>
     </>
   );
 }
