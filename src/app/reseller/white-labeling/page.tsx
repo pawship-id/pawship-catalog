@@ -1,4 +1,5 @@
 "use client";
+import CTAForm from "@/components/reseller/cta-form";
 import FinalCTA from "@/components/reseller/white-labeling/final-cta";
 import Testimonial from "@/components/reseller/white-labeling/testimonial";
 import { Badge } from "@/components/ui/badge";
@@ -11,16 +12,12 @@ import {
   Package,
   Palette,
   PencilRuler,
-  Send,
   Sparkles,
   Star,
   TrendingUp,
   Truck,
-  UserPlus,
-  X,
   Zap,
 } from "lucide-react";
-import Link from "next/link";
 import React, { useState } from "react";
 
 export default function WhiteLabellingPage() {
@@ -93,42 +90,17 @@ export default function WhiteLabellingPage() {
   ];
 
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    brandName: "",
-    ownerName: "",
-    phoneNumber: "",
-    service: "",
-  });
+  const [selectedService, setSelectedService] = useState("");
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const handleJoinNow = (service?: string) => {
+    setShowForm(true);
+    setSelectedService(service || "");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    let message = `Hi, I'm ${formData.ownerName}, interested in your White Labeling Service. My phone is ${formData.phoneNumber}.`;
-
-    if (formData.brandName) {
-      message += ` Brand: ${formData.brandName}.`;
-    }
-
-    const whatsappUrl = `https://wa.me/628158843760?text=${encodeURIComponent(
-      message
-    )}`;
-    window.open(whatsappUrl, "_blank");
-    setShowForm(false);
-    setFormData({
-      brandName: "",
-      ownerName: "",
-      phoneNumber: "",
-      service: "",
-    });
-  };
+  const servicesInput = [
+    { value: "reseller", label: "Reseller Basic" },
+    { value: "whitelabel", label: "White Labeling" },
+  ];
 
   return (
     <>
@@ -162,6 +134,7 @@ export default function WhiteLabellingPage() {
               your own brand identity.
             </p>
             <Button
+              onClick={() => handleJoinNow()}
               size="lg"
               className="inline-flex items-center gap-3 bg-white text-primary px-8 py-6 rounded-lg cursor-pointer text-base font-semibold hover:bg-white/95 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl"
             >
@@ -250,7 +223,10 @@ export default function WhiteLabellingPage() {
           </div>
 
           <div className="flex justify-center mt-10">
-            <button className="bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white px-4 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center w-full max-w-xs sm:max-w-none sm:w-auto">
+            <button
+              onClick={() => handleJoinNow()}
+              className="bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white px-4 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center w-full max-w-xs sm:max-w-none sm:w-auto"
+            >
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               <span className="text-sm sm:text-base">
                 Start Your Consultation
@@ -302,7 +278,7 @@ export default function WhiteLabellingPage() {
               </div>
 
               <Button
-                onClick={() => setShowForm(true)}
+                onClick={() => handleJoinNow("reseller")}
                 className="w-full bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white py-6 rounded-lg font-bold transform hover:scale-105 transition-all duration-300 shadow-lg mt-auto"
               >
                 Join Now!
@@ -311,12 +287,6 @@ export default function WhiteLabellingPage() {
 
             {/* Custom Package */}
             <div className="bg-secondary border-2 border-primary/30 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              {/* <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  Custom White Label
-                </h3>
-                <p className="text-gray-600">Complete brand customization</p>
-              </div> */}
               <div className="flex items-center mb-4">
                 <Star className="h-8 w-8 text-primary/80 mr-3" />
                 <h3 className="text-2xl font-bold text-gray-800">
@@ -350,7 +320,7 @@ export default function WhiteLabellingPage() {
               </div>
 
               <Button
-                onClick={() => setShowForm(true)}
+                onClick={() => handleJoinNow("whitelabel")}
                 className="w-full bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white py-6 rounded-lg font-bold transform hover:scale-105 transition-all duration-300 shadow-lg mt-auto"
               >
                 Join Now!
@@ -362,115 +332,17 @@ export default function WhiteLabellingPage() {
 
       <Testimonial />
 
-      <FinalCTA />
+      <FinalCTA onSetShowForm={setShowForm} />
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full relative">
-            <button
-              onClick={() => setShowForm(false)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-            >
-              <X size={24} />
-            </button>
-
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-3 text-gray-800">
-                <span className="inline-flex items-center">
-                  <Sparkles className="w-6 h-6 text-primary mr-2" />
-                  Start Your Journey With Us
-                  <Sparkles className="w-6 h-6 text-primary ml-2" />
-                </span>
-              </h3>
-              <p className="text-gray-600 mb-2">
-                Fill in a few details below so we can guide you better.
-              </p>
-              <p className="text-sm text-gray-500 italic">
-                No commitments yet — just a first step to explore opportunities
-                with us.
-              </p>
-            </div>
-
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-4"
-              autoComplete="off"
-            >
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Brand Name <span className="text-gray-400">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  name="brandName"
-                  autoFocus
-                  value={formData.brandName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Owner Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="ownerName"
-                  value={formData.ownerName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number <span className="text-red-500">*</span>
-                  <span className="text-gray-400 text-xs">
-                    {" "}
-                    (include country code)
-                  </span>
-                </label>
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange}
-                  placeholder="+62 812 3456 7890"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="service"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Service <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="service"
-                  name="service"
-                  value={formData.service}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
-                >
-                  <option value="">Select a service</option>
-                  <option value="reseller">Reseller Basic</option>
-                  <option value="whitelabel">White Labeling</option>
-                </select>
-              </div>
-
-              <button className="w-full bg-gradient-to-r from-[#F79985] to-[#FCBE87] hover:scale-105 text-white font-semibold py-3 rounded-lg text-base transition-all duration-300 shadow-lg">
-                Let's Talk
-                <MessageSquare className="inline h-5 w-5 ml-2" />
-              </button>
-            </form>
-          </div>
-        </div>
+        <CTAForm
+          onSetShowForm={setShowForm}
+          selectedService={selectedService}
+          onSubmit={(whatsappUrl) => {
+            window.open(whatsappUrl, "_blank");
+          }}
+          servicesInput={servicesInput}
+        />
       )}
     </>
   );

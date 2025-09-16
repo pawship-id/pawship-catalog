@@ -4,7 +4,11 @@ import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function FinalCTA() {
+interface FinalCTAProps {
+  onSetShowForm: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export default function FinalCTA({ onSetShowForm }: FinalCTAProps) {
   return (
     <section className="pt-10 pb-16">
       <div className="container mx-auto px-4">
@@ -37,17 +41,12 @@ export default function FinalCTA() {
             </p>
 
             <Button
-              asChild
+              onClick={() => onSetShowForm(true)}
               size="lg"
               className="rounded-lg bg-primary/90 hover:bg-primary text-white text-base font-semibold px-5 py-6"
             >
-              <Link
-                href="/reseller/white-labeling"
-                className="flex items-center gap-2"
-              >
-                <ArrowRight className="w-5 h-5 mr-2" />
-                Book a Consultation
-              </Link>
+              <ArrowRight className="w-5 h-5 mr-2" />
+              Book a Consultation
             </Button>
           </div>
         </div>

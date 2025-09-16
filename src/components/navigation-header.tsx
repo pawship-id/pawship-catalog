@@ -10,7 +10,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Search,
@@ -22,6 +21,7 @@ import {
   ChevronRight,
   Heart,
 } from "lucide-react";
+import SearchBar from "@/components/search-bar";
 
 export default function NavigationHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -370,53 +370,8 @@ export default function NavigationHeader() {
         )}
       </div>
 
-      {isSearchOpen && (
-        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm">
-          <div className="container mx-auto px-4 pt-20">
-            <div className="max-w-4xl mx-auto">
-              <div className="relative bg-white rounded-full shadow-lg border-2 border-gray-200">
-                <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400 h-6 w-6" />
-                <Input
-                  type="search"
-                  placeholder="Enter Product Name"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-16 pr-20 py-6 text-lg w-full border-0 bg-transparent rounded-full focus:ring-0 focus:outline-none placeholder:text-gray-400"
-                  autoFocus
-                />
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-full bg-gray-100 hover:bg-gray-200 p-3"
-                >
-                  <Search className="h-6 w-6 text-gray-600" />
-                </Button>
-              </div>
-
-              <div className="mt-16 text-center">
-                <div className="mb-4">
-                  <Search className="h-16 w-16 text-gray-300 mx-auto" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  You have not searched anything yet
-                </h3>
-                <p className="text-gray-500">
-                  Start typing a product name in the input
-                </p>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsSearchOpen(false)}
-                className="absolute top-4 right-4 rounded-full p-2"
-              >
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Search Bar Navigation */}
+      {isSearchOpen && <SearchBar setIsSearchOpen={setIsSearchOpen} />}
     </header>
   );
 }
