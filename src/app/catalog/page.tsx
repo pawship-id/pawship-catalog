@@ -2,7 +2,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Filter, ChevronRight, ChevronLeft, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import ProductGrid from "../../components/catalog/product-grid";
+import ProductGrid from "@/components/catalog/product-grid";
 import { Product, TCurrency } from "@/lib/types/product";
 import { products } from "@/lib/data/products";
 import SortDropdown from "@/components/catalog/sort-dropdown";
@@ -176,10 +176,9 @@ export default function CatalogProductPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center space-x-4">
-              {/* Mobile Filter Toggle */}
               <button
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="lg:hidden flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all duration-200"
+                className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all duration-200"
               >
                 <Filter size={18} />
                 <span className="font-medium">Filters</span>
@@ -209,19 +208,8 @@ export default function CatalogProductPage() {
 
         {/* Main Content */}
         <div className="flex gap-8">
-          {/* Desktop Filter Sidebar */}
-          <aside className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-8">
-              <FilterSidebar
-                selectedFilters={selectedFilters}
-                onFiltersChange={setSelectedFilters}
-              />
-            </div>
-          </aside>
-
-          {/* Mobile Filter Sidebar */}
           {isFilterOpen && (
-            <div className="fixed inset-0 bg-black/50 z-50 lg:hidden">
+            <div className="fixed inset-0 bg-black/50 z-50 ">
               <div className="fixed left-0 top-0 h-full w-80 bg-white overflow-y-auto">
                 <div className="p-4 border-b">
                   <button
@@ -255,11 +243,10 @@ export default function CatalogProductPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3  gap-6">
-                <ProductGrid products={currentProducts} currency={currency} />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <ProductGrid products={currentProducts} />
               </div>
             )}
-
             {totalPages > 1 && (
               <div className="mt-16 flex items-center justify-center space-x-2">
                 <button

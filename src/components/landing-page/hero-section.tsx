@@ -64,7 +64,7 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-[calc(100vh-115px)] md:min-h-[calc(100vh-100px)] lg:min-h-[calc(100vh-100px)] min-w-screen overflow-hidden">
+    <section className="relative min-h-[calc(100vh-100px)] min-w-screen overflow-hidden">
       {/* Hero Image Carousel */}
       <div className="absolute inset-0 z-0">
         <Image
@@ -77,26 +77,26 @@ export default function HeroSection() {
 
         {/* Dynamic CTA Button */}
         <button
-          className={`absolute z-10 px-8 py-4 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:scale-105 -translate-x-1/2 -translate-y-1/2 ${heroSlides[currentSlide].buttonBg} ${heroSlides[currentSlide].buttonText}`}
+          className={`absolute z-10  rounded-lg font-semibold transition-all duration-300 shadow-lg hover:scale-105 -translate-x-1/2 -translate-y-1/2 w-40 min-h-14 flex items-center justify-center text-center leading-tight ${heroSlides[currentSlide].buttonBg} ${heroSlides[currentSlide].buttonText}`}
           style={{
             bottom: `${heroSlides[currentSlide].bottomPercent}%`,
             left: `${heroSlides[currentSlide].leftPercent}%`,
           }}
         >
-          {heroSlides[currentSlide].cta}
+          <span className="break-words">{heroSlides[currentSlide].cta}</span>
         </button>
 
         {/* Navigation Arrows */}
         <button
           onClick={prevSlide}
-          className="absolute left-6 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-background hover:scale-110 transition-all duration-300"
+          className="hidden sm:block absolute left-6 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-background hover:scale-110 transition-all duration-300"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
 
         <button
           onClick={nextSlide}
-          className="absolute right-6 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-background hover:scale-110 transition-all duration-300"
+          className="hidden sm:block absolute right-6 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-background hover:scale-110 transition-all duration-300"
         >
           <ChevronRight className="h-6 w-6" />
         </button>

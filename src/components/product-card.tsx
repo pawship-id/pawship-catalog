@@ -2,24 +2,7 @@
 import React, { useState } from "react";
 import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "./ui/button";
-
-interface ProductImage {
-  id: string;
-  url: string;
-  alt: string;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  originalPrice?: number;
-  rating: number;
-  reviewCount: number;
-  images: ProductImage[];
-  tag: string;
-}
-
+import { Product } from "@/lib/types/product";
 interface ProductCardProps {
   product: Product;
 }
@@ -34,11 +17,14 @@ export default function ProductCard({ product }: ProductCardProps) {
     setTimeout(() => setIsAddingToCart(false), 1500);
   };
 
-  const discount = product.originalPrice
-    ? Math.round(
-        ((product.originalPrice - product.price) / product.originalPrice) * 100
-      )
-    : 0;
+  const discount =
+    product.originalPrice && product.originalPrice["IDR"]
+      ? Math.round(
+          ((product.originalPrice["IDR"] - product.price["IDR"]) /
+            product.originalPrice["IDR"]) *
+            100
+        )
+      : 0;
 
   return (
     <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col">
@@ -125,11 +111,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="mb-3">
             {product.originalPrice && (
               <p className="text-base text-gray-400 line-through">
-                Rp {product.originalPrice}
+                Rp {product.originalPrice["IDR"]}
               </p>
             )}
             <p className="text-lg font-bold text-gray-900">
-              Rp {product.price}
+              Rp {product.price["IDR"]}
             </p>
           </div>
 

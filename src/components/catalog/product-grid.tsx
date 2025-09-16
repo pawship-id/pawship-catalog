@@ -1,19 +1,15 @@
-import ProductCard from "./product-card";
-import { Product, TCurrency } from "@/lib/types/product";
+import { Product } from "@/lib/types/product";
+import ProductCard from "../product-card";
 
 interface ProductGridProps {
   products: Product[];
-  currency: TCurrency;
 }
 
-export default function ProductGrid({
-  products,
-  currency = "IDR",
-}: ProductGridProps) {
+export default function ProductGrid({ products }: ProductGridProps) {
   return (
     <>
       {products.map((product, idx) => (
-        <ProductCard key={idx} product={product} currency={currency} />
+        <ProductCard key={idx} product={product} />
       ))}
     </>
   );

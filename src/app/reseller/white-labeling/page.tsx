@@ -1,6 +1,7 @@
 "use client";
 import FinalCTA from "@/components/reseller/white-labeling/final-cta";
 import Testimonial from "@/components/reseller/white-labeling/testimonial";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
@@ -15,6 +16,7 @@ import {
   Star,
   TrendingUp,
   Truck,
+  UserPlus,
   X,
   Zap,
 } from "lucide-react";
@@ -130,32 +132,42 @@ export default function WhiteLabellingPage() {
 
   return (
     <>
-      {/* Hero Banner  */}
-      <section className="relative min-h-[calc(100vh-115px)] md:min-h-[calc(100vh-100px)] lg:min-h-[calc(100vh-100px)] min-w-screen bg-gradient-to-br from-orange-100 via-white to-orange-50 overflow-hidden flex">
-        <div className="relative max-w-7xl mx-auto flex">
-          <div className="text-center flex flex-col justify-center">
-            <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-foreground mb-6">
+      {/* Hero Section */}
+      <section
+        className="relative h-[60vh] overflow-hidden bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "url('https://i.pinimg.com/736x/23/d2/c5/23d2c59a97fd28df1cf398f4e791e742.jpg')",
+        }}
+      >
+        <div className="absolute inset-0 bg-black opacity-50"></div>
+        {/* Overlay hitam */}
+        <div className="relative z-10 flex items-center justify-center h-full text-white">
+          <div className="max-w-4xl mx-auto text-center space-y-6">
+            <Badge className="bg-primary text-primary-foreground">
+              White Labeling
+            </Badge>
+            <h1 className="text-4xl lg:text-6xl font-bold  mb-6">
               <span className="inline-flex items-center">
-                <Sparkles className="w-8 h-8 lg:w-12 lg:h-12 text-primary mr-4" />
+                <Sparkles className="w-8 h-8 lg:w-12 lg:h-12 text-white mr-4" />
                 Build Your Own Pet Brand
-                <Sparkles className="w-8 h-8 lg:w-12 lg:h-12 text-primary ml-4" />
+                <Sparkles className="w-8 h-8 lg:w-12 lg:h-12 text-white ml-4" />
               </span>
               <br />
-              <span className="bg-gradient-to-r from-[#F69784] to-[#FBBD87] bg-clip-text text-transparent">
-                with Us
-              </span>
+              <span className="text-primary">with Us</span>
             </h1>
-
-            <p className="text-lg sm:text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg lg:text-xl">
               Turn your vision into reality with our exclusive white-label
               service. Customize our premium pet clothing & accessories with
               your own brand identity.
             </p>
-
-            <button className="bg-gradient-to-r from-[#F69784] to-[#FBBD87] text-white px-8 py-4 rounded-lg text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center mx-auto">
+            <Button
+              size="lg"
+              className="inline-flex items-center gap-3 bg-white text-primary px-8 py-6 rounded-lg cursor-pointer text-base font-semibold hover:bg-white/95 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl"
+            >
               <ArrowRight className="w-5 h-5 mr-2" />
               Book a Consultation
-            </button>
+            </Button>
           </div>
         </div>
       </section>

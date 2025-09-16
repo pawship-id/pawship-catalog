@@ -82,17 +82,11 @@ export default function SliderFeaturedProduct() {
         {tabs.map((tab) => (
           <Badge
             key={tab}
-            className={`rounded-3xl py-2 px-3 border-primary text-primary hover:bg-primary hover:text-white duration-300 font-semibold flex items-center justify-center cursor-pointer text-center ${
+            className={`rounded-3xl py-1 px-2 border-primary text-primary hover:bg-primary hover:text-white duration-300 w-28 h-9 font-semibold flex items-center justify-center cursor-pointer ${
               activeTab === tab
                 ? "bg-primary text-white"
                 : "bg-white text-primary"
             }`}
-            style={{
-              width: "120px",
-              minHeight: "36px",
-              whiteSpace: "normal",
-              lineHeight: "1.2",
-            }}
             onClick={() => handleTabChange(tab)}
           >
             {tab}

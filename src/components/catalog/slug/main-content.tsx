@@ -5,7 +5,7 @@ import { products } from "@/lib/data/products";
 import { Filter, ChevronRight, ChevronLeft, X } from "lucide-react";
 import SortDropdown from "@/components/catalog/sort-dropdown";
 import ProductGrid from "@/components/catalog/product-grid";
-import FilterSidebar from "../filter-sidebar";
+import FilterSidebar from "@/components/catalog/filter-sidebar";
 
 type TSelectedFilter = {
   categories: string[];
@@ -214,7 +214,7 @@ export default function MainContent({ slugData, type }: MainContentProps) {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              <ProductGrid products={currentProducts} currency={currency} />
+              <ProductGrid products={currentProducts} />
             </div>
           )}
           {totalPages > 1 && (
