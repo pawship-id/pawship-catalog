@@ -1,265 +1,415 @@
+"use client";
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  MessageCircle,
+  Ruler,
+} from "lucide-react";
 import React, { useState } from "react";
-import { Download, ExternalLink, Ruler, Truck, Users } from "lucide-react";
-import { Product, User } from "@/app/product/[slug]/page";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { Button } from "../ui/button";
 
-interface ProductTabsProps {
-  product: Product;
-  user: User;
-}
-
-const ProductTabs: React.FC<ProductTabsProps> = ({ product, user }) => {
-  const [activeTab, setActiveTab] = useState("description");
-
-  const tabs = [
-    { id: "description", label: "Description", icon: null },
-    { id: "sizing", label: "Sizing", icon: Ruler },
-    { id: "shipping", label: "Shipping", icon: Truck },
-    ...(user.type === "b2b"
-      ? [{ id: "resellers", label: "Resellers", icon: Users }]
-      : []),
+export default function ProductTabs() {
+  const [expandedTab, setExpandedTab] = useState("description");
+  const [activeTabSize, setActiveTabSize] = useState("size-chart");
+  const sizeChart = [
+    {
+      size: "XS",
+      neck: "20-25",
+      chest: "30-35",
+      length: 20,
+    },
+    {
+      size: "S",
+      neck: "25-30",
+      chest: "35-40",
+      length: 25,
+    },
+    {
+      size: "M",
+      neck: "30-35",
+      chest: "40-45",
+      length: 30,
+    },
+    {
+      size: "L",
+      neck: "35-40",
+      chest: "45-50",
+      length: 35,
+    },
   ];
 
-  const renderDescription = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-2">Overview</h3>
-        <p className="text-gray-700">{product.description}</p>
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-2">Materials</h3>
-        <ul className="list-disc list-inside text-gray-700 space-y-1">
-          {product.materials.map((material, index) => (
-            <li key={index}>{material}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-2">Features</h3>
-        <ul className="list-disc list-inside text-gray-700 space-y-1">
-          {product.features.map((feature, index) => (
-            <li key={index}>{feature}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-2">Care Instructions</h3>
-        <ul className="list-disc list-inside text-gray-700 space-y-1">
-          {product.careInstructions.map((instruction, index) => (
-            <li key={index}>{instruction}</li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-
-  const renderSizing = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-4">Sizing Guide</h3>
-        <div className="bg-gray-50 rounded-lg p-4">
-          <p className="text-gray-700">{product.sizingGuide}</p>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-4">Size Recommender</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Neck (cm)
-            </label>
-            <input
-              type="number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="e.g., 40"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Chest (cm)
-            </label>
-            <input
-              type="number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="e.g., 95"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fit Preference
-            </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
-              <option>Regular</option>
-              <option>Loose</option>
-              <option>Tight</option>
-            </select>
-          </div>
-        </div>
-        <button className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-          Get Size Recommendation
-        </button>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-blue-800">
-          Not finding the right fit? Every pet is unique — we can create a
-          custom size with a small extra charge.
-          <a
-            href="#"
-            className="text-blue-600 font-semibold hover:underline ml-1"
-          >
-            Talk to Our Agent
-          </a>
-        </p>
-      </div>
-    </div>
-  );
-
-  const renderShipping = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-4">Delivery Time</h3>
-        <div className="space-y-3">
-          {Object.entries(product.shippingInfo).map(([region, info]) => (
-            <div
-              key={region}
-              className="flex justify-between items-center p-3 border border-gray-200 rounded-lg"
-            >
-              <div>
-                <div className="font-medium text-gray-900">
-                  {region === "SEA" ? "Southeast Asia" : "Other Regions"}
-                </div>
-                <div className="text-sm text-gray-600">
-                  {info.regions.join(", ")}
-                </div>
-              </div>
-              <div className="font-semibold text-orange-600">{info.time}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-gray-50 rounded-lg p-4">
-        <p className="text-gray-700">
-          <strong>Delivery Cost:</strong> Calculated at checkout based on your
-          location and order weight.
-        </p>
-      </div>
-    </div>
-  );
-
-  const renderResellers = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-4">
-          Wholesale & White-Label
-        </h3>
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <p className="text-orange-800">
-            Access exclusive wholesale pricing and white-label opportunities.
-            Contact your account manager for custom branding options and bulk
-            order arrangements.
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-4">
-          Marketing Resources
-        </h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Download className="w-5 h-5 text-gray-400" />
-              <div>
-                <div className="font-medium text-gray-900">
-                  Product Images & Assets
-                </div>
-                <div className="text-sm text-gray-600">
-                  High-res images, lifestyle shots, size charts
-                </div>
-              </div>
-            </div>
-            <a
-              href={product.marketingKitUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-orange-600 hover:text-orange-700 font-medium"
-            >
-              Download <ExternalLink className="w-4 h-4" />
-            </a>
-          </div>
-
-          <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Download className="w-5 h-5 text-gray-400" />
-              <div>
-                <div className="font-medium text-gray-900">
-                  Bulk Order Template
-                </div>
-                <div className="text-sm text-gray-600">
-                  Excel template for large quantity orders
-                </div>
-              </div>
-            </div>
-            <button className="flex items-center gap-1 text-orange-600 hover:text-orange-700 font-medium">
-              Download <ExternalLink className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case "description":
-        return renderDescription();
-      case "sizing":
-        return renderSizing();
-      case "shipping":
-        return renderShipping();
-      case "resellers":
-        return renderResellers();
-      default:
-        return renderDescription();
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab.id
-                    ? "border-orange-500 text-orange-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {Icon && <Icon className="w-4 h-4" />}
-                  {tab.label}
-                </div>
-              </button>
-            );
-          })}
-        </nav>
+    <div className="my-8 space-y-4">
+      <div className="border-b-2 border-gray-200">
+        <div className="group">
+          <button
+            className="w-full text-left text-lg pb-2 group-hover:text-primary transition-colors flex justify-between items-center"
+            onClick={() =>
+              setExpandedTab(expandedTab === "description" ? "" : "description")
+            }
+          >
+            Description
+            <span className="text-gray-400">
+              {expandedTab === "description" ? (
+                <ChevronUp className="group-hover:text-primary" />
+              ) : (
+                <ChevronDown className="group-hover:text-primary" />
+              )}
+            </span>
+          </button>
+        </div>
+        {expandedTab === "description" && (
+          <div className="mt-2 pb-4 text-gray-600">
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Overview</h3>
+                <p className="text-gray-700">
+                  Crafted from premium soft cotton, the Magician BIP Set offers
+                  all-day comfort with a lightweight and breathable feel. Gentle
+                  on the skin, it’s safe for babies and kids. The playful
+                  magician-themed design makes it not only functional but also
+                  stylish for everyday wear.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Key Features</h3>
+                <ul className="list-disc list-inside space-y-1">
+                  {[
+                    "Premium cotton material, soft & breathable",
+                    "Ergonomic design for maximum comfort",
+                    "Unique magician-themed pattern",
+                    "Perfect for daily use or special occasions",
+                  ].map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">
+                  Care Instructions
+                </h3>
+                <ul className="list-disc list-inside space-y-1">
+                  {[
+                    "Hand wash or machine wash on gentle cycle",
+                    "Use mild detergent, avoid bleach",
+                    "Dry in the shade to maintain color vibrancy",
+                    "Iron on low heat if needed",
+                  ].map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Tab Content */}
-      <div className="py-4">{renderTabContent()}</div>
+      <div className="border-b-2 border-gray-200">
+        <div className="group">
+          <button
+            className="w-full text-left pb-2 group-hover:text-primary transition-colors flex justify-between items-center"
+            onClick={() => setExpandedTab(expandedTab === "size" ? "" : "size")}
+          >
+            Size Guide
+            <span className="text-gray-400">
+              {expandedTab === "size" ? (
+                <ChevronUp className="group-hover:text-primary" />
+              ) : (
+                <ChevronDown className="group-hover:text-primary" />
+              )}
+            </span>
+          </button>
+        </div>
+
+        {expandedTab === "size" && (
+          <div className="mt-2 pb-4 text-gray-600">
+            <div className="border-b border-gray-200">
+              <nav className="flex space-x-8">
+                {[
+                  { id: "size-chart", label: "Size Chart" },
+                  { id: "how-to-measure", label: "How To Measure" },
+                ].map((tab) => {
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTabSize(tab.id)}
+                      className={`flex-1 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTabSize === tab.id
+                          ? "border-primary text-primary"
+                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      }`}
+                    >
+                      <p className="mb-2">{tab.label}</p>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {activeTabSize === "size-chart" && (
+              <div className="space-y-6 mt-6">
+                <Table className="border border-gray-300 overflow-x-auto">
+                  <TableHeader>
+                    <TableRow className="bg-gray-100 hover:bg-gray-100">
+                      <TableHead className="font-medium border border-gray-300">
+                        Size
+                      </TableHead>
+                      <TableHead className="font-medium border border-gray-300">
+                        Neck (cm)
+                      </TableHead>
+                      <TableHead className="font-medium border border-gray-300">
+                        Chest (cm)
+                      </TableHead>
+                      <TableHead className="font-medium border border-gray-300">
+                        Length (cm)
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sizeChart.map((item, idx) => {
+                      return (
+                        <TableRow
+                          key={idx}
+                          className="hover:bg-gray-50 transition-colors border border-gray-300"
+                        >
+                          <TableCell className="font-medium border border-gray-300">
+                            {item.size}
+                          </TableCell>
+                          <TableCell className="border border-gray-300">
+                            {item.neck}
+                          </TableCell>
+                          <TableCell className="border border-gray-300">
+                            {item.chest}
+                          </TableCell>
+                          <TableCell className="border border-gray-300">
+                            {item.length}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">
+                    Size Recommender
+                  </h3>
+
+                  <form className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Neck (cm)
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter neck measurement"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Chest (cm)
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter chest measurement"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Fit Preference
+                      </label>
+                      <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent">
+                        <option value="">Select fit preference</option>
+                        <option value="loose">Loose</option>
+                        <option value="normal">Normal</option>
+                        <option value="tight">Tight</option>
+                      </select>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full hover:bg-primary bg-primary/90"
+                    >
+                      Get Size Recommendation
+                    </Button>
+                  </form>
+                </div>
+
+                <div className="bg-secondary border border-primary/50 rounded-lg p-4 mb-4">
+                  <h3 className="font-semibold text-gray-700 mb-3">
+                    <Ruler className="mr-2 h-4 w-4 inline" />
+                    Not finding the right fit?
+                  </h3>
+                  <p className="text-sm text-gray-700 mb-3">
+                    Every pet is unique — and we’ve got them covered! If your
+                    pawfriend needs a size outside our chart or special
+                    adjustments, we can create a{" "}
+                    <b>custom size just for them</b>.
+                  </p>
+                  <p className="text-sm text-gray-700 mb-3">
+                    💡 Custom sizes come with a small extra charge and vary by
+                    request.
+                  </p>
+                  <p className="text-sm text-gray-700 mb-3">
+                    👉 Talk to Our Agent to discuss your pet’s exact needs and
+                    get a tailored price
+                  </p>
+                  <button className="flex items-center space-x-2 text-primary/90 hover:text-primary font-medium">
+                    <MessageCircle className="h-4 w-4" />
+                    <span>Talk to Our Agent</span>
+                  </button>
+                </div>
+              </div>
+            )}
+            {activeTabSize === "how-to-measure" && (
+              <div className="py-4">
+                <p className="text-wrap">
+                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Fugit
+                  quibusdam, optio necessitatibus dicta repellendus obcaecati ex
+                  velit sed harum excepturi sequi saepe sunt voluptate, laborum
+                  maxime non pariatur veniam porro.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="border-b-2 border-gray-200">
+        <div className="group">
+          <button
+            className="w-full text-left pb-2 group-hover:text-primary transition-colors flex justify-between items-center"
+            onClick={() =>
+              setExpandedTab(expandedTab === "shipping" ? "" : "shipping")
+            }
+          >
+            Shipping
+            <span className="text-gray-400">
+              {expandedTab === "shipping" ? (
+                <ChevronUp className="group-hover:text-primary" />
+              ) : (
+                <ChevronDown className="group-hover:text-primary" />
+              )}
+            </span>
+          </button>
+        </div>
+
+        {expandedTab === "shipping" && (
+          <div className="mt-2 pb-4 text-gray-600">
+            <h3 className="font-semibold text-gray-900 my-3">
+              Delivery Information
+            </h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">SEA Region:</span>
+                <span className="text-gray-600">
+                  Estimated delivery 3-5 business days
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">
+                  Other Regions:
+                </span>
+                <span className="text-gray-600">
+                  Estimated delivery 7-14 business days
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">
+                  Shipping Cost:
+                </span>
+                <span className="text-gray-600">Calculated at checkout</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="border-b-2 border-gray-200">
+        <div className="group">
+          <button
+            className="w-full text-left pb-2 group-hover:text-primary transition-colors flex justify-between items-center"
+            onClick={() =>
+              setExpandedTab(expandedTab === "reseller" ? "" : "reseller")
+            }
+          >
+            Reseller
+            <span className="text-gray-400">
+              {expandedTab === "reseller" ? (
+                <ChevronUp className="group-hover:text-primary" />
+              ) : (
+                <ChevronDown className="group-hover:text-primary" />
+              )}
+            </span>
+          </button>
+        </div>
+        {expandedTab === "reseller" && (
+          <div className="mt-2 pb-4 text-gray-600">
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">
+                  Wholesale & White Label Service
+                </h3>
+                <p className="text-gray-700">
+                  As an authorized reseller, you have access to wholesale
+                  pricing, custom branding options, and dedicated support. Our
+                  white-label services allow you to customize products with your
+                  own branding.
+                </p>
+                <div>
+                  <p className="flex items-center gap-1 mb-1">
+                    Want your own label?
+                  </p>
+                  <a
+                    href="/reseller/white-labeling"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                    <span>Learn about White Labeling</span>
+                  </a>
+                </div>
+              </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">
+                  📂 Marketing Kit for Resellers
+                </h3>
+                <p className="text-sm text-gray-700 mb-3">
+                  Download ready-to-use product photos, lifestyle shots, and
+                  captions to promote this item to your customers.
+                </p>
+                <a
+                  href=""
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Download Marketing Content</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
-};
-
-export default ProductTabs;
+}
