@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "./ui/button";
 import { Product } from "@/lib/types/product";
+import { useRouter } from "next/navigation";
+
 interface ProductCardProps {
   product: Product;
 }
@@ -11,6 +13,8 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+
+  const router = useRouter();
 
   const handleAddToCart = () => {
     setIsAddingToCart(true);
@@ -49,6 +53,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       {/* Main Image */}
       <div
+        onClick={() => router.push(`/product/magician-bip-set`)}
         className="relative h-55 overflow-hidden cursor-pointer"
         onMouseEnter={() => {
           if (product.images.length > 1) setCurrentImageIndex(1);
@@ -82,7 +87,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                   index === currentImageIndex
                     ? "bg-white scale-125"
                     : "bg-white/60 hover:bg-white/80"
-                }`}
+                } cursor-pointer`}
               />
             ))}
           </div>
@@ -102,7 +107,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               isLiked
                 ? "fill-red-500 text-red-500"
                 : "text-gray-600 hover:text-red-500"
-            }`}
+            } cursor-pointer`}
           />
         </div>
 
@@ -123,7 +128,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             variant="outline"
             onClick={handleAddToCart}
             disabled={isAddingToCart}
-            className="w-full py-1 bg-primary/85 text-white border-primary rounded-lg font-semibold transition-all duration-200 hover:bg-primary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-1 bg-primary/85 text-white border-primary rounded-lg font-semibold transition-all duration-200 hover:bg-primary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           >
             <ShoppingCart className="w-4 h-4" />
             {isAddingToCart ? "Adding to Cart..." : "Add to Cart"}
