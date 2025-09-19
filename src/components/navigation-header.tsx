@@ -22,6 +22,14 @@ import {
   Heart,
 } from "lucide-react";
 import SearchBar from "@/components/search-bar";
+import { useCurrency } from "@/context/CurrencyContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 export default function NavigationHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -33,6 +41,8 @@ export default function NavigationHeader() {
   const [expandedSubItems, setExpandedSubItems] = useState<{
     [key: string]: boolean;
   }>({});
+
+  const { currency, setCurrency, loading } = useCurrency();
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -199,22 +209,25 @@ export default function NavigationHeader() {
           <div className="flex items-center">
             {/* Location */}
             <div className="hidden md:flex">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex items-center space-x-1"
+              {loading ? (
+                <p>Detecting location...</p>
+              ) : (
+                <div className="relative">
+                  <Select
+                    value={currency}
+                    onValueChange={(value) => setCurrency(value as any)}
                   >
-                    <span className="text-sm font-medium">IDR | Indonesia</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48" align="end">
-                  <DropdownMenuItem>SGD | Singapore</DropdownMenuItem>
-                  <DropdownMenuItem>USD | United State</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
+                      <SelectValue placeholder="Select Currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD | United States</SelectItem>
+                      <SelectItem value="IDR">IDR | Indonesia</SelectItem>
+                      <SelectItem value="SGD">SGD | Singapore</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Search */}
@@ -349,22 +362,21 @@ export default function NavigationHeader() {
             </nav>
 
             <div className="md:hidden mt-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex items-center"
-                  >
-                    <span className="text-sm font-medium">IDR | Indonesia</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48" align="start">
-                  <DropdownMenuItem>SGD | Singapore</DropdownMenuItem>
-                  <DropdownMenuItem>USD | United State</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="relative">
+                <Select
+                  value={currency}
+                  onValueChange={(value) => setCurrency(value as any)}
+                >
+                  <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
+                    <SelectValue placeholder="Select Currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD | United States</SelectItem>
+                    <SelectItem value="IDR">IDR | Indonesia</SelectItem>
+                    <SelectItem value="SGD">SGD | Singapore</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         )}

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavigationHeader from "@/components/navigation-header";
 import { Footer } from "@/components/footer";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,18 +30,20 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NavigationHeader />
-        <main className="min-h-screen">{children}</main>
-        <a
-          href="/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-all duration-300 flex items-center justify-center"
-        >
-          {/* Ikon WhatsApp pakai Lucide */}
-          <img src="/images/icon-wa.png" className="w-6 h-6" />
-        </a>
-        <Footer />
+        <CurrencyProvider>
+          <NavigationHeader />
+          <main className="min-h-screen">{children}</main>
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-all duration-300 flex items-center justify-center"
+          >
+            {/* Ikon WhatsApp pakai Lucide */}
+            <img src="/images/icon-wa.png" className="w-6 h-6" />
+          </a>
+          <Footer />
+        </CurrencyProvider>
       </body>
     </html>
   );

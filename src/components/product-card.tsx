@@ -4,6 +4,7 @@ import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "./ui/button";
 import { Product } from "@/lib/types/product";
 import { useRouter } from "next/navigation";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +14,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const { currency, format } = useCurrency();
 
   const router = useRouter();
 
@@ -22,10 +24,10 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   const discount =
-    product.originalPrice && product.originalPrice["IDR"]
+    product.originalPrice && product.originalPrice[currency]
       ? Math.round(
-          ((product.originalPrice["IDR"] - product.price["IDR"]) /
-            product.originalPrice["IDR"]) *
+          ((product.originalPrice[currency] - product.price[currency]) /
+            product.originalPrice[currency]) *
             100
         )
       : 0;
@@ -116,11 +118,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="mb-3">
             {product.originalPrice && (
               <p className="text-base text-gray-400 line-through">
-                Rp {product.originalPrice["IDR"]}
+                {format(product.originalPrice[currency])}
               </p>
             )}
             <p className="text-lg font-bold text-gray-900">
-              Rp {product.price["IDR"]}
+              {format(product.price[currency])}
             </p>
           </div>
 
