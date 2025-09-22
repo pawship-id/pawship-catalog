@@ -100,6 +100,15 @@ export default function NavigationHeader() {
     { name: "About Us", href: "/about-us" },
     { name: "Contact Us", href: "/contact-us" },
     { name: "FAQ", href: "/faq" },
+    {
+      name: "More",
+      href: "/",
+      subItems: [
+        { name: "Stores", href: "/stores" },
+        { name: "Payments", href: "/payments" },
+        { name: "Good Cause", href: "/good-cause" },
+      ],
+    },
   ];
 
   const toggleExpandedItem = (index: number) => {
@@ -192,7 +201,7 @@ export default function NavigationHeader() {
                   </DropdownMenu>
                 ) : (
                   <Link
-                    href="/"
+                    href={item.href}
                     className="text-foreground hover:text-primary transition-colors relative group py-3"
                   >
                     {item.name}
