@@ -26,13 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
         <CurrencyProvider>
           <NavigationHeader />
-          <main className="min-h-screen">{children}</main>
+          <main className="flex-grow">{children}</main>
           <a
             href="/"
             target="_blank"

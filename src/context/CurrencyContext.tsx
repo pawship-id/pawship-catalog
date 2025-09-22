@@ -42,14 +42,14 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({
             const countryCode = data.countryCode;
             setCurrency(getCurrencyByCountry(countryCode));
           } catch (err) {
-            console.error("Failed to detect location:", err);
+            console.log("Failed to detect location:", err);
             setCurrency("USD");
           } finally {
             setLoading(false);
           }
         },
         (err) => {
-          console.error("Geolocation error:", err);
+          console.log("Geolocation error:", err);
           setCurrency("USD");
           setLoading(false);
         }

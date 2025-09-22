@@ -68,8 +68,8 @@ export function Footer() {
             </h3>
             <ul className="space-y-2">
               {[
-                { name: "About Us", href: "/about" },
-                { name: "Contact", href: "/contact" },
+                { name: "About Us", href: "/about-us" },
+                { name: "Contact Us", href: "/contact-us" },
                 { name: "Good Cause", href: "/good-cause" },
                 { name: "Stores", href: "/stores" },
                 { name: "Payments", href: "/payments" },

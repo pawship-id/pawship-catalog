@@ -104,6 +104,7 @@ export default function NavigationHeader() {
       name: "More",
       href: "/",
       subItems: [
+        // { name: "FAQ", href: "/faq" },
         { name: "Stores", href: "/stores" },
         { name: "Payments", href: "/payments" },
         { name: "Good Cause", href: "/good-cause" },
@@ -154,7 +155,7 @@ export default function NavigationHeader() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-6">
+          <nav className="hidden xl:flex items-center space-x-6">
             {navigation.map((item, idx) => (
               <Fragment key={idx}>
                 {item.subItems ? (
@@ -217,7 +218,7 @@ export default function NavigationHeader() {
           {/* Right Side Actions */}
           <div className="flex items-center">
             {/* Location */}
-            <div className="hidden md:flex">
+            <div className="hidden lg:flex">
               {loading ? (
                 <p>Detecting location...</p>
               ) : (
@@ -275,7 +276,7 @@ export default function NavigationHeader() {
             <Button
               variant="ghost"
               size="sm"
-              className="lg:hidden"
+              className="xl:hidden"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? (
@@ -289,7 +290,7 @@ export default function NavigationHeader() {
 
         {/* Mobile Navigation Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden border-t py-4">
+          <div className="xl:hidden border-t py-4">
             <nav className="flex flex-col space-y-2">
               {navigation.map((item, idx) => (
                 <Fragment key={idx}>
@@ -370,22 +371,26 @@ export default function NavigationHeader() {
               ))}
             </nav>
 
-            <div className="md:hidden mt-4">
-              <div className="relative">
-                <Select
-                  value={currency}
-                  onValueChange={(value) => setCurrency(value as any)}
-                >
-                  <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
-                    <SelectValue placeholder="Select Currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD | United States</SelectItem>
-                    <SelectItem value="IDR">IDR | Indonesia</SelectItem>
-                    <SelectItem value="SGD">SGD | Singapore</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="lg:hidden mt-4">
+              {loading ? (
+                <p>Detecting location...</p>
+              ) : (
+                <div className="relative">
+                  <Select
+                    value={currency}
+                    onValueChange={(value) => setCurrency(value as any)}
+                  >
+                    <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
+                      <SelectValue placeholder="Select Currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD | United States</SelectItem>
+                      <SelectItem value="IDR">IDR | Indonesia</SelectItem>
+                      <SelectItem value="SGD">SGD | Singapore</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </div>
         )}
