@@ -257,7 +257,7 @@ export default function NavigationHeader() {
             </Button>
 
             <Button variant="ghost" size="sm" className="relative" asChild>
-              <Link href="/">
+              <Link href="/wishlist">
                 <Heart className="h-4 w-4" />
               </Link>
             </Button>

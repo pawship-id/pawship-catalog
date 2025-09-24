@@ -571,7 +571,7 @@ const CartPage = () => {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-primary/30 lg:sticky lg:top-4">
+            <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-primary/30 lg:sticky lg:top-30">
               <div className="p-4 sm:p-6">
                 <h2 className="text-xl font-semibold text-gray-800 mb-6">
                   Order Summary
