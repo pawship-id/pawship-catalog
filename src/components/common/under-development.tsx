@@ -19,12 +19,12 @@ export default function UnderDevelopment({
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Construction className="h-8 w-8 text-muted-foreground" />
-            </div>
             <CardTitle className="text-2xl font-playfair font-bold text-foreground">
               {title}
             </CardTitle>
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mt-4">
+              <Construction className="h-8 w-8 text-muted-foreground" />
+            </div>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
