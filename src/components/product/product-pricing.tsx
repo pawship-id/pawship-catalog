@@ -1,5 +1,5 @@
 import React from "react";
-import { Info } from "lucide-react";
+import Tooltip from "./tooltip";
 
 interface PriceTier {
   quantity: number;
@@ -7,7 +7,7 @@ interface PriceTier {
   unitPrice: number;
 }
 
-const PricingDisplay: React.FC = () => {
+export default function PricingDisplay() {
   // Static data
   const selectedCurrency = "IDR";
   const resellerPrice = { IDR: 210_000, SGD: 17.7, USD: 15 };
@@ -37,14 +37,7 @@ const PricingDisplay: React.FC = () => {
           <h3 className="font-semibold text-gray-900">
             Reseller Discount Tiers
           </h3>
-          <div className="group relative">
-            <Info className="w-4 h-4 text-gray-400 cursor-help" />
-            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-sm rounded-lg p-3 w-64 z-10 pointer-events-none">
-              Quantities can be mixed within models, colors, and sizes. For
-              basics/essentials products, quantity can only be mixed within
-              colors and sizes.
-            </div>
-          </div>
+          <Tooltip />
         </div>
 
         <div className="overflow-hidden rounded-lg border border-gray-200">
@@ -93,6 +86,4 @@ const PricingDisplay: React.FC = () => {
       )}
     </div>
   );
-};
-
-export default PricingDisplay;
+}

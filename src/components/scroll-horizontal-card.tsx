@@ -1,16 +1,17 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import ProductCard from "../product-card";
-import { products as productData } from "@/lib/data/products";
-import Loading from "../loading";
+import ProductCard from "./product-card";
+import Loading from "./loading";
 
-export default function RelatedProduct() {
+export default function ScrollHorizontalCard({
+  products,
+}: {
+  products: any[];
+}) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const sliderRef = useRef<HTMLDivElement>(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  const products = productData.slice(0, 10);
 
   // Calculate total slides based on visible cards
   const getVisibleCards = () => {
@@ -70,10 +71,7 @@ export default function RelatedProduct() {
   };
 
   return (
-    <section className="py-8">
-      <div className="space-y-4">
-        <h1 className="text-3xl font-bold text-gray-900">You May Also Like</h1>
-      </div>
+    <section>
       {visibleCards !== 0 ? (
         <>
           {/* Horizontal Scroll Container */}

@@ -273,7 +273,7 @@ export default function ProductTabs() {
                   </p>
                   <button className="flex items-center space-x-2 text-primary/90 hover:text-primary font-medium">
                     <MessageCircle className="h-4 w-4" />
-                    <span>Talk to Our Agent</span>
+                    <span>Talk to Our Team</span>
                   </button>
                 </div>
               </div>
