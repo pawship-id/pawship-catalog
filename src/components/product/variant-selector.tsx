@@ -7,6 +7,7 @@ interface ProductVariant {
   type: string;
   value: string;
   available: boolean;
+  isPO: boolean;
 }
 
 interface VariantSelectorProps {
@@ -19,13 +20,13 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
   onQuantityChange,
 }) => {
   const variants: ProductVariant[] = [
-    { id: "1", type: "size", value: "XS", available: true },
-    { id: "2", type: "size", value: "S", available: true },
-    { id: "3", type: "size", value: "M", available: true },
-    { id: "4", type: "size", value: "L", available: false },
-    { id: "5", type: "color", value: "Red", available: true },
-    { id: "6", type: "color", value: "Blue", available: true },
-    { id: "7", type: "color", value: "Green", available: true },
+    { id: "1", type: "size", value: "XS", available: true, isPO: true },
+    { id: "2", type: "size", value: "S", available: true, isPO: false },
+    { id: "3", type: "size", value: "M", available: false, isPO: true },
+    { id: "4", type: "size", value: "L", available: false, isPO: false },
+    { id: "5", type: "color", value: "Red", available: true, isPO: true },
+    { id: "6", type: "color", value: "Blue", available: true, isPO: false },
+    { id: "7", type: "color", value: "Green", available: true, isPO: false },
   ];
 
   const stock = 50;
@@ -84,26 +85,35 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
               {type}
             </label>
             <div className="flex flex-wrap gap-2">
+              {/* If the available variant and the isPO variant are true, then you can still add to cart via PO, but if the available variant is false and isPO is false, then display oos */}
               {typeVariants.map((variant) => (
-                <button
-                  key={variant.id}
-                  onClick={() =>
-                    handleVariantSelect(type, variant.id, variant.value)
-                  }
-                  disabled={!variant.available}
-                  className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
-                    selectedVariants[type] === variant.value
-                      ? "border-orange-400 bg-orange-50 text-orange-700"
-                      : variant.available
-                      ? "border-gray-300 hover:border-gray-400 text-gray-700"
-                      : "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  {variant.value}
-                  {!variant.available && (
-                    <span className="ml-1 text-xs">(Out of Stock)</span>
+                <div key={variant.id} className="relative">
+                  <button
+                    onClick={() =>
+                      handleVariantSelect(type, variant.id, variant.value)
+                    }
+                    disabled={
+                      !variant.available && !variant.isPO ? true : false
+                    }
+                    className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
+                      selectedVariants[type] === variant.value
+                        ? "border-orange-400 bg-orange-50 text-orange-700"
+                        : variant.available || variant.isPO
+                        ? "border-gray-300 hover:border-gray-400 text-gray-700"
+                        : "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    {variant.value}
+                    {!variant.available && !variant.isPO && (
+                      <span className="ml-1 text-xs">(Out of Stock)</span>
+                    )}
+                  </button>
+                  {((!variant.available && variant.isPO) || variant.isPO) && (
+                    <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                      PO
+                    </div>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           </div>

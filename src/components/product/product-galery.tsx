@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Play, Share2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Play, X } from "lucide-react";
 import { ProductImage } from "@/lib/types/product";
+import ShareButton from "./share-button";
 
 interface ProductImageGalleryProps {
   productName?: string;
@@ -40,6 +41,7 @@ export function ProductGallery({
 }: ProductImageGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [showFullScreen, setShowFullscreen] = useState(false);
 
   const isVideoMode = assets[currentIndex]?.type === "video";
 
@@ -56,8 +58,8 @@ export function ProductGallery({
       {/* Main Image/Video Display */}
       <div className="relative aspect-square bg-muted rounded-2xl overflow-hidden group">
         {/* Tag Labels */}
-        <div className="absolute top-6 left-6 flex gap-2 z-10">
-          <span className="px-3 py-1 text-xs font-bold rounded-md bg-[#1F4E46] text-white">
+        <div className="absolute top-8 left-6 shadow-4xl flex gap-2 z-10">
+          <span className="px-3 py-2 text-xs font-semibold rounded-full  bg-[#1F4E46] text-white">
             {tag}
           </span>
         </div>
@@ -76,43 +78,113 @@ export function ProductGallery({
               className={`w-5 h-5 ${isWishlisted ? "fill-current" : ""}`}
             />
           </button>
-          <button className="p-2 bg-white/80 text-gray-600 rounded-full hover:bg-white transition-colors">
-            <Share2 className="w-5 h-5" />
-          </button>
+          <ShareButton url="http://localhost:3000/product/magician-bip-set" />
         </div>
 
         {/* Asset: Video / Image */}
-        {isVideoMode ? (
-          <video
-            src={currentAsset.url}
-            controls
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div
-            className="w-full h-full cursor-zoom-in"
-            onMouseMove={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const x = ((e.clientX - rect.left) / rect.width) * 100;
-              const y = ((e.clientY - rect.top) / rect.height) * 100;
-              e.currentTarget.style.setProperty("--mouse-x", `${x}%`);
-              e.currentTarget.style.setProperty("--mouse-y", `${y}%`);
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.setProperty("--mouse-x", "50%");
-              e.currentTarget.style.setProperty("--mouse-y", "50%");
-            }}
-          >
+        <div
+          className="w-full h-full cursor-pointer"
+          onClick={() => setShowFullscreen(true)}
+        >
+          {isVideoMode ? (
+            <video
+              src={currentAsset.url}
+              controls
+              className="w-full h-full object-cover"
+            />
+          ) : (
             <img
               src={currentAsset.url || "/placeholder.svg"}
               alt={
                 currentAsset.alt || `${productName} - Image ${currentIndex + 1}`
               }
-              className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-150"
-              style={{
-                transformOrigin: "var(--mouse-x, 50%) var(--mouse-y, 50%)",
-              }}
+              className="w-full h-full object-cover"
             />
+          )}
+
+          {/* Navigation Buttons */}
+          {assets.length > 1 && (
+            <>
+              {/* Previous Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const prevIndex =
+                    currentIndex === 0 ? assets.length - 1 : currentIndex - 1;
+                  setCurrentIndex(prevIndex);
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-1.5 bg-white/80 hover:bg-white text-gray-600 rounded-full transition-all z-10 sm:p-2 opacity-0 group-hover:opacity-100 touch:opacity-100 [@media(hover:none)]:opacity-100"
+              >
+                <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
+
+              {/* Next Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextIndex =
+                    currentIndex === assets.length - 1 ? 0 : currentIndex + 1;
+                  setCurrentIndex(nextIndex);
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 bg-white/80 hover:bg-white text-gray-600 rounded-full transition-all z-10 sm:p-2 opacity-0 group-hover:opacity-100 touch:opacity-100 [@media(hover:none)]:opacity-100"
+              >
+                <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Fullscreen Modal */}
+        {showFullScreen && (
+          <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+            <button
+              onClick={() => setShowFullscreen(false)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            >
+              <X className="w-8 h-8" />
+            </button>
+
+            {/* Previous Button */}
+            {assets.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const prevIndex =
+                    currentIndex === 0 ? assets.length - 1 : currentIndex - 1;
+                  setCurrentIndex(prevIndex);
+                }}
+                className="absolute left-4 text-white hover:text-gray-300 z-10"
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+            )}
+
+            {/* Next Button */}
+            {assets.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextIndex =
+                    currentIndex === assets.length - 1 ? 0 : currentIndex + 1;
+                  setCurrentIndex(nextIndex);
+                }}
+                className="absolute right-4 text-white hover:text-gray-300 z-10"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+            )}
+
+            <div className="max-w-4xl max-h-[80vh] w-full h-full flex items-center justify-center">
+              <img
+                src={currentAsset.url || "/placeholder.svg"}
+                alt={
+                  currentAsset.alt ||
+                  `${productName} - Image ${currentIndex + 1}`
+                }
+                className="max-w-full max-h-full object-contain"
+                onClick={() => setShowFullscreen(false)}
+              />
+            </div>
           </div>
         )}
 
