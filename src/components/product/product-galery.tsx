@@ -58,7 +58,7 @@ export function ProductGallery({
       {/* Main Image/Video Display */}
       <div className="relative aspect-square bg-muted rounded-2xl overflow-hidden group">
         {/* Tag Labels */}
-        <div className="absolute top-8 left-6 shadow-4xl flex gap-2 z-10">
+        <div className="absolute top-4 left-4 shadow-4xl flex gap-2 z-10">
           <span className="px-3 py-2 text-xs font-semibold rounded-full  bg-[#1F4E46] text-white">
             {tag}
           </span>
