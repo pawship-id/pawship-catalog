@@ -251,7 +251,7 @@ export default function NavigationHeader() {
             </Button>
 
             <Button variant="ghost" size="sm" className="relative" asChild>
-              <Link href="/">
+              <Link href="/login">
                 <User className="h-4 w-4" />
               </Link>
             </Button>
