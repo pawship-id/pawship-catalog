@@ -1,9 +1,9 @@
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Heart, Sparkles, Users } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import React from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function AboutUsPage() {
   const whyPawshipContent = [
@@ -286,18 +286,24 @@ export default function AboutUsPage() {
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <Button
                 size="lg"
+                asChild
                 className="px-8 py-6 text-base group cursor-pointer bg-primary/90 hover:bg-primary"
               >
-                🛍️ Shop Now
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                <Link href={"/catalog"}>
+                  🛍️ Shop Now
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </Button>
               <Button
                 variant="outline"
                 size="lg"
+                asChild
                 className="px-8 py-6 text-lg group cursor-pointer hover:bg-primary/90 hover:text-white"
               >
-                🤝 Become a Reseller
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                <Link href={"/reseller"}>
+                  🤝 Become a Reseller
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </Button>
             </div>
 
