@@ -4,6 +4,7 @@ import "./globals.css";
 import NavigationHeader from "@/components/navigation-header";
 import { Footer } from "@/components/footer";
 import { Providers } from "@/components/providers";
+import FloatingButtonWA from "@/components/floating-button-wa";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,15 +34,7 @@ export default function RootLayout({
         <Providers>
           <NavigationHeader />
           <main className="flex-grow">{children}</main>
-          <a
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-all duration-300 flex items-center justify-center"
-          >
-            {/* Ikon WhatsApp pakai Lucide */}
-            <img src="/images/icon-wa.png" className="w-6 h-6" />
-          </a>
+          <FloatingButtonWA />
           <Footer />
         </Providers>
       </body>
