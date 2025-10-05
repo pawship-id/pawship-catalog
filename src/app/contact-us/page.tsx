@@ -1,6 +1,6 @@
 "use client";
 import { Badge } from "@/components/ui/badge";
-import { Mail, MessageCircle, Phone, Send } from "lucide-react";
+import { Instagram, Mail, MessageCircle, Send } from "lucide-react";
 import React, { useState } from "react";
 
 export default function ContactUsPage() {
@@ -101,28 +101,6 @@ export default function ContactUsPage() {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Subject *
-                  </label>
-                  <select
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/90 focus:border-transparent"
-                  >
-                    <option value="">Select a subject</option>
-                    <option value="product-inquiry">Product Inquiry</option>
-                    <option value="order-support">Order Support</option>
-                    <option value="shipping">Shipping & Delivery</option>
-                    <option value="returns">Returns & Exchanges</option>
-                    <option value="reseller">Reseller Program</option>
-                    <option value="partnership">Partnership</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Message *
                   </label>
                   <textarea
@@ -130,7 +108,7 @@ export default function ContactUsPage() {
                     value={formData.message}
                     onChange={handleChange}
                     required
-                    rows={6}
+                    rows={3}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/90 focus:border-transparent resize-none"
                     placeholder="Tell us how we can help you..."
                   />
@@ -149,18 +127,18 @@ export default function ContactUsPage() {
             {/* Contact Info */}
             <div className="space-y-8">
               <div className="bg-secondary shadow-md rounded-3xl p-8">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Quick Contact
-                </h3>
+                </h2>
 
-                <div className="space-y-4">
+                <div className="space-y-4 grid md:grid-cols-2">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-primary/90 rounded-full flex items-center justify-center">
-                      <Phone className="h-6 w-6 text-white" />
+                      <Instagram className="h-6 w-6 text-white" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">Call Us</p>
-                      <p className="text-gray-600">+62 21 1234 5678</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900">Instagram</p>
+                      <p className="text-gray-600 break-words">@pawship.id</p>
                     </div>
                   </div>
 
@@ -168,9 +146,11 @@ export default function ContactUsPage() {
                     <div className="w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center">
                       <Mail className="h-6 w-6 text-white" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900">Email Us</p>
-                      <p className="text-gray-600">hello@pawship.id</p>
+                      <p className="text-gray-600 break-words">
+                        pawship.id@gmail.com
+                      </p>
                     </div>
                   </div>
 
@@ -178,35 +158,27 @@ export default function ContactUsPage() {
                     <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                       <MessageCircle className="h-6 w-6 text-white" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">WhatsApp</p>
-                      <p className="text-gray-600">+62 812 3456 7890</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900">
+                        WhatsApp for B2B
+                      </p>
+                      <p className="text-gray-600 break-words">
+                        +62 815 8843 760
+                      </p>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-3xl shadow-lg p-8">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">
-                  Business Hours
-                </h3>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Monday - Friday</span>
-                    <span className="font-semibold text-gray-900">
-                      9:00 AM - 6:00 PM
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Saturday</span>
-                    <span className="font-semibold text-gray-900">
-                      9:00 AM - 3:00 PM
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Sunday</span>
-                    <span className="font-semibold text-gray-900">Closed</span>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                      <MessageCircle className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900">
+                        WhatsApp for B2C
+                      </p>
+                      <p className="text-gray-600 break-words">
+                        +62 812 3135 1150
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
