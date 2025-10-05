@@ -60,11 +60,11 @@ function LoginForm() {
       setIsLoading(false);
 
       if (callbackUrl) {
-        redirect(callbackUrl);
+        window.location.href = callbackUrl;
       } else if (role === "admin") {
-        redirect("/dashboard/admin");
+        window.location.href = "/dashboard/admin";
       } else {
-        redirect("/");
+        window.location.href = "/";
       }
     }, 2000);
   }
