@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavigationHeader from "@/components/navigation-header";
 import { Footer } from "@/components/footer";
-import { CurrencyProvider } from "@/context/CurrencyContext";
+import { Providers } from "@/components/providers";
 import FloatingButtonWA from "@/components/floating-button-wa";
 
 const geistSans = Geist({
@@ -31,12 +31,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
-        <CurrencyProvider>
+        <Providers>
           <NavigationHeader />
           <main className="flex-grow">{children}</main>
           <FloatingButtonWA />
           <Footer />
-        </CurrencyProvider>
+        </Providers>
       </body>
     </html>
   );
