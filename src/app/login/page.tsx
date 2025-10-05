@@ -3,12 +3,11 @@
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 import { Eye, EyeOff } from "lucide-react";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams(); // get search params
   const callbackUrl = searchParams.get("callbackUrl") || "/"; // get callbackUrl
   const [showPassword, setShowPassword] = useState(false);
@@ -58,15 +57,15 @@ function LoginForm() {
     showSuccessAlert("Login Successful", "Redirecting...");
 
     setTimeout(() => {
-      if (callbackUrl) {
-        router.push(callbackUrl);
-      } else if (role === "admin") {
-        router.push("/dashboard/admin");
-      } else {
-        router.push("/");
-      }
-
       setIsLoading(false);
+
+      if (callbackUrl) {
+        redirect(callbackUrl);
+      } else if (role === "admin") {
+        redirect("/dashboard/admin");
+      } else {
+        redirect("/");
+      }
     }, 2000);
   }
 
