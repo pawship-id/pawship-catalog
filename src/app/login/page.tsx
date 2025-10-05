@@ -58,16 +58,13 @@ function LoginForm() {
 
     setTimeout(() => {
       setIsLoading(false);
-      console.log("set time out");
 
       if (callbackUrl) {
-        console.log(callbackUrl, "if callback");
-
-        window.location.href = callbackUrl;
+        redirect(callbackUrl);
       } else if (role === "admin") {
-        window.location.href = "/dashboard/admin";
+        redirect("/dashboard/admin");
       } else {
-        window.location.href = "/";
+        redirect("/");
       }
     }, 2000);
   }
