@@ -20,6 +20,9 @@ import {
   X,
   ChevronRight,
   Heart,
+  Settings,
+  MapPin,
+  LogOut,
 } from "lucide-react";
 import SearchBar from "@/components/search-bar";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -30,6 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { signOut, useSession } from "next-auth/react";
+import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
 
 export default function NavigationHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -43,6 +48,7 @@ export default function NavigationHeader() {
   }>({});
 
   const { currency, setCurrency, loading } = useCurrency();
+  const { data: session, status } = useSession();
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -124,6 +130,17 @@ export default function NavigationHeader() {
       ...prev,
       [key]: !prev[key],
     }));
+  };
+
+  const handleSignOut = async () => {
+    const result = await showConfirmAlert(
+      "You will be logged out of your account",
+      "Yes, logout!"
+    );
+
+    if (result.isConfirmed) {
+      await signOut({ callbackUrl: "/login" });
+    }
   };
 
   return (
@@ -250,27 +267,106 @@ export default function NavigationHeader() {
               <Search className="h-4 w-4" />
             </Button>
 
-            <Button variant="ghost" size="sm" className="relative" asChild>
-              <Link href="/login">
-                <User className="h-4 w-4" />
-              </Link>
-            </Button>
+            {/* User */}
+            {session && status === "authenticated" ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="relative flex items-center space-x-1"
+                  >
+                    <span className="hidden sm:inline">
+                      Halo, {session.user?.username}
+                    </span>
+                    <User className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem className="sm:hidden font-medium">
+                    <User className="h-4 w-4" />
+                    <span>Halo, {session.user?.username}</span>
+                  </DropdownMenuItem>
+                  <div className="sm:hidden border-t my-1"></div>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      href="/wishlist"
+                      className="flex items-center space-x-2"
+                    >
+                      <Heart className="h-4 w-4" />
+                      <span>Favorite</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/cart" className="flex items-center space-x-2">
+                      <ShoppingCart className="h-4 w-4" />
+                      <span>Shopping Cart</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      href="/address"
+                      className="flex items-center space-x-2"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      <span>Address</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      href="/settings"
+                      className="flex items-center space-x-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Setting</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <div className=" border-t my-1"></div>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center space-x-2 w-full"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </button>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="relative flex items-center space-x-1"
+              >
+                <Link href={"/login"}>
+                  <User className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
 
-            <Button variant="ghost" size="sm" className="relative" asChild>
-              <Link href="/wishlist">
-                <Heart className="h-4 w-4" />
-              </Link>
-            </Button>
+            {/* nav item favorite and cart before login */}
+            {!session && status === "unauthenticated" && (
+              <>
+                {/* Favorite */}
+                <Button variant="ghost" size="sm" className="relative" asChild>
+                  <Link href="/wishlist">
+                    <Heart className="h-4 w-4" />
+                  </Link>
+                </Button>
 
-            {/* Cart */}
-            <Button variant="ghost" size="sm" className="relative" asChild>
-              <Link href="/cart">
-                <ShoppingCart className="h-4 w-4" />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                  3
-                </Badge>
-              </Link>
-            </Button>
+                {/* Cart */}
+                <Button variant="ghost" size="sm" className="relative" asChild>
+                  <Link href="/cart">
+                    <ShoppingCart className="h-4 w-4" />
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                      3
+                    </Badge>
+                  </Link>
+                </Button>
+              </>
+            )}
 
             {/* Mobile Menu Toggle */}
             <Button

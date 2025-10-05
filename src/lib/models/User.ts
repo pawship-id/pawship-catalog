@@ -4,6 +4,7 @@ import softDelete from "mongoose-delete";
 import crypto from "crypto";
 
 export interface IUser extends Document {
+  username: string;
   email: string;
   password?: string;
   confirmPassword?: string;
@@ -20,11 +21,16 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
+    username: {
+      type: String,
+      required: [true, "Please input an username"],
+      unique: [true, "Username already exists"],
+    },
     email: {
       type: String,
       required: [true, "Please input an email"],
       match: [/.+@.+\..+/, "Invalid email format"],
-      unique: true,
+      unique: [true, "Email already exists"],
     },
     password: {
       type: String,

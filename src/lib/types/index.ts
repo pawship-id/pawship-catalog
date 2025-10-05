@@ -1,5 +1,6 @@
 export type ActionResult = {
   status: "success" | "error" | "";
   message: string | string[];
-  data?: any;
+  formData?: any; // input form
+  data?: any; // response data
 };

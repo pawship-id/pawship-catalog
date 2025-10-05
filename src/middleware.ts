@@ -6,9 +6,25 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
 
+  // if the user has not logged in
+  if (!token) {
+    if (pathname.startsWith("/wishlist") || pathname.startsWith("/cart")) {
+      return NextResponse.redirect(
+        new URL(`/login?callbackUrl=${pathname}`, req.url)
+      );
+    }
+  }
+
   // if the user is already logged in and tries to access the login page, redirect to the homepage
-  if (token && pathname.startsWith("/login")) {
-    return NextResponse.redirect(new URL("/", req.url));
+  if (token) {
+    if (
+      pathname.startsWith("/login") ||
+      pathname.startsWith("/register") ||
+      pathname.startsWith("/forgot-password") ||
+      pathname.startsWith("/reset-password")
+    ) {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
   }
 
   // if the user tries to access the admin page
@@ -28,5 +44,13 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/dashboard/admin/:path*"],
+  matcher: [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/wishlist",
+    "/cart",
+    "/dashboard/admin/:path*",
+  ],
 };

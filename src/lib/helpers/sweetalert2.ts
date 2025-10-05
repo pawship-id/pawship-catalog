@@ -41,3 +41,20 @@ export const showErrorAlert = (
     timer: 3000,
   });
 };
+
+// function to confirm alert
+export const showConfirmAlert = async (
+  text: string,
+  textConfirmButton: string
+) => {
+  return await Swal.fire({
+    title: "Are you sure?",
+    text: text,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: textConfirmButton,
+    cancelButtonText: "Cancel",
+  });
+};

@@ -1,42 +1,58 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams(); // get search params
   const callbackUrl = searchParams.get("callbackUrl") || "/"; // get callbackUrl
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    setIsLoading(true);
+
     const form = new FormData(e.currentTarget);
-    const email = form.get("email");
+
+    const identifier = form.get("identifier");
+
     const password = form.get("password");
 
-    if (!email) {
-      return showErrorAlert("Error", "Please input an email");
+    if (!identifier) {
+      setIsLoading(false);
+
+      return showErrorAlert("Error", "Please input an email or username");
     }
 
     if (!password) {
+      setIsLoading(false);
+
       return showErrorAlert("Error", "Please input a password");
     }
 
     const res = await signIn("credentials", {
-      email,
+      identifier,
       password,
       redirect: false,
     });
 
     if (res?.error) {
+      setIsLoading(false);
+
       return showErrorAlert("Error", res.error);
     }
 
     const response = await fetch("/api/auth/session");
+
     const data = await response.json();
+
     const role = data?.user?.role;
 
     showSuccessAlert("Login Successful", "Redirecting...");
@@ -49,6 +65,8 @@ export default function LoginPage() {
       } else {
         router.push("/");
       }
+
+      setIsLoading(false);
     }, 2000);
   }
 
@@ -66,20 +84,32 @@ export default function LoginPage() {
 
           <div className="w-full space-y-4">
             <input
-              type="email"
-              placeholder="Email"
+              type="text"
               autoFocus
-              name="email"
-              defaultValue="adminpawship@gmail.com"
+              placeholder="Email or Username"
+              name="identifier"
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
             />
-            <input
-              type="password"
-              placeholder="Password"
-              name="password"
-              defaultValue="qwerty123"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
-            />
+
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
           </div>
           <Link
             href="/forgot-password"
@@ -87,8 +117,14 @@ export default function LoginPage() {
           >
             Forgot your password?
           </Link>
-          <button className="w-full px-4 py-3 bg-primary/90 hover:bg-primary text-white font-bold rounded-md  transition-colors duration-200 text-base sm:text-lg cursor-pointer">
-            Sign in
+          <button
+            className={`w-full px-4 py-3 text-white font-bold rounded-md transition-colors duration-200 text-base sm:text-lg ${
+              isLoading
+                ? "bg-primary/60 cursor-not-allowed"
+                : "bg-primary/90 hover:bg-primary cursor-pointer"
+            }`}
+          >
+            {isLoading ? "Loading..." : "Sign in"}
           </button>
           <Link
             href="/register"

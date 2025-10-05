@@ -1,18 +1,45 @@
 "use client";
 import Link from "next/link";
-import { register } from "@/lib/actions/auth";
+import { registerAction } from "@/lib/actions/auth";
 import { ActionResult } from "@/lib/types";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 import { redirect } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
+import { useFormStatus } from "react-dom";
 
 const initialState: ActionResult = {
   status: "",
   message: "",
+  formData: {
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  },
 };
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      disabled={pending}
+      type="submit"
+      className={`w-full px-4 py-3 text-white font-bold rounded-md transition-colors duration-200 text-base sm:text-lg mt-4 sm:mt-6 ${
+        pending
+          ? "bg-primary/60 cursor-not-allowed"
+          : "bg-primary/90 hover:bg-primary cursor-pointer"
+      }`}
+    >
+      {pending ? "Loading..." : "Create"}
+    </button>
+  );
+}
+
 export default function RegisterPage() {
-  const [state, formAction] = useActionState(register, initialState);
+  const [state, formAction] = useActionState(registerAction, initialState);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (state.status === "error") {
@@ -40,31 +67,62 @@ export default function RegisterPage() {
 
           <div className="w-full space-y-4">
             <input
+              type="text"
+              placeholder="Username"
+              autoFocus
+              name="username"
+              defaultValue={state.formData.username}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
+            />
+            <input
               type="email"
               placeholder="Email"
-              autoFocus
               name="email"
-              defaultValue="salwa@gmail.com"
+              defaultValue={state.formData.email}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
             />
-            <input
-              type="password"
-              placeholder="Password"
-              name="password"
-              defaultValue="qwerty123"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
-            />
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm Password"
-              defaultValue="qwerty123"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                name="password"
+                defaultValue={state.formData.password}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                placeholder="Confirm Password"
+                defaultValue={state.formData.confirmPassword}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
           </div>
-          <button className="w-full px-4 py-3 bg-primary/90 hover:bg-primary text-white font-bold rounded-md  transition-colors duration-200 text-base sm:text-lg mt-4 sm:mt-6 cursor-pointer">
-            Create
-          </button>
+          <SubmitButton />
           <Link
             href="/login"
             className="text-xs sm:text-sm text-gray-600 mt-4 sm:mt-6 hover:underline"
