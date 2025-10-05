@@ -3,7 +3,7 @@ import { forgotPasswordAction } from "@/lib/actions/auth";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, Suspense } from "react";
 import { useFormStatus } from "react-dom";
 import { useSearchParams } from "next/navigation";
 
@@ -24,12 +24,12 @@ function SubmitButton() {
   );
 }
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordContent() {
   const [state, formAction] = useActionState(forgotPasswordAction, null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const msg = searchParams.get("msg");
+    const msg = searchParams?.get("msg");
     if (msg) {
       showErrorAlert(undefined, msg);
     }
@@ -80,5 +80,13 @@ export default function ForgotPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ForgotPasswordContent />
+    </Suspense>
   );
 }
