@@ -277,7 +277,7 @@ export default function NavigationHeader() {
                     className="relative flex items-center space-x-1"
                   >
                     <span className="hidden sm:inline">
-                      Halo, {session.user?.username}
+                      Halo, {session.user?.fullName.split(" ")[0]}
                     </span>
                     <User className="h-4 w-4" />
                   </Button>
@@ -285,7 +285,7 @@ export default function NavigationHeader() {
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem className="sm:hidden font-medium">
                     <User className="h-4 w-4" />
-                    <span>Halo, {session.user?.username}</span>
+                    <span>Halo, {session.user?.fullName.split(" ")[0]}</span>
                   </DropdownMenuItem>
                   <div className="sm:hidden border-t my-1"></div>
                   <DropdownMenuItem asChild className="cursor-pointer">

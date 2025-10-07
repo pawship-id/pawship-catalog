@@ -4,14 +4,12 @@ import softDelete from "mongoose-delete";
 import crypto from "crypto";
 
 export interface IUser extends Document {
-  username: string;
+  fullName: string;
+  phoneNumber: string;
   email: string;
   password?: string;
   confirmPassword?: string;
   role: "admin" | "reseller" | "retail";
-  profile: {
-    name: string;
-  };
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: Types.ObjectId;
@@ -21,10 +19,14 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    username: {
+    fullName: {
       type: String,
-      required: [true, "Please input an username"],
-      unique: [true, "Username already exists"],
+      required: [true, "Please input a full name"],
+    },
+    phoneNumber: {
+      type: String,
+      required: [true, "Please input a phone number"],
+      maxLength: 25,
     },
     email: {
       type: String,
@@ -42,12 +44,6 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ["admin", "reseller", "retail"],
       default: "retail",
-    },
-    profile: {
-      name: {
-        type: String,
-        required: false,
-      },
     },
     passwordResetToken: {
       type: String,

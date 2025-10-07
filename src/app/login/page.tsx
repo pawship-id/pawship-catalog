@@ -20,14 +20,14 @@ function LoginForm() {
 
     const form = new FormData(e.currentTarget);
 
-    const identifier = form.get("identifier");
+    const email = form.get("email");
 
     const password = form.get("password");
 
-    if (!identifier) {
+    if (!email) {
       setIsLoading(false);
 
-      return showErrorAlert("Error", "Please input an email or username");
+      return showErrorAlert("Error", "Please input an email");
     }
 
     if (!password) {
@@ -37,7 +37,7 @@ function LoginForm() {
     }
 
     const res = await signIn("credentials", {
-      identifier,
+      email,
       password,
       redirect: false,
     });
@@ -83,10 +83,10 @@ function LoginForm() {
 
           <div className="w-full space-y-4">
             <input
-              type="text"
+              type="email"
               autoFocus
-              placeholder="Email or Username"
-              name="identifier"
+              placeholder="Email"
+              name="email"
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
             />
 

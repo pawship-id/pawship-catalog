@@ -9,7 +9,7 @@ const handler = NextAuth({
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        identifier: { label: "Email or Username", type: "text" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
@@ -19,12 +19,9 @@ const handler = NextAuth({
 
         await dbConnect();
 
-        const user = await User.findOne({
-          $or: [
-            { email: credentials.identifier },
-            { username: credentials.identifier },
-          ],
-        }).select("+password");
+        const user = await User.findOne({ email: credentials.email }).select(
+          "+password"
+        );
         if (!user) throw new Error("Invalid email or password.");
 
         const isMatch = await bcrypt.compare(
@@ -36,7 +33,7 @@ const handler = NextAuth({
         return {
           id: user._id.toString(),
           email: user.email,
-          username: user.username,
+          fullName: user.fullName,
           role: user.role,
         };
       },
@@ -46,7 +43,7 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.username = user.username;
+        token.fullName = user.fullName;
         token.role = user.role;
       }
       return token;
@@ -54,7 +51,7 @@ const handler = NextAuth({
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string;
-        session.user.username = token.username as string;
+        session.user.fullName = token.fullName as string;
         session.user.role = token.role as string;
       }
       return session;
