@@ -13,34 +13,28 @@ export async function registerAction(
   _: unknown,
   formData: FormData
 ): Promise<ActionResult> {
-  const username = formData.get("username") as string;
+  const fullName = formData.get("fullName") as string;
+  const phoneNumber = formData.get("phoneNumber") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
+  console.log(fullName, phoneNumber, email, password, confirmPassword);
 
   try {
     await dbConnect();
-
-    const existingUsername = await User.findOne({ username });
-    if (existingUsername) {
-      return {
-        status: "error",
-        message: "Username already exists.",
-        formData: { username, email, password, confirmPassword },
-      };
-    }
 
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
       return {
         status: "error",
         message: "Email already exists.",
-        formData: { username, email, password, confirmPassword },
+        formData: { fullName, phoneNumber, email, password, confirmPassword },
       };
     }
 
     const newUser = new User({
-      username,
+      fullName,
+      phoneNumber,
       email,
       password, // hash process in the model
       confirmPassword,
@@ -50,7 +44,7 @@ export async function registerAction(
     return {
       status: "success",
       message: "You can now log in.",
-      formData: { username, email, password, confirmPassword },
+      formData: { fullName, phoneNumber, email, password, confirmPassword },
     };
   } catch (error: any) {
     console.log(error, "register function /lib/actions/auth.ts");
@@ -60,19 +54,19 @@ export async function registerAction(
       return {
         status: "error",
         message: errors,
-        formData: { username, email, password, confirmPassword },
+        formData: { fullName, phoneNumber, email, password, confirmPassword },
       };
     } else if (error.name === "MongooseError") {
       return {
         status: "error",
         message: error.message,
-        formData: { username, email, password, confirmPassword },
+        formData: { fullName, phoneNumber, email, password, confirmPassword },
       };
     } else {
       return {
         status: "error",
         message: "Something went wrong",
-        formData: { username, email, password, confirmPassword },
+        formData: { fullName, phoneNumber, email, password, confirmPassword },
       };
     }
   }

@@ -12,7 +12,8 @@ const initialState: ActionResult = {
   status: "",
   message: "",
   formData: {
-    username: "",
+    fullName: "",
+    phoneNumber: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -68,12 +69,25 @@ export default function RegisterPage() {
           <div className="w-full space-y-4">
             <input
               type="text"
-              placeholder="Username"
+              placeholder="Full Name"
               autoFocus
-              name="username"
-              defaultValue={state.formData.username}
+              name="fullName"
+              defaultValue={state.formData.fullName}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
             />
+            <div>
+              <input
+                type="text"
+                placeholder="Phone Number"
+                name="phoneNumber"
+                defaultValue={state.formData.phoneNumber}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-primary/80 focus:border-transparent"
+              />
+              <small className="text-gray-500 text-xs mt-2 block">
+                Please start the phone number with the country code, for
+                example: +62
+              </small>
+            </div>
             <input
               type="email"
               placeholder="Email"
