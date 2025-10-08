@@ -5,6 +5,7 @@ import { Search, Plus } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "@/components/admin/users/columns";
 import { getUsers } from "@/lib/data/admin/user";
+import Link from "next/link";
 
 export default async function UserPage() {
   const data = await getUsers();
@@ -20,9 +21,11 @@ export default async function UserPage() {
 
       <div className="mb-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
+          <Button asChild>
+            <Link href="/dashboard/users/create">
+              <Plus className="h-4 w-4 mr-2" />
+              Add User
+            </Link>
           </Button>
           <div className="flex items-center space-x-2 w-full sm:w-auto">
             <div className="relative w-full max-w-sm">
