@@ -59,12 +59,14 @@ function LoginForm() {
     setTimeout(() => {
       setIsLoading(false);
 
-      if (callbackUrl) {
-        window.location.href = callbackUrl;
-      } else if (role === "admin") {
-        window.location.href = "/dashboard/admin";
+      if (role === "admin") {
+        window.location.href = "/dashboard";
       } else {
-        window.location.href = "/";
+        if (callbackUrl) {
+          window.location.href = callbackUrl;
+        } else {
+          window.location.href = "/";
+        }
       }
     }, 2000);
   }
