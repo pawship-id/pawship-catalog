@@ -2,21 +2,19 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus } from "lucide-react";
-import { DataTable } from "@/components/ui/data-table";
-import { columns } from "@/components/admin/users/columns";
-import { getUsers } from "@/lib/data/admin/user";
 import Link from "next/link";
+import TableUser from "@/components/admin/users/table-user";
 
-export default async function UserPage() {
-  const data = await getUsers();
-
+export default function UserPage() {
   return (
-    <div className="p-6 min-h-screen">
+    <div>
       <div className="mb-6 space-y-2">
         <h1 className="text-3xl font-playfair font-bold text-foreground">
           Users Management
         </h1>
-        <p className="text-muted-foreground">View and manage all users</p>
+        <p className="text-muted-foreground text-lg">
+          View and manage all users
+        </p>
       </div>
 
       <div className="mb-4">
@@ -39,9 +37,7 @@ export default async function UserPage() {
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <DataTable columns={columns} data={data} />
-      </div>
+      <TableUser />
     </div>
   );
 }

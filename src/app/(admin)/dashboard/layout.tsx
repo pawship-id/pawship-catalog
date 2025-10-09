@@ -12,7 +12,9 @@ export default function AdminLayout({
     <SessionProvider>
       <div className="flex h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto">
+          <div className="p-6 min-h-screen mx-4">{children}</div>
+        </main>
       </div>
     </SessionProvider>
   );
