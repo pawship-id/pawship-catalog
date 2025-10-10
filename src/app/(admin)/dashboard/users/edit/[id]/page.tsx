@@ -16,10 +16,16 @@ interface EditUserProps {
 export default async function EditUserPage({ params }: EditUserProps) {
   const { id } = await params;
   const cookiesStore = await cookies();
-  const token =
+
+  const tokenValue =
     process.env.NODE_ENV === "production"
       ? cookiesStore.get("__Secure-next-auth.session-token")?.value
       : cookiesStore.get("next-auth.session-token")?.value;
+
+  const cookieName =
+    process.env.NODE_ENV === "production"
+      ? "__Secure-next-auth.session-token"
+      : "next-auth.session-token";
 
   console.log(process.env.NODE_ENV, "ENV");
 
@@ -34,7 +40,7 @@ export default async function EditUserPage({ params }: EditUserProps) {
       id,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          cookie: `${cookieName}=${tokenValue}`,
           "Content-Type": "application/json",
         },
       }
