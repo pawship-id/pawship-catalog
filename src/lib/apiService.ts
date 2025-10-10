@@ -38,12 +38,17 @@ export async function getById<T extends BaseModel>(
   url: string,
   id: string
 ): Promise<ApiResponse<T>> {
+  console.log(url, id, "URL ID");
+
   const response = await fetch(`${url}/${id}`, {
     cache: "no-store",
   });
 
+  console.log(response, "RESPONSE");
+
   if (!response.ok) {
     const errorBody: ApiResponse<T> = await response.json();
+    console.log(errorBody, "ERROR BODY");
 
     throw new Error(errorBody.message || "Internal server error");
   }
