@@ -19,6 +19,8 @@ export default async function EditUserPage({ params }: EditUserProps) {
   let errorMessage: string | undefined;
 
   try {
+    console.log(process.env.NEXT_PUBLIC_BASE_URL, "NEXT PUBLIC");
+
     let response = await getById<UserData>(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/users`,
       id
@@ -26,6 +28,8 @@ export default async function EditUserPage({ params }: EditUserProps) {
 
     user = response.data;
   } catch (error: any) {
+    console.log(error, "INI ERROR FE");
+
     errorMessage = error.message || "Failed to fetch user data";
   }
 
