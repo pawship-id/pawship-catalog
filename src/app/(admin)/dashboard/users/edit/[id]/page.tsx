@@ -1,71 +1,43 @@
+"use client";
 import FormUser from "@/components/admin/users/form-user";
 import { Button } from "@/components/ui/button";
 import { getById } from "@/lib/apiService";
 import { UserData } from "@/lib/types/user";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
-import { cookies } from "next/headers";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 
-interface EditUserProps {
-  params: {
-    id: string;
-  };
-}
+export default function EditUserPage() {
+  const params = useParams();
+  const id = params.id as string;
 
-export default async function EditUserPage({ params }: EditUserProps) {
-  const { id } = await params;
-  const cookiesStore = await cookies();
+  const [user, setUser] = useState<UserData | undefined>();
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState(true);
 
-  const tokenValue =
-    process.env.NODE_ENV === "production"
-      ? cookiesStore.get("__Secure-next-auth.session-token")?.value
-      : cookiesStore.get("next-auth.session-token")?.value;
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        setIsLoading(true);
+        const userData = await getById<UserData>("/api/users", id);
 
-  const cookieName =
-    process.env.NODE_ENV === "production"
-      ? "__Secure-next-auth.session-token"
-      : "next-auth.session-token";
-
-  console.log(process.env.NODE_ENV, "ENV");
-
-  let user: UserData | undefined;
-  let errorMessage: string | undefined;
-
-  try {
-    console.log(process.env.NEXT_PUBLIC_BASE_URL, "NEXT PUBLIC");
-
-    // let response = await getById<UserData>(
-    //   `${process.env.NEXT_PUBLIC_BASE_URL}/api/users`,
-    //   id,
-    //   {
-    //     headers: {
-    //       cookie: `${cookieName}=${tokenValue}`,
-    //       "Content-Type": "application/json",
-    //     },
-    //   }
-    // );
-    let response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/${id}`,
-      {
-        headers: {
-          cookie: `${cookieName}=${tokenValue}`,
-          "Content-Type": "application/json",
-        },
+        setUser(userData.data);
+        setErrorMessage(undefined);
+      } catch (error: any) {
+        console.log(error, "INI ERROR FE");
+        setErrorMessage(error.message || "Failed to fetch user data");
+        setUser(undefined);
+      } finally {
+        setIsLoading(false);
       }
-    );
+    };
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    fetchUser();
+  }, [id]);
 
-    let { data } = await response.json();
-
-    user = data;
-  } catch (error: any) {
-    console.log(error, "INI ERROR FE");
-
-    errorMessage = error.message || "Failed to fetch user data";
+  if (isLoading) {
+    return <div>Loading...</div>;
   }
 
   return (
