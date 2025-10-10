@@ -49,6 +49,10 @@ export default async function EditUserPage({ params }: EditUserProps) {
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/${id}`
     );
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     let { data } = await response.json();
 
     user = data;
