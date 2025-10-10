@@ -46,7 +46,13 @@ export default async function EditUserPage({ params }: EditUserProps) {
     //   }
     // );
     let response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/${id}`
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/${id}`,
+      {
+        headers: {
+          cookie: `${cookieName}=${tokenValue}`,
+          "Content-Type": "application/json",
+        },
+      }
     );
 
     if (!response.ok) {
