@@ -16,7 +16,12 @@ interface EditUserProps {
 export default async function EditUserPage({ params }: EditUserProps) {
   const { id } = await params;
   const cookiesStore = await cookies();
-  const token = cookiesStore.get("next-auth.session-token")?.value;
+  const token =
+    process.env.NODE_ENV === "production"
+      ? cookiesStore.get("__Secure-next-auth.session-token")?.value
+      : cookiesStore.get("next-auth.session-token")?.value;
+
+  console.log(process.env.NODE_ENV, "ENV");
 
   let user: UserData | undefined;
   let errorMessage: string | undefined;
