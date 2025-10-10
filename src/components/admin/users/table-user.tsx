@@ -8,13 +8,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit } from "lucide-react";
+import { Edit, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { getAll } from "@/lib/apiService";
 import { showErrorAlert } from "@/lib/helpers/sweetalert2";
-import DeleteButton from "./delete-button";
 import { UserData } from "@/lib/types/user";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import DeleteButton from "./delete-button";
+import Link from "next/link";
 
 export default function TableUser() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -84,7 +90,7 @@ export default function TableUser() {
             <TableHead>Phone Number</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -119,15 +125,28 @@ export default function TableUser() {
                     {!user.deleted ? "Active" : "Non Active"}
                   </span>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/dashboard/users/edit/${user._id}`}>
-                        <Edit />
-                      </Link>
-                    </Button>
-                    <DeleteButton userId={user._id} onFetch={fetchUsers} />
-                  </div>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="cursor-pointer"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link href={`/dashboard/users/edit/${user._id}`}>
+                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="p-0">
+                        <DeleteButton userId={user._id} onFetch={fetchUsers} />
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))

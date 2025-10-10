@@ -47,9 +47,10 @@ export default function DeleteButton({ userId, onFetch }: DeleteButtonProps) {
       size="sm"
       onClick={handleDelete}
       disabled={loading}
-      className="text-destructive"
+      className="w-full justify-start cursor-pointer"
     >
       {loading ? <Loader className="animate-spin" /> : <Trash2 />}
+      <span className="ml-2">Delete</span>
     </Button>
   );
 }

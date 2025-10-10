@@ -39,7 +39,7 @@ export default function RootLayout({
                   Loading...
                 </p>
                 <p className="mt-1 text-sm text-gray-500">
-                  Mohon tunggu sebentar.
+                  Please wait a moment.
                 </p>
               </div>
             </div>

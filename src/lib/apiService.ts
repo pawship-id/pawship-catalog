@@ -1,5 +1,4 @@
 import { ApiResponse } from "@/lib/types/api";
-import { IncomingHttpHeaders } from "http";
 
 // basic data types for all Mongoose Models
 interface BaseModel {
@@ -37,29 +36,14 @@ export async function getAll<T extends BaseModel>(
  */
 export async function getById<T extends BaseModel>(
   url: string,
-  id: string,
-  option?: any
+  id: string
 ): Promise<ApiResponse<T>> {
-  let optionData: RequestInit = {
-    cache: "no-store" as RequestCache,
-  };
-
-  if (option) {
-    optionData = {
-      ...option,
-      ...optionData,
-    };
-  }
-
-  console.log(optionData);
-
-  const response = await fetch(`${url}/${id}`, optionData);
-
-  console.log(response, "RESPONSE");
+  const response = await fetch(`${url}/${id}`, {
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     const errorBody: ApiResponse<T> = await response.json();
-    console.log(errorBody, "ERROR BODY");
 
     throw new Error(errorBody.message || "Internal server error");
   }
