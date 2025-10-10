@@ -3,7 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 
 interface Context {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // GET: read user by ID
