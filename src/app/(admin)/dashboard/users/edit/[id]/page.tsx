@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { getById } from "@/lib/apiService";
 import { UserData } from "@/lib/types/user";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import React from "react";
 
@@ -14,6 +15,8 @@ interface EditUserProps {
 
 export default async function EditUserPage({ params }: EditUserProps) {
   const { id } = await params;
+  const cookiesStore = await cookies();
+  const token = cookiesStore.get("next-auth.session-token")?.value;
 
   let user: UserData | undefined;
   let errorMessage: string | undefined;
@@ -23,7 +26,13 @@ export default async function EditUserPage({ params }: EditUserProps) {
 
     let response = await getById<UserData>(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/users`,
-      id
+      id,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
     );
 
     user = response.data;
