@@ -28,7 +28,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // if the user tries to access the admin page
-  if (pathname.startsWith("/dashboard/admin")) {
+  if (pathname.startsWith("/dashboard")) {
     // if there is no token (not logged in), redirect to login
     if (!token) {
       return NextResponse.redirect(new URL("/login", req.url));
@@ -51,6 +51,6 @@ export const config = {
     "/reset-password",
     "/wishlist",
     "/cart",
-    "/dashboard/admin/:path*",
+    "/dashboard/:path*",
   ],
 };

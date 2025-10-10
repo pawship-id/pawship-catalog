@@ -26,23 +26,26 @@ const UserSchema = new Schema<IUser>(
     phoneNumber: {
       type: String,
       required: [true, "Please input a phone number"],
-      maxLength: 25,
+      maxLength: [25, "Phone number cannot exceed 25 characters"],
     },
     email: {
       type: String,
       required: [true, "Please input an email"],
       match: [/.+@.+\..+/, "Invalid email format"],
-      unique: [true, "Email already exists"],
+      unique: true,
     },
     password: {
       type: String,
       required: [true, "Please input a password"],
-      minlength: 6,
+      minlength: [6, "Password must be at least 6 characters long"],
       select: false,
     },
     role: {
       type: String,
-      enum: ["admin", "reseller", "retail"],
+      enum: {
+        values: ["admin", "reseller", "retail"],
+        message: "Role must be one of: admin, reseller, or retail",
+      },
       default: "retail",
     },
     passwordResetToken: {
