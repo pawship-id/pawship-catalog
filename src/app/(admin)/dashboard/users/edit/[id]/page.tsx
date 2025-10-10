@@ -35,18 +35,23 @@ export default async function EditUserPage({ params }: EditUserProps) {
   try {
     console.log(process.env.NEXT_PUBLIC_BASE_URL, "NEXT PUBLIC");
 
-    let response = await getById<UserData>(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users`,
-      id,
-      {
-        headers: {
-          cookie: `${cookieName}=${tokenValue}`,
-          "Content-Type": "application/json",
-        },
-      }
+    // let response = await getById<UserData>(
+    //   `${process.env.NEXT_PUBLIC_BASE_URL}/api/users`,
+    //   id,
+    //   {
+    //     headers: {
+    //       cookie: `${cookieName}=${tokenValue}`,
+    //       "Content-Type": "application/json",
+    //     },
+    //   }
+    // );
+    let response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/${id}`
     );
 
-    user = response.data;
+    let { data } = await response.json();
+
+    user = data;
   } catch (error: any) {
     console.log(error, "INI ERROR FE");
 
