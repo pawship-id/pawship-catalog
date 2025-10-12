@@ -19,7 +19,7 @@ export default function EditUserPage() {
       setLoading(true);
       setError(null);
 
-      const response = await getById<UserData>("/api/users", id);
+      const response = await getById<UserData>("/api/admin/users", id);
 
       if (response.data) {
         setUser(response.data);

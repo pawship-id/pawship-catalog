@@ -19,8 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import DeleteButton from "./delete-button";
 import Link from "next/link";
+import DeleteButton from "@/components/admin/delete-button";
 
 export default function TableUser() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -32,7 +32,7 @@ export default function TableUser() {
       setLoading(true);
       setError(null);
 
-      const response = await getAll<UserData>("/api/users");
+      const response = await getAll<UserData>("/api/admin/users");
 
       if (response.data?.length) {
         setUsers(response.data);
@@ -143,7 +143,11 @@ export default function TableUser() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem className="p-0">
-                        <DeleteButton userId={user._id} onFetch={fetchUsers} />
+                        <DeleteButton
+                          id={user._id}
+                          onFetch={fetchUsers}
+                          resource="users"
+                        />
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
