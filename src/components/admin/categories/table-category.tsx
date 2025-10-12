@@ -11,7 +11,6 @@ import {
 import { Edit, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAll } from "@/lib/apiService";
-import { showErrorAlert } from "@/lib/helpers/sweetalert2";
 import { CategoryData } from "@/lib/types/category";
 import {
   DropdownMenu,
@@ -20,6 +19,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import DeleteButton from "@/components/admin/delete-button";
+import LoadingTable from "@/components/admin/loading-table";
+import ErrorTable from "@/components/admin/error-table";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -40,8 +41,6 @@ export default function TableCategory() {
       }
     } catch (err: any) {
       setError(err.message);
-
-      showErrorAlert(undefined, err.message);
     } finally {
       setLoading(false);
     }
@@ -52,33 +51,11 @@ export default function TableCategory() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="rounded-md border">
-        <div className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Loading categories...
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingTable text="Loading fetch categories" />;
   }
 
   if (error) {
-    return (
-      <div className="rounded-md border">
-        <div className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <p className="text-sm text-red-600 mb-2">Error: {error}</p>
-            <Button onClick={fetchCategories} variant="outline" size="sm">
-              Try Again
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    return <ErrorTable error={error} handleClick={fetchCategories} />;
   }
 
   return (
@@ -106,13 +83,17 @@ export default function TableCategory() {
             categories.map((item) => (
               <TableRow key={item._id}>
                 <TableCell className="font-medium ">
-                  <Image
-                    src={item.imageUrl}
-                    width={150}
-                    height={50}
-                    alt={`Gambar ${item.name}`}
-                    className="object-cover aspect-square"
-                  />
+                  {item.imageUrl ? (
+                    <Image
+                      src={item.imageUrl}
+                      width={150}
+                      height={50}
+                      alt={`Gambar ${item.name}`}
+                      className="object-cover aspect-square"
+                    />
+                  ) : (
+                    <>No Image</>
+                  )}
                 </TableCell>
                 <TableCell>{item.name}</TableCell>
                 <TableCell>

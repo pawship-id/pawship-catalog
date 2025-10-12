@@ -11,7 +11,6 @@ import {
 import { Edit, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAll } from "@/lib/apiService";
-import { showErrorAlert } from "@/lib/helpers/sweetalert2";
 import { UserData } from "@/lib/types/user";
 import {
   DropdownMenu,
@@ -21,6 +20,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import DeleteButton from "@/components/admin/delete-button";
+import LoadingTable from "@/components/admin/loading-table";
+import ErrorTable from "@/components/admin/error-table";
 
 export default function TableUser() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -39,8 +40,6 @@ export default function TableUser() {
       }
     } catch (err: any) {
       setError(err.message);
-
-      showErrorAlert(undefined, err.message);
     } finally {
       setLoading(false);
     }
@@ -51,33 +50,11 @@ export default function TableUser() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="rounded-md border">
-        <div className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Loading users...
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingTable text="Loading fetch users..." />;
   }
 
   if (error) {
-    return (
-      <div className="rounded-md border">
-        <div className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <p className="text-sm text-red-600 mb-2">Error: {error}</p>
-            <Button onClick={fetchUsers} variant="outline" size="sm">
-              Try Again
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    return <ErrorTable error={error} handleClick={fetchUsers} />;
   }
 
   return (

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import { Suspense } from "react";
+import LoadingPage from "@/components/admin/loading-page";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,15 +34,7 @@ export default function RootLayout({
         <Suspense
           fallback={
             <div className="fixed inset-0 z-[9999] bg-white bg-opacity-95 flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                <p className="mt-4 text-lg font-medium text-gray-700">
-                  Loading...
-                </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  Please wait a moment.
-                </p>
-              </div>
+              <LoadingPage />
             </div>
           }
         >

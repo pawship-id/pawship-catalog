@@ -1,16 +1,16 @@
 import React from "react";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 
-interface ErrorProps {
+interface ErrorPageProps {
   errorMessage: string;
   url?: string;
 }
 
-export default function Error({ errorMessage, url }: ErrorProps) {
+export default function ErrorPage({ errorMessage, url }: ErrorPageProps) {
   return (
-    <div className="flex items-center justify-center py-20">
+    <div className="flex items-center justify-center py-16">
       <div className="w-full max-w-md p-10 bg-white rounded-xl shadow-xl border border-gray-100">
         <div className="text-center space-y-8 max-w-lg">
           {/* Logo */}

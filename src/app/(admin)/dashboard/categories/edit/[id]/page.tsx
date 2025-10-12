@@ -4,7 +4,8 @@ import { CategoryData } from "@/lib/types/category";
 import { useParams } from "next/navigation";
 import FormCategory from "@/components/admin/categories/form-category";
 import React, { useEffect, useState } from "react";
-import Error from "@/components/error";
+import ErrorPage from "@/components/admin/error-page";
+import LoadingPage from "@/components/admin/loading-page";
 
 export default function EditCategoryPage() {
   const params = useParams();
@@ -45,13 +46,9 @@ export default function EditCategoryPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-lg font-medium text-gray-700">Loading...</p>
-          <p className="mt-1 text-sm text-gray-500">Please wait a moment.</p>
-        </div>
+        <LoadingPage />
       ) : error ? (
-        <Error errorMessage={error} url="/dashboard/categories" />
+        <ErrorPage errorMessage={error} url="/dashboard/categories" />
       ) : (
         <FormCategory initialData={category} categoryId={id} />
       )}

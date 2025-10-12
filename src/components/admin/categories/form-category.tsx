@@ -390,7 +390,11 @@ export default function FormCategory({
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mt-6">
-        <Button type="submit" className="px-6 w-full sm:w-auto">
+        <Button
+          type="submit"
+          disabled={loading}
+          className="px-6 w-full sm:w-auto"
+        >
           {loading
             ? "Loading..."
             : isEditMode
