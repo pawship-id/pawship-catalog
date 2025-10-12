@@ -11,11 +11,16 @@ import { Loader, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 
 interface DeleteButtonProps {
-  userId: string;
+  id: string;
   onFetch: () => void;
+  resource: string;
 }
 
-export default function DeleteButton({ userId, onFetch }: DeleteButtonProps) {
+export default function DeleteButton({
+  id,
+  onFetch,
+  resource,
+}: DeleteButtonProps) {
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
@@ -28,9 +33,9 @@ export default function DeleteButton({ userId, onFetch }: DeleteButtonProps) {
       setLoading(true);
 
       try {
-        await deleteById("/api/users", userId);
+        await deleteById(`/api/admin/${resource}`, id);
 
-        showSuccessAlert(undefined, "Successfully deleted user!");
+        showSuccessAlert(undefined, "Successfully deleted data!");
 
         onFetch();
       } catch (err: any) {
@@ -47,9 +52,10 @@ export default function DeleteButton({ userId, onFetch }: DeleteButtonProps) {
       size="sm"
       onClick={handleDelete}
       disabled={loading}
-      className="text-destructive"
+      className="w-full justify-start cursor-pointer"
     >
       {loading ? <Loader className="animate-spin" /> : <Trash2 />}
+      <span className="ml-2">Delete</span>
     </Button>
   );
 }

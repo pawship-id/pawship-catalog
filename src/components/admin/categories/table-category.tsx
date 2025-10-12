@@ -11,32 +11,33 @@ import {
 import { Edit, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAll } from "@/lib/apiService";
-import { UserData } from "@/lib/types/user";
+import { CategoryData } from "@/lib/types/category";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import Link from "next/link";
 import DeleteButton from "@/components/admin/delete-button";
 import LoadingTable from "@/components/admin/loading-table";
 import ErrorTable from "@/components/admin/error-table";
+import Link from "next/link";
+import Image from "next/image";
 
-export default function TableUser() {
-  const [users, setUsers] = useState<UserData[]>([]);
+export default function TableCategory() {
+  const [categories, setCategories] = useState<CategoryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchCategories = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await getAll<UserData>("/api/admin/users");
+      const response = await getAll<CategoryData>("/api/admin/categories");
 
-      if (response.data?.length) {
-        setUsers(response.data);
+      if (response.data) {
+        setCategories(response.data);
       }
     } catch (err: any) {
       setError(err.message);
@@ -46,15 +47,15 @@ export default function TableUser() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchCategories();
   }, []);
 
   if (loading) {
-    return <LoadingTable text="Loading fetch users..." />;
+    return <LoadingTable text="Loading fetch categories" />;
   }
 
   if (error) {
-    return <ErrorTable error={error} handleClick={fetchUsers} />;
+    return <ErrorTable error={error} handleClick={fetchCategories} />;
   }
 
   return (
@@ -62,44 +63,48 @@ export default function TableUser() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Full Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Phone Number</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>Image</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Display Web</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.length === 0 ? (
+          {categories.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={6}
                 className="text-center py-8 text-muted-foreground"
               >
-                No users found
+                No categories found
               </TableCell>
             </TableRow>
           ) : (
-            users.map((user) => (
-              <TableRow key={user._id}>
-                <TableCell className="font-medium">{user.fullName}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {user.phoneNumber}
+            categories.map((item) => (
+              <TableRow key={item._id}>
+                <TableCell className="font-medium ">
+                  {item.imageUrl ? (
+                    <Image
+                      src={item.imageUrl}
+                      width={150}
+                      height={50}
+                      alt={`Gambar ${item.name}`}
+                      className="object-cover aspect-square"
+                    />
+                  ) : (
+                    <>No Image</>
+                  )}
                 </TableCell>
-                <TableCell>
-                  <span className="capitalize">{user.role}</span>
-                </TableCell>
+                <TableCell>{item.name}</TableCell>
                 <TableCell>
                   <span
                     className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      !user.deleted
+                      item.isDisplayed
                         ? "bg-green-100 text-green-800"
                         : "bg-red-100 text-red-800"
                     }`}
                   >
-                    {!user.deleted ? "Active" : "Non Active"}
+                    {item.isDisplayed ? "Yes" : "No"}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -115,15 +120,15 @@ export default function TableUser() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link href={`/dashboard/users/edit/${user._id}`}>
+                        <Link href={`/dashboard/categories/edit/${item._id}`}>
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem className="p-0">
                         <DeleteButton
-                          id={user._id}
-                          onFetch={fetchUsers}
-                          resource="users"
+                          id={item._id}
+                          onFetch={fetchCategories}
+                          resource="categories"
                         />
                       </DropdownMenuItem>
                     </DropdownMenuContent>

@@ -47,10 +47,13 @@ export default function FormUser({ initialData, userId }: UserFormProps) {
       let response: ApiResponse<UserData>;
 
       if (!isEditMode) {
-        response = await createData<UserData, UserForm>("/api/users", formData);
+        response = await createData<UserData, UserForm>(
+          "/api/admin/users",
+          formData
+        );
       } else {
         response = await updateData<UserData, UserForm>(
-          "/api/users",
+          "/api/admin/users",
           userId,
           formData
         );

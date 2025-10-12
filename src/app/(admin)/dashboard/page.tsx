@@ -36,7 +36,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-6  min-h-screen">
+    <div>
       <div className="mb-6 space-y-2">
         <h1 className="text-3xl font-playfair font-bold text-foreground">
           Dashboard
@@ -46,7 +46,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 min-[570px]:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         {stats.map((stat) => (
           <Card key={stat.title} className="bg-white shadow-md border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

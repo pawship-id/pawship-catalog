@@ -63,10 +63,12 @@ export async function createData<T extends BaseModel, D>(
   url: string,
   data: D
 ): Promise<ApiResponse<T>> {
+  const isFormData = data instanceof FormData;
+
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    headers: isFormData ? {} : { "Content-Type": "application/json" },
+    body: isFormData ? data : JSON.stringify(data),
   });
 
   if (!response.ok) {
@@ -91,10 +93,12 @@ export async function updateData<T extends BaseModel, D>(
   id: string,
   data: Partial<D>
 ): Promise<ApiResponse<T>> {
+  const isFormData = data instanceof FormData;
+
   const response = await fetch(`${url}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    headers: isFormData ? {} : { "Content-Type": "application/json" },
+    body: isFormData ? data : JSON.stringify(data),
   });
 
   if (!response.ok) {

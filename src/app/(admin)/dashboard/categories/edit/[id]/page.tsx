@@ -1,29 +1,29 @@
 "use client";
-import FormUser from "@/components/admin/users/form-user";
 import { getById } from "@/lib/apiService";
-import { UserData } from "@/lib/types/user";
+import { CategoryData } from "@/lib/types/category";
 import { useParams } from "next/navigation";
+import FormCategory from "@/components/admin/categories/form-category";
 import React, { useEffect, useState } from "react";
 import ErrorPage from "@/components/admin/error-page";
 import LoadingPage from "@/components/admin/loading-page";
 
-export default function EditUserPage() {
+export default function EditCategoryPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [user, setUser] = useState<UserData | null>(null);
+  const [category, setCategory] = useState<CategoryData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setLoading] = useState(true);
 
-  const fetchUserById = async () => {
+  const fetchCategoryById = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await getById<UserData>("/api/admin/users", id);
+      const response = await getById<CategoryData>("/api/admin/categories", id);
 
       if (response.data) {
-        setUser(response.data);
+        setCategory(response.data);
       }
     } catch (err: any) {
       setError(err.message);
@@ -33,24 +33,24 @@ export default function EditUserPage() {
   };
 
   useEffect(() => {
-    fetchUserById();
+    fetchCategoryById();
   }, [id]);
 
   return (
     <div>
       <div className="mb-6 space-y-2">
         <h1 className="text-3xl font-playfair font-bold text-foreground">
-          Form Edit User
+          Form Edit Category
         </h1>
-        <p className="text-muted-foreground text-lg">Edit User Data</p>
+        <p className="text-muted-foreground text-lg">Edit Category Data</p>
       </div>
 
       {isLoading ? (
         <LoadingPage />
       ) : error ? (
-        <ErrorPage errorMessage={error} url="/dashboard/users" />
+        <ErrorPage errorMessage={error} url="/dashboard/categories" />
       ) : (
-        <FormUser initialData={user} userId={id} />
+        <FormCategory initialData={category} categoryId={id} />
       )}
     </div>
   );
