@@ -8,19 +8,10 @@ import {
   LayoutDashboard,
   Users,
   Package,
-  ShoppingCart,
   FolderTree,
-  ImageIcon,
-  Settings,
   LogOut,
   Menu,
   X,
-  BarChart3,
-  Warehouse,
-  Megaphone,
-  Puzzle,
-  PackageCheck,
-  ChevronDown,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -31,35 +22,6 @@ const navigation = [
   { name: "Users", href: "/dashboard/users", icon: Users },
   { name: "Categories", href: "/dashboard/categories", icon: FolderTree },
   { name: "Products", href: "/dashboard/products", icon: Package },
-  { name: "Stock", href: "/dashboard/stock", icon: PackageCheck },
-  { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
-  { name: "Content", href: "/dashboard/content", icon: ImageIcon },
-  { name: "Users", href: "/dashboard/users", icon: Users, adminOnly: true },
-  {
-    name: "Analytics",
-    href: "/dashboard/analytics",
-    icon: BarChart3,
-    placeholder: true,
-  },
-  {
-    name: "Inventory",
-    href: "/dashboard/inventory",
-    icon: Warehouse,
-    placeholder: true,
-  },
-  {
-    name: "Marketing",
-    href: "/dashboard/marketing",
-    icon: Megaphone,
-    placeholder: true,
-  },
-  {
-    name: "Integrations",
-    href: "/dashboard/integrations",
-    icon: Puzzle,
-    placeholder: true,
-  },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -75,7 +37,6 @@ export default function Sidebar() {
   };
 
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user;
@@ -107,10 +68,6 @@ export default function Sidebar() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-
-  const filteredNavigation = navigation.filter(
-    (item) => !item.adminOnly || user?.role === "Admin"
-  );
 
   return (
     <>
@@ -177,7 +134,7 @@ export default function Sidebar() {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
-            {filteredNavigation.map((item) => {
+            {navigation.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
@@ -198,83 +155,12 @@ export default function Sidebar() {
                 >
                   <item.icon className="h-4 w-4 flex-shrink-0" />
                   {!isCollapsed && (
-                    <span className="flex items-center gap-2">
-                      {item.name}
-                      {item.placeholder && (
-                        <span className="text-xs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded-full">
-                          Soon
-                        </span>
-                      )}
-                    </span>
+                    <span className="flex items-center gap-2">{item.name}</span>
                   )}
                 </Link>
               );
             })}
           </nav>
-
-          {/* Expandable Menu Section */}
-          <div className="p-4">
-            <div className="space-y-2">
-              <Button
-                variant="ghost"
-                onClick={() => setIsExpanded(!isExpanded)}
-                className={cn(
-                  "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  isCollapsed && "justify-center"
-                )}
-              >
-                <Settings className="h-4 w-4" />
-                {!isCollapsed && (
-                  <>
-                    <span className="ml-3">Management</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 ml-auto transition-transform",
-                        isExpanded && "rotate-180"
-                      )}
-                    />
-                  </>
-                )}
-              </Button>
-
-              {isExpanded && !isCollapsed && (
-                <div className="ml-7 space-y-1">
-                  <Link
-                    href="/dashboard/reports"
-                    className={cn(
-                      "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                      pathname === "/dashboard/reports"
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    )}
-                    onClick={() => {
-                      if (window.innerWidth < 768) {
-                        setIsCollapsed(true);
-                      }
-                    }}
-                  >
-                    <span>Reports</span>
-                  </Link>
-                  <Link
-                    href="/dashboard/permissions"
-                    className={cn(
-                      "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                      pathname === "/dashboard/permissions"
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    )}
-                    onClick={() => {
-                      if (window.innerWidth < 768) {
-                        setIsCollapsed(true);
-                      }
-                    }}
-                  >
-                    <span>Permissions</span>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Logout */}
           <div className="p-4 border-t border-sidebar-border">
