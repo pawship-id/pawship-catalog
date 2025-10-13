@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   X,
+  Globe,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -22,6 +23,7 @@ const navigation = [
   { name: "Users", href: "/dashboard/users", icon: Users },
   { name: "Categories", href: "/dashboard/categories", icon: FolderTree },
   { name: "Products", href: "/dashboard/products", icon: Package },
+  { name: "Website", href: "/", icon: Globe },
 ];
 
 export default function Sidebar() {
@@ -92,11 +94,13 @@ export default function Sidebar() {
           <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
             {!isCollapsed && (
               <div className="flex items-center justify-center w-full">
-                <img
-                  src="/images/transparent-logo-2.png"
-                  alt="Pawship Logo"
-                  className="h-10 w-auto"
-                />
+                <Link href="/">
+                  <img
+                    src="/images/transparent-logo-2.png"
+                    alt="Pawship Logo"
+                    className="h-10 w-auto"
+                  />
+                </Link>
               </div>
             )}
             <Button
