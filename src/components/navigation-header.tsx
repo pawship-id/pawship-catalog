@@ -97,17 +97,15 @@ export default function NavigationHeader() {
         { name: "White Labeling", href: "/reseller/white-labeling" },
       ],
     },
-    { name: "About Us", href: "/about-us" },
-    { name: "Contact Us", href: "/contact-us" },
-    { name: "FAQ", href: "/faq" },
     {
       name: "More",
       href: "/",
       subItems: [
-        // { name: "FAQ", href: "/faq" },
+        { name: "About Us", href: "/about-us" },
+        { name: "Contact Us", href: "/contact-us" },
+        { name: "FAQ", href: "/faq" },
         { name: "Stores", href: "/stores" },
         { name: "Payments", href: "/payments" },
-        { name: "Good Cause", href: "/good-cause" },
       ],
     },
   ];

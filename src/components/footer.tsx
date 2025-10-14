@@ -70,7 +70,7 @@ export function Footer() {
               {[
                 { name: "About Us", href: "/about-us" },
                 { name: "Contact Us", href: "/contact-us" },
-                { name: "Good Cause", href: "/good-cause" },
+                { name: "FAQ", href: "/faq" },
                 { name: "Stores", href: "/stores" },
                 { name: "Payments", href: "/payments" },
               ].map((link) => (

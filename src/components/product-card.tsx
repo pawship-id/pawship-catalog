@@ -33,7 +33,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       : 0;
 
   return (
-    <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col">
+    <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col max-w-xs">
       {/* Badges */}
       <div className="absolute top-4 left-4 z-10 flex gap-2">
         {product.tag === "New Arrivals" && (
@@ -56,7 +56,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Main Image */}
       <div
         onClick={() => router.push(`/product/magician-bip-set`)}
-        className="relative h-55 overflow-hidden cursor-pointer"
+        className="relative aspect-square overflow-hidden cursor-pointer"
         onMouseEnter={() => {
           if (product.images.length > 1) setCurrentImageIndex(1);
         }}
@@ -68,7 +68,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               key={image.id}
               src={image.url}
               alt={image.alt}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+              className={`aspect-square absolute w-full h-full inset-0 object-cover transition-opacity duration-500 ${
                 index === currentImageIndex ? "opacity-100" : "opacity-0"
               }`}
             />
