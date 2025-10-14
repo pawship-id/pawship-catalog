@@ -103,6 +103,7 @@ export default function ScrollHorizontalCard({
                           ? "260px"
                           : "200px"
                         : "280px",
+                      maxWidth: "280px",
                     }}
                   >
                     <ProductCard product={product} />

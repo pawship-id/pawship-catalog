@@ -105,6 +105,7 @@ export default function RelatedProduct() {
                           ? "260px"
                           : "200px"
                         : "280px",
+                      maxWidth: "280px",
                     }}
                   >
                     <ProductCard product={product} />
