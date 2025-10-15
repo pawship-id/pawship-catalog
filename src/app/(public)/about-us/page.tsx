@@ -279,7 +279,7 @@ export default function AboutUsPage() {
                 Your Pawfriends Deserve the Best.
               </p>
               <p className="text-lg text-muted-foreground italic">
-                "Celebrating friendship, caring for every paw."
+                "Celebrating friendship, caring for every paws."
               </p>
             </div>
 

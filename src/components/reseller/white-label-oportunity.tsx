@@ -36,7 +36,7 @@ export default function WhiteLabelOportunity() {
             asChild
             className="bg-white text-primary hover:bg-white hover:text-primary cursor-pointer px-6 py-8 rounded-lg text-lg font-semibold transform hover:scale-105 transition-all duration-300"
           >
-            <Link href="reseller/white-labeling">Book a Consultation</Link>
+            <Link href="reseller/white-labeling">Explore White-Labeling</Link>
           </Button>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { MessageSquare, Sparkles, X } from "lucide-react";
+import { MessageCircle, Sparkles, X } from "lucide-react";
 import React, { useState } from "react";
 
 interface ServiceInput {
@@ -159,7 +159,7 @@ export default function CTAForm({
 
           <button className="w-full bg-gradient-to-r from-[#F79985] to-[#FCBE87] hover:scale-105 text-white font-semibold py-3 rounded-lg text-base transition-all duration-300 shadow-lg">
             Let's Talk
-            <MessageSquare className="inline h-5 w-5 ml-2" />
+            <MessageCircle className="inline h-5 w-5 ml-1" />
           </button>
         </form>
       </div>
