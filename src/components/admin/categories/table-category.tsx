@@ -65,7 +65,7 @@ export default function TableCategory() {
           <TableRow>
             <TableHead>Image</TableHead>
             <TableHead>Name</TableHead>
-            <TableHead>Display Web</TableHead>
+            <TableHead>Display on Home Page</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -84,13 +84,13 @@ export default function TableCategory() {
               <TableRow key={item._id}>
                 <TableCell className="font-medium ">
                   {item.imageUrl ? (
-                    <Image
-                      src={item.imageUrl}
-                      width={150}
-                      height={50}
-                      alt={`Gambar ${item.name}`}
-                      className="object-cover aspect-square"
-                    />
+                    <div className="h-30 w-30 bg-muted rounded-md flex items-center justify-center">
+                      <img
+                        src="https://down-id.img.susercontent.com/file/sg-11134201-7rdxd-m0e23s2x3gz40b@resize_w900_nl.webp"
+                        alt="Magician BIP Set"
+                        className="w-full h-full object-cover rounded-md"
+                      />
+                    </div>
                   ) : (
                     <>No Image</>
                   )}
