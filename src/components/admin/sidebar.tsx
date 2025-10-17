@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Globe,
+  Store,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -23,6 +24,11 @@ const navigation = [
   { name: "Users", href: "/dashboard/users", icon: Users },
   { name: "Categories", href: "/dashboard/categories", icon: FolderTree },
   { name: "Products", href: "/dashboard/products", icon: Package },
+  {
+    name: "Reseller Category",
+    href: "/dashboard/reseller-categories",
+    icon: Store,
+  },
   { name: "Website", href: "/", icon: Globe },
 ];
 

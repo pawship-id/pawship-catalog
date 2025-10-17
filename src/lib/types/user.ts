@@ -6,6 +6,7 @@ export interface UserForm {
   role: string;
   password?: string;
   confirmPassword?: string;
+  resellerCategoryId?: string;
 }
 
 // UserData is a type that contains all the fields in the User collection.

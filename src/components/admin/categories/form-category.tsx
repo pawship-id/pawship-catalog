@@ -344,7 +344,7 @@ export default function FormCategory({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="text-base font-medium text-gray-700">
-            Displayed on the website
+            Display on Home Page
           </Label>
           <div className="flex gap-4">
             <div className="flex items-center space-x-2">
