@@ -169,18 +169,8 @@ export default function AboutUsPage() {
                 <div className="space-y-4">
                   <p className="md:text-lg text-gray-700 leading-relaxed">
                     Today, Pawship is trusted by pawrents and resellers across{" "}
-                    <Badge variant="secondary" className="mx-1">
-                      🇮🇩 Indonesia
-                    </Badge>
-                    ,{" "}
-                    <Badge variant="secondary" className="mx-1">
-                      🇭🇰 Hong Kong
-                    </Badge>
-                    , and{" "}
-                    <Badge variant="secondary" className="mx-1">
-                      🇸🇬 Singapore
-                    </Badge>
-                    .
+                    Indonesia, Hongkong, Singapore, Malaysia, Taiwan and
+                    Australia.
                   </p>
                   <p className="md:text-lg text-gray-700 leading-relaxed">
                     Whether you're shopping for your own pets or building your
