@@ -10,6 +10,7 @@ export interface IUser extends Document {
   password?: string;
   confirmPassword?: string;
   role: "admin" | "reseller" | "retail";
+  resellerCategoryId?: Types.ObjectId;
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: Types.ObjectId;
@@ -47,6 +48,11 @@ const UserSchema = new Schema<IUser>(
         message: "Role must be one of: admin, reseller, or retail",
       },
       default: "retail",
+    },
+    resellerCategoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "ResellerCategory",
+      required: false,
     },
     passwordResetToken: {
       type: String,
