@@ -21,7 +21,7 @@ async function dbConnect() {
 
   if (!cached.promise) {
     const opts = {
-      dbName: "db_pawship_catalog",
+      dbName: process.env.MONGODB_DATABASE_NAME,
       bufferCommands: false,
     };
 
