@@ -78,7 +78,7 @@ export default function Sidebar() {
     .toUpperCase();
 
   return (
-    <>
+    <div>
       {/* Overlay for mobile when sidebar is expanded */}
       {!isCollapsed && (
         <div
@@ -188,6 +188,6 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

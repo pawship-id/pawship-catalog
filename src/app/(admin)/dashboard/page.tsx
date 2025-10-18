@@ -45,7 +45,6 @@ export default function DashboardPage() {
           Welcome to your Pawship CMS admin dashboard
         </p>
       </div>
-
       <div className="grid grid-cols-1 min-[570px]:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         {stats.map((stat) => (
           <Card key={stat.title} className="bg-white shadow-md border">
@@ -66,7 +65,6 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-white shadow-md border">
           <CardHeader>

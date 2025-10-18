@@ -14,9 +14,6 @@ import { CategoryData } from "@/lib/types/category";
 import { getAll } from "@/lib/apiService";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ArrowLeftFromLine,
-  ChevronLeft,
-  ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   Plus,
@@ -30,12 +27,19 @@ import { VariantEditor, VariantRow, VariantType } from "./varian-editor";
 import { Button } from "@/components/ui/button";
 import { showErrorAlert } from "@/lib/helpers/sweetalert2";
 
-export default function FormProduct() {
+interface ProductFormProps {
+  initialData?: any;
+  productId?: string;
+}
+
+export default function FormProduct({
+  initialData,
+  productId,
+}: ProductFormProps) {
   const [formData, setFormData] = useState({
     sku: "",
     title: "",
-    images: [] as File[],
-    video: [] as File[],
+    productMedia: [] as File[],
     description: "",
     retailPrice: { USD: 0, IDR: 0, SGD: 0 },
     resellerPrice: {
@@ -70,6 +74,13 @@ export default function FormProduct() {
     shipping: { scheme: "" },
     marketingLinks: [] as string[],
   });
+
+  const [previewSizeProduct, setPreviewSizeProduct] = useState<string | null>(
+    null
+  );
+  const [showSizeProductModal, setShowSizeProductModal] = useState(false);
+
+  const isEditMode = !!productId;
   const [variantRows, setVariantRows] = useState<VariantRow[]>([]);
   const [variantTypes, setVariantTypes] = useState<VariantType[]>(
     () =>
@@ -104,9 +115,8 @@ export default function FormProduct() {
   };
 
   const tabMenu = [
-    { value: "basic", label: "Basic Info" },
-    { value: "pricing", label: "Pricing" },
-    { value: "images-variations", label: "Images & Variations" },
+    { value: "product-details", label: "Product Details" },
+    { value: "variations-pricing", label: "Variation & Pricing" },
     { value: "additional", label: "Additional" },
   ];
   const [activeTab, setActiveTab] = useState(tabMenu[0].value);
@@ -161,7 +171,7 @@ export default function FormProduct() {
     <>
       <form className="space-y-2 md:space-y-4" autoComplete="off">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             {tabMenu.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value}>
                 {tab.label}
@@ -169,7 +179,7 @@ export default function FormProduct() {
             ))}
           </TabsList>
 
-          <TabsContent value="basic" className="space-y-4 my-3">
+          <TabsContent value="product-details" className="space-y-4 my-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label
@@ -271,12 +281,172 @@ export default function FormProduct() {
                 htmlFor="categoryId"
                 className="text-base font-medium text-gray-700"
               >
-                Description *
+                Product Images & Videos
+              </Label>
+              <div className="relative py-1">
+                <input
+                  type="file"
+                  multiple
+                  disabled={formData.productMedia.length === 9}
+                  accept="image/*,video/*"
+                  className={`absolute inset-0 w-full h-full opacity-0 z-10 ${formData.productMedia.length === 9 ? "cursor-not-allowed" : "cursor-pointer"}`}
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    // Limit to maximum 9 images
+                    const limitedFiles = files.slice(0, 9);
+                    setFormData({ ...formData, productMedia: limitedFiles });
+                    console.log("Selected files:", limitedFiles);
+                  }}
+                />
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Click to upload images / video or drag and drop
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PNG, JPG, GIF, MP4, MOV, WEBM up to 5MB (Max 9 items)
+                  </p>
+                </div>
+              </div>
+              {formData.productMedia.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.productMedia.map((image, index) => (
+                    <Badge key={index} variant="secondary">
+                      Media {index + 1}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            productMedia: prev.productMedia.filter(
+                              (_, i) => i !== index
+                            ),
+                          }))
+                        }
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="tags"
+                className="text-base font-medium text-gray-700"
+              >
+                Tags
+              </Label>
+              <div className="space-y-1">
+                <Input
+                  id="tags"
+                  placeholder="Enter tags"
+                  className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
+                  required
+                  autoFocus
+                />
+                <small>
+                  Separate multiple tags with commas (e.g., cat, dog).
+                </small>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="categoryId"
+                className="text-base font-medium text-gray-700"
+              >
+                Description Product *
               </Label>
               <Textarea
                 placeholder="Enter description"
                 className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="image"
+                className="text-base font-medium text-gray-700"
+              >
+                Upload Size Product
+              </Label>
+              <Input
+                id="image"
+                type="file"
+                accept="image/*"
+                className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  let url: string | null = null;
+
+                  if (file) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      image: file,
+                    }));
+                    url = URL.createObjectURL(file);
+                  } else {
+                    setFormData((prev) => ({
+                      ...prev,
+                      image:
+                        isEditMode && initialData?.imageUrl
+                          ? initialData.imageUrl
+                          : null,
+                    }));
+                  }
+
+                  setPreviewSizeProduct(
+                    url ||
+                      (isEditMode && initialData?.imageUrl
+                        ? initialData.imageUrl
+                        : null)
+                  );
+                }}
+              />
+
+              <div className="flex justify-between items-center mt-2">
+                <small className="text-destructive text-sm">
+                  * Maximum input 1 image
+                </small>
+                {previewSizeProduct && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSizeProductModal(true)}
+                    className="text-blue-500 hover:text-blue-700 text-sm font-medium cursor-pointer"
+                  >
+                    Show image
+                  </button>
+                )}
+              </div>
+
+              {/* Image Modal */}
+              {showSizeProductModal && previewSizeProduct && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-white p-4 rounded-lg max-w-md w-full mx-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium">
+                        Size Product Image Preview
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowSizeProductModal(false)}
+                        className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <img
+                      src={previewSizeProduct}
+                      alt="Category preview"
+                      className="w-full h-auto object-cover rounded-lg border border-gray-300"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -323,162 +493,8 @@ export default function FormProduct() {
             </div>
           </TabsContent>
 
-          <TabsContent value="pricing" className="space-y-4 my-3">
-            <div className="space-y-3">
-              <h3 className="text-base font-medium text-gray-700">
-                Retail Pricing
-              </h3>
-              <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="retail-usd">USD *</Label>
-                  <Input
-                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    id="retail-usd"
-                    type="number"
-                    step="0.01"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="retail-idr">IDR *</Label>
-                  <Input
-                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    id="retail-idr"
-                    type="number"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="retail-sgd">SGD *</Label>
-                  <Input
-                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    id="retail-sgd"
-                    type="number"
-                    step="0.01"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="retail-hkd">HKD *</Label>
-                  <Input
-                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    id="retail-hkd"
-                    type="number"
-                    step="0.01"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* <div className="space-y-3 mt-6">
-              <h3 className="text-base font-medium text-gray-700">
-                Reseller Pricing{" "}
-                <small className="text-sm text-gray-500">
-                  (Base price for reseller)
-                </small>
-              </h3>
-              <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="retail-usd">USD *</Label>
-                  <Input
-                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    id="retail-usd"
-                    type="number"
-                    step="0.01"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="retail-idr">IDR *</Label>
-                  <Input
-                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    id="retail-idr"
-                    type="number"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="retail-sgd">SGD *</Label>
-                  <Input
-                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    id="retail-sgd"
-                    type="number"
-                    step="0.01"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="retail-hkd">HKD *</Label>
-                  <Input
-                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    id="retail-hkd"
-                    type="number"
-                    step="0.01"
-                    required
-                  />
-                </div>
-              </div>
-            </div> */}
-          </TabsContent>
-
-          <TabsContent value="images-variations" className="space-y-4 my-3">
-            <div className="space-y-2">
-              <Label
-                htmlFor="categoryId"
-                className="text-base font-medium text-gray-700"
-              >
-                Product Images *
-              </Label>
-              <div className="relative py-1">
-                <input
-                  type="file"
-                  multiple
-                  disabled={formData.images.length === 9}
-                  accept="image/*"
-                  className={`absolute inset-0 w-full h-full opacity-0 z-10 ${formData.images.length === 9 ? "cursor-not-allowed" : "cursor-pointer"}`}
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    // Limit to maximum 9 images
-                    const limitedFiles = files.slice(0, 9);
-                    setFormData({ ...formData, images: limitedFiles });
-                    console.log("Selected files:", limitedFiles);
-                  }}
-                />
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Click to upload images or drag and drop
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    PNG, JPG, GIF up to 10MB (Max 9 images)
-                  </p>
-                </div>
-              </div>
-              {formData.images.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.images.map((image, index) => (
-                    <Badge key={index} variant="secondary">
-                      Image {index + 1}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            images: prev.images.filter((_, i) => i !== index),
-                          }))
-                        }
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
+          <TabsContent value="variations-pricing" className="space-y-4 my-3">
+            {/* <div className="space-y-2">
               <Label
                 htmlFor="videos"
                 className="text-base font-medium text-gray-700"
@@ -531,7 +547,7 @@ export default function FormProduct() {
                   ))}
                 </div>
               )}
-            </div>
+            </div> */}
 
             <div className="space-y-2">
               <Label className="text-base font-medium">Tipe Variasi</Label>

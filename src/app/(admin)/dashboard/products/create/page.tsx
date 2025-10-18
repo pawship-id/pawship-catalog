@@ -10,7 +10,6 @@ export default function CreateProductPage() {
         </h1>
         <p className="text-muted-foreground text-lg">Create New Product</p>
       </div>
-
       <FormProduct />
     </div>
   );

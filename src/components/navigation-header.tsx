@@ -23,6 +23,7 @@ import {
   Settings,
   MapPin,
   LogOut,
+  Home,
 } from "lucide-react";
 import SearchBar from "@/components/search-bar";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -286,6 +287,17 @@ export default function NavigationHeader() {
                     <span>Halo, {session.user?.fullName.split(" ")[0]}</span>
                   </DropdownMenuItem>
                   <div className="sm:hidden border-t my-1"></div>
+                  {session.user.role === "admin" && (
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link
+                        href="/dashboard"
+                        className="flex items-center space-x-2"
+                      >
+                        <Home className="h-4 w-4" />
+                        <span>CMS Admin</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link
                       href="/wishlist"
