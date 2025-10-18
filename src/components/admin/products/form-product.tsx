@@ -494,61 +494,6 @@ export default function FormProduct({
           </TabsContent>
 
           <TabsContent value="variations-pricing" className="space-y-4 my-3">
-            {/* <div className="space-y-2">
-              <Label
-                htmlFor="videos"
-                className="text-base font-medium text-gray-700"
-              >
-                Product Videos
-              </Label>
-              <div className="relative py-1">
-                <input
-                  type="file"
-                  multiple
-                  disabled={formData.video?.length === 3}
-                  accept="video/*"
-                  className={`absolute inset-0 w-full h-full opacity-0 z-10 ${formData.video?.length === 3 ? "cursor-not-allowed" : "cursor-pointer"}`}
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    // Limit to maximum 3 videos
-                    const limitedFiles = files.slice(0, 3);
-                    setFormData({ ...formData, video: limitedFiles });
-                    console.log("Selected videos:", limitedFiles);
-                  }}
-                />
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Click to upload videos or drag and drop
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    MP4, MOV, AVI up to 50MB (Max 3 videos)
-                  </p>
-                </div>
-              </div>
-              {formData.video?.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.video.map((video, index) => (
-                    <Badge key={index} variant="secondary">
-                      Video {index + 1}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            video: prev.video.filter((_, i) => i !== index),
-                          }))
-                        }
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div> */}
-
             <div className="space-y-2">
               <Label className="text-base font-medium">Tipe Variasi</Label>
               <div className="mt-3">

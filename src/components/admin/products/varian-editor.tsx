@@ -5,8 +5,8 @@ import { useMemo, useRef, useState } from "react";
 import { GripVertical, ImagePlus, X, Plus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { showErrorAlert } from "@/lib/helpers/sweetalert2";
 
 export interface VariantType {
   id: string;
@@ -21,14 +21,8 @@ export interface VariantRow {
   sku: string;
   attrs: Record<string, string>;
   name: string;
-  barcode?: string;
   stock?: string;
-  price?: {
-    usd?: number;
-    idr?: number;
-    sgd?: number;
-    hkd?: number;
-  };
+  price?: any;
   selected?: boolean;
 }
 
@@ -67,10 +61,90 @@ export function VariantEditor({
     [variantTypes]
   );
 
-  const defaultOptions = ["Warna", "Ukuran"];
+  const defaultOptions = ["Color", "Size"];
   const existingTypeNames = new Set(
     variantTypes.map((t) => t.name.toLowerCase())
   );
+
+  const [defaultStockPrice, setDefaultStockPrice] = useState({
+    stockDefault: "",
+    priceDefault: "",
+  });
+
+  const currencyList = [
+    {
+      currency: "IDR",
+      rate: 1,
+    },
+    {
+      currency: "USD",
+      rate: 16000,
+    },
+    {
+      currency: "SGD",
+      rate: 11000,
+    },
+    {
+      currency: "HKD",
+      rate: 2000,
+    },
+  ];
+
+  const handleApply = () => {
+    const hasSelectedRows = value.some((row) => row.selected);
+
+    if (!defaultStockPrice.stockDefault) {
+      showErrorAlert(undefined, "Please input a stock");
+      return;
+    }
+
+    if (!defaultStockPrice.priceDefault) {
+      showErrorAlert(undefined, "Please input a price IDR");
+      return;
+    }
+
+    if (!hasSelectedRows) {
+      showErrorAlert(undefined, "Please select row");
+      return; // exit early if no rows are selected
+    }
+
+    const updatedRows = value.map((item) => {
+      // only update selected rows
+      if (!item.selected) {
+        return item;
+      }
+
+      // change price
+      let tempPrice: Record<string, number> = {};
+
+      currencyList.forEach((el) => {
+        if (el.currency === "IDR") {
+          tempPrice[el.currency] =
+            Number(defaultStockPrice.priceDefault) || item.price?.IDR;
+        } else {
+          let price =
+            Number(defaultStockPrice.priceDefault) / el.rate ||
+            item.price[el.currency];
+
+          tempPrice[el.currency] = Number(price.toFixed(1));
+        }
+      });
+
+      return {
+        ...item,
+        stock: defaultStockPrice.stockDefault || item.stock,
+        price: tempPrice,
+        selected: false,
+      };
+    });
+
+    onChange(updatedRows);
+
+    setDefaultStockPrice({
+      stockDefault: "",
+      priceDefault: "",
+    });
+  };
 
   const availableOptions = defaultOptions.filter(
     (option) => !existingTypeNames.has(option.toLowerCase())
@@ -152,7 +226,6 @@ export function VariantEditor({
         attrs,
         sku: "",
         name: buildNameFromAttrs(attrs, order),
-        barcode: "",
         image: undefined,
       },
     ]);
@@ -296,6 +369,44 @@ export function VariantEditor({
           </Button>
         </div>
 
+        <div className="flex items-center gap-2">
+          <div className="space-y-2">
+            <Input
+              placeholder="Enter stock"
+              className="border-gray-300 w-30"
+              value={defaultStockPrice.stockDefault}
+              onChange={(e) =>
+                setDefaultStockPrice({
+                  ...defaultStockPrice,
+                  stockDefault: e.target.value,
+                })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Input
+              placeholder="Enter IDR price"
+              className="border-gray-300 w-40"
+              value={defaultStockPrice.priceDefault}
+              onChange={(e) =>
+                setDefaultStockPrice({
+                  ...defaultStockPrice,
+                  priceDefault: e.target.value,
+                })
+              }
+            />
+          </div>
+          <Button
+            type="button"
+            className="cursor-pointer"
+            disabled={value.length === 0}
+            size="sm"
+            onClick={handleApply}
+          >
+            Apply
+          </Button>
+        </div>
+
         <div className="w-full mb-2">
           <div className="min-w-max">
             <table className="w-full text-sm border">
@@ -322,16 +433,14 @@ export function VariantEditor({
                     </th>
                   ))}
                   <th className="w-56 px-2 text-left">Nama Variasi</th>
-                  <th className="w-56 px-2 text-left">Barcode</th>
                   <th className="w-40 px-2 text-left">Stock</th>
-                  {value.length > 0 && (
-                    <>
-                      <th className="w-40 px-2 text-left">Harga (USD)</th>
-                      <th className="w-40 px-2 text-left">Harga (IDR)</th>
-                      <th className="w-40 px-2 text-left">Harga (SGD)</th>
-                      <th className="w-40 px-2 text-left">Harga (HKD)</th>
-                    </>
-                  )}
+                  {value.length && currencyList.length
+                    ? currencyList.map((el, idx) => (
+                        <th key={idx} className="w-40 px-2 text-left">
+                          Harga ({el.currency})
+                        </th>
+                      ))
+                    : ""}
                 </tr>
               </thead>
               <tbody>
@@ -365,7 +474,7 @@ export function VariantEditor({
                           <button
                             type="button"
                             onClick={() => handleFilePick(row.id)}
-                            className="flex h-8 w-8 items-center justify-center rounded border"
+                            className="flex h-8 w-8 items-center justify-center rounded border cursor-pointer"
                             aria-label="Tambah gambar"
                           >
                             <ImagePlus className="h-4 w-4" />
@@ -388,13 +497,14 @@ export function VariantEditor({
                         onChange={(e) =>
                           updateRow(row.id, { sku: e.target.value })
                         }
-                        className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
+                        className="border-gray-300"
                         placeholder="MonaPeach:L"
                       />
                     </td>
                     {typeNames.map((tName) => (
                       <td key={`${row.id}-${tName}`} className="px-2">
                         <Input
+                          className="border-gray-300"
                           value={row.attrs?.[tName] || ""}
                           onChange={(e) => {
                             const attrs = {
@@ -410,6 +520,7 @@ export function VariantEditor({
                     ))}
                     <td className="px-2">
                       <Input
+                        className="border-gray-300"
                         value={row.name}
                         onChange={(e) =>
                           updateRow(row.id, { name: e.target.value })
@@ -419,103 +530,38 @@ export function VariantEditor({
                     </td>
                     <td className="px-2">
                       <Input
-                        value={row.barcode || ""}
-                        onChange={(e) =>
-                          updateRow(row.id, { barcode: e.target.value })
-                        }
-                        placeholder="MOPH:L"
-                      />
-                    </td>
-                    <td className="px-2">
-                      <Input
+                        className="border-gray-300"
                         type="number"
-                        value={row.stock}
+                        value={row.stock || ""}
                         onChange={(e) =>
                           updateRow(row.id, { stock: e.target.value })
                         }
                         placeholder="0"
                       />
                     </td>
-                    {value.length > 0 && (
-                      <>
-                        <td className="px-2">
+                    {value.length > 0 &&
+                      currencyList.length &&
+                      currencyList.map((item, idx) => (
+                        <td key={idx} className="px-2">
                           <Input
                             type="number"
                             inputMode="decimal"
-                            value={row.price?.usd ?? ""}
+                            value={row.price?.[item.currency] ?? ""}
                             onChange={(e) =>
                               updateRow(row.id, {
                                 price: {
                                   ...row.price,
-                                  usd: e.target.value
+                                  [item.currency]: e.target.value
                                     ? Number(e.target.value)
-                                    : undefined,
+                                    : "",
                                 },
                               })
                             }
                             placeholder="0"
-                            className="h-8 text-xs"
+                            className="h-8 text-xs border-gray-300"
                           />
                         </td>
-                        <td className="px-2">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            value={row.price?.idr ?? ""}
-                            onChange={(e) =>
-                              updateRow(row.id, {
-                                price: {
-                                  ...row.price,
-                                  idr: e.target.value
-                                    ? Number(e.target.value)
-                                    : undefined,
-                                },
-                              })
-                            }
-                            placeholder="0"
-                            className="h-8 text-xs"
-                          />
-                        </td>
-                        <td className="px-2">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            value={row.price?.sgd ?? ""}
-                            onChange={(e) =>
-                              updateRow(row.id, {
-                                price: {
-                                  ...row.price,
-                                  sgd: e.target.value
-                                    ? Number(e.target.value)
-                                    : undefined,
-                                },
-                              })
-                            }
-                            placeholder="0"
-                            className="h-8 text-xs"
-                          />
-                        </td>
-                        <td className="px-2">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            value={row.price?.hkd ?? ""}
-                            onChange={(e) =>
-                              updateRow(row.id, {
-                                price: {
-                                  ...row.price,
-                                  hkd: e.target.value
-                                    ? Number(e.target.value)
-                                    : undefined,
-                                },
-                              })
-                            }
-                            placeholder="0"
-                            className="h-8 text-xs"
-                          />
-                        </td>
-                      </>
-                    )}
+                      ))}
                   </tr>
                 ))}
                 {value.length === 0 && (
