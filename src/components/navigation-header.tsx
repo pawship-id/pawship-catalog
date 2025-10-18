@@ -10,25 +10,46 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Search,
   ShoppingCart,
   User,
   ChevronDown,
-  Heart,
-  Package,
-  LogOut,
-  Settings,
   Menu,
   X,
+  ChevronRight,
+  Heart,
+  Settings,
+  MapPin,
+  LogOut,
+  Home,
 } from "lucide-react";
+import SearchBar from "@/components/search-bar";
+import { useCurrency } from "@/context/CurrencyContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { signOut, useSession } from "next-auth/react";
+import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
 
 export default function NavigationHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedItems, setExpandedItems] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [expandedSubItems, setExpandedSubItems] = useState<{
+    [key: string]: boolean;
+  }>({});
+
+  const { currency, setCurrency, loading } = useCurrency();
+  const { data: session, status } = useSession();
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -38,23 +59,40 @@ export default function NavigationHeader() {
       subItems: [
         {
           name: "Collections",
-          subItems: ["Bibs/Collar", "Harness", "Costume", "Basic"],
+          subItems: [
+            {
+              name: "Bibs/Collar",
+              href: `/catalog/${encodeURIComponent("bibs/collar")}`, // encode to "bibs%2Fcollar"
+            },
+            {
+              name: "Harness",
+              href: "/catalog/harness",
+            },
+            {
+              name: "Costume",
+              href: "/catalog/custome",
+            },
+            {
+              name: "Basic",
+              href: "/catalog/basic",
+            },
+          ],
         },
         {
           name: "New Arrivals",
-          href: "/",
+          href: "/catalog/new-arrivals",
         },
         {
           name: "Limited Stocks",
-          href: "/",
+          href: "/catalog/limited-stocks",
         },
         {
           name: "Best Sellers",
-          href: "/",
+          href: "/catalog/best-sellers",
         },
         {
           name: "Sale",
-          href: "/",
+          href: "/catalog/sale",
         },
       ],
     },
@@ -62,14 +100,47 @@ export default function NavigationHeader() {
       name: "Reseller",
       href: "/reseller",
       subItems: [
-        { name: "Partners Program", href: "/" },
-        { name: "White Labeling", href: "/" },
+        { name: "Partners Program", href: "/reseller" },
+        { name: "White Labeling", href: "/reseller/white-labeling" },
       ],
     },
-    { name: "About Us", href: "/about-us" },
-    { name: "Contact Us", href: "/contact-us" },
-    { name: "FAQ", href: "/faq" },
+    {
+      name: "More",
+      href: "/",
+      subItems: [
+        { name: "About Us", href: "/about-us" },
+        { name: "Contact Us", href: "/contact-us" },
+        { name: "FAQ", href: "/faq" },
+        { name: "Stores", href: "/stores" },
+        { name: "Payments", href: "/payments" },
+      ],
+    },
   ];
+
+  const toggleExpandedItem = (index: number) => {
+    setExpandedItems((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
+  const toggleExpandedSubItem = (key: string) => {
+    setExpandedSubItems((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handleSignOut = async () => {
+    const result = await showConfirmAlert(
+      "You will be logged out of your account",
+      "Yes, logout!"
+    );
+
+    if (result.isConfirmed) {
+      await signOut({ callbackUrl: "/login" });
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -100,7 +171,7 @@ export default function NavigationHeader() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-6">
+          <nav className="hidden xl:flex items-center space-x-6">
             {navigation.map((item, idx) => (
               <Fragment key={idx}>
                 {item.subItems ? (
@@ -129,8 +200,8 @@ export default function NavigationHeader() {
                               >
                                 {subItem.subItems.map((subItem, idx) => (
                                   <DropdownMenuItem asChild key={idx}>
-                                    <Link href="/collections/bibs-collar">
-                                      {subItem}
+                                    <Link href={subItem.href}>
+                                      {subItem.name}
                                     </Link>
                                   </DropdownMenuItem>
                                 ))}
@@ -138,9 +209,7 @@ export default function NavigationHeader() {
                             </DropdownMenu>
                           ) : (
                             <DropdownMenuItem asChild key={idx}>
-                              <Link href="/collections/costume">
-                                {subItem.name}
-                              </Link>
+                              <Link href={subItem.href}>{subItem.name}</Link>
                             </DropdownMenuItem>
                           )}
                         </Fragment>
@@ -149,7 +218,7 @@ export default function NavigationHeader() {
                   </DropdownMenu>
                 ) : (
                   <Link
-                    href="/"
+                    href={item.href}
                     className="text-foreground hover:text-primary transition-colors relative group py-3"
                   >
                     {item.name}
@@ -165,23 +234,26 @@ export default function NavigationHeader() {
           {/* Right Side Actions */}
           <div className="flex items-center">
             {/* Location */}
-            <div className="hidden md:flex">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex items-center space-x-1"
+            <div className="hidden lg:flex">
+              {loading ? (
+                <p>Detecting location...</p>
+              ) : (
+                <div className="relative">
+                  <Select
+                    value={currency}
+                    onValueChange={(value) => setCurrency(value as any)}
                   >
-                    <span className="text-sm font-medium">IDR | Indonesia</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48" align="end">
-                  <DropdownMenuItem>SGD | Singapore</DropdownMenuItem>
-                  <DropdownMenuItem>USD | United State</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
+                      <SelectValue placeholder="Select Currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD | United States</SelectItem>
+                      <SelectItem value="IDR">IDR | Indonesia</SelectItem>
+                      <SelectItem value="SGD">SGD | Singapore</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Search */}
@@ -194,78 +266,123 @@ export default function NavigationHeader() {
               <Search className="h-4 w-4" />
             </Button>
 
-            {/* Profile/Login */}
-            {/* <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center space-x-1"
-                >
-                  <User className="h-4 w-4" />
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-48" align="end">
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center space-x-2"
+            {/* User */}
+            {session && status === "authenticated" ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="relative flex items-center space-x-1"
                   >
-                    <Settings className="h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="flex items-center space-x-2">
+                    <span className="hidden sm:inline">
+                      Halo, {session.user?.fullName.split(" ")[0]}
+                    </span>
                     <User className="h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/orders" className="flex items-center space-x-2">
-                    <Package className="h-4 w-4" />
-                    <span>Orders</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/wishlist"
-                    className="flex items-center space-x-2"
-                  >
-                    <Heart className="h-4 w-4" />
-                    <span>Wishlist</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/logout" className="flex items-center space-x-2">
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu> */}
-            <Button variant="ghost" size="sm" className="relative" asChild>
-              <Link href="/">
-                <User className="h-4 w-4" />
-              </Link>
-            </Button>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem className="sm:hidden font-medium">
+                    <User className="h-4 w-4" />
+                    <span>Halo, {session.user?.fullName.split(" ")[0]}</span>
+                  </DropdownMenuItem>
+                  <div className="sm:hidden border-t my-1"></div>
+                  {session.user.role === "admin" && (
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link
+                        href="/dashboard"
+                        className="flex items-center space-x-2"
+                      >
+                        <Home className="h-4 w-4" />
+                        <span>CMS Admin</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      href="/wishlist"
+                      className="flex items-center space-x-2"
+                    >
+                      <Heart className="h-4 w-4" />
+                      <span>Favorite</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/cart" className="flex items-center space-x-2">
+                      <ShoppingCart className="h-4 w-4" />
+                      <span>Shopping Cart</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      href="/address"
+                      className="flex items-center space-x-2"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      <span>Address</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      href="/settings"
+                      className="flex items-center space-x-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Setting</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <div className=" border-t my-1"></div>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center space-x-2 w-full"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </button>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="relative flex items-center space-x-1"
+              >
+                <Link href={"/login"}>
+                  <User className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
 
-            {/* Cart */}
-            <Button variant="ghost" size="sm" className="relative" asChild>
-              <Link href="/cart">
-                <ShoppingCart className="h-4 w-4" />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                  3
-                </Badge>
-              </Link>
-            </Button>
+            {/* nav item favorite and cart before login */}
+            {!session && status === "unauthenticated" && (
+              <>
+                {/* Favorite */}
+                <Button variant="ghost" size="sm" className="relative" asChild>
+                  <Link href="/wishlist">
+                    <Heart className="h-4 w-4" />
+                  </Link>
+                </Button>
+
+                {/* Cart */}
+                <Button variant="ghost" size="sm" className="relative" asChild>
+                  <Link href="/cart">
+                    <ShoppingCart className="h-4 w-4" />
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                      3
+                    </Badge>
+                  </Link>
+                </Button>
+              </>
+            )}
 
             {/* Mobile Menu Toggle */}
             <Button
               variant="ghost"
               size="sm"
-              className="lg:hidden"
+              className="xl:hidden"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? (
@@ -279,47 +396,79 @@ export default function NavigationHeader() {
 
         {/* Mobile Navigation Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden border-t py-4">
-            <nav className="flex flex-col space-y-4">
+          <div className="xl:hidden border-t py-4">
+            <nav className="flex flex-col space-y-2">
               {navigation.map((item, idx) => (
                 <Fragment key={idx}>
                   {item.subItems ? (
                     <div className="space-y-2">
-                      <p className="font-medium text-foreground">{item.name}</p>
-                      {item.subItems.map((subItem, idx) => (
-                        <div className="pl-4 space-y-2" key={idx}>
-                          {subItem.subItems ? (
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-muted-foreground">
-                                {subItem.name}
-                              </p>
-                              <div className="pl-4 space-y-1">
-                                {subItem.subItems.map((subItem, idx) => (
-                                  <Link
-                                    href="/collections/bibs-collar"
-                                    className="block text-xs text-muted-foreground hover:text-primary"
-                                    key={idx}
+                      <button
+                        onClick={() => toggleExpandedItem(idx)}
+                        className="flex items-center justify-between w-full text-left font-medium text-foreground hover:text-primary transition-colors py-2"
+                      >
+                        <span>{item.name}</span>
+                        <ChevronRight
+                          className={`h-4 w-4 transition-transform ${
+                            expandedItems[idx] ? "rotate-90" : ""
+                          }`}
+                        />
+                      </button>
+
+                      {expandedItems[idx] && (
+                        <div className="pl-4 space-y-2">
+                          {item.subItems.map((subItem, subIdx) => (
+                            <div key={subIdx}>
+                              {subItem.subItems ? (
+                                <div className="space-y-2">
+                                  <button
+                                    onClick={() =>
+                                      toggleExpandedSubItem(`${idx}-${subIdx}`)
+                                    }
+                                    className="flex items-center justify-between w-full text-left text-sm text-muted-foreground hover:text-primary py-1"
                                   >
-                                    {subItem}
-                                  </Link>
-                                ))}
-                              </div>
+                                    <span>{subItem.name}</span>
+                                    <ChevronRight
+                                      className={`h-3 w-3 transition-transform ${
+                                        expandedSubItems[`${idx}-${subIdx}`]
+                                          ? "rotate-90"
+                                          : ""
+                                      }`}
+                                    />
+                                  </button>
+
+                                  {expandedSubItems[`${idx}-${subIdx}`] && (
+                                    <div className="pl-4 space-y-1">
+                                      {subItem.subItems.map(
+                                        (nestedItem, nestedIdx) => (
+                                          <Link
+                                            href={nestedItem.href}
+                                            className="block text-xs text-muted-foreground hover:text-primary py-1"
+                                            key={nestedIdx}
+                                          >
+                                            {nestedItem.name}
+                                          </Link>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <Link
+                                  href={subItem.href || "/"}
+                                  className="block text-sm text-muted-foreground hover:text-primary py-1"
+                                >
+                                  {subItem.name}
+                                </Link>
+                              )}
                             </div>
-                          ) : (
-                            <Link
-                              href="/white-labeling"
-                              className="block text-sm text-muted-foreground hover:text-primary"
-                            >
-                              {subItem.name}
-                            </Link>
-                          )}
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   ) : (
                     <Link
-                      href="/"
-                      className="text-foreground hover:text-primary transition-colors relative"
+                      href={item.href || "/"}
+                      className="text-foreground hover:text-primary transition-colors py-2"
                     >
                       {item.name}
                     </Link>
@@ -328,75 +477,33 @@ export default function NavigationHeader() {
               ))}
             </nav>
 
-            <div className="md:hidden mt-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex items-center "
+            <div className="lg:hidden mt-4">
+              {loading ? (
+                <p>Detecting location...</p>
+              ) : (
+                <div className="relative">
+                  <Select
+                    value={currency}
+                    onValueChange={(value) => setCurrency(value as any)}
                   >
-                    <span className="text-sm font-medium">IDR | Indonesia</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48" align="start">
-                  <DropdownMenuItem>SGD | Singapore</DropdownMenuItem>
-                  <DropdownMenuItem>USD | United State</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
+                      <SelectValue placeholder="Select Currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD | United States</SelectItem>
+                      <SelectItem value="IDR">IDR | Indonesia</SelectItem>
+                      <SelectItem value="SGD">SGD | Singapore</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
 
-      {isSearchOpen && (
-        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm">
-          <div className="container mx-auto px-4 pt-20">
-            <div className="max-w-4xl mx-auto">
-              <div className="relative bg-white rounded-full shadow-lg border-2 border-gray-200">
-                <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400 h-6 w-6" />
-                <Input
-                  type="search"
-                  placeholder="Enter Product Name"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-16 pr-20 py-6 text-lg w-full border-0 bg-transparent rounded-full focus:ring-0 focus:outline-none placeholder:text-gray-400"
-                  autoFocus
-                />
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-full bg-gray-100 hover:bg-gray-200 p-3"
-                >
-                  <Search className="h-6 w-6 text-gray-600" />
-                </Button>
-              </div>
-
-              <div className="mt-16 text-center">
-                <div className="mb-4">
-                  <Search className="h-16 w-16 text-gray-300 mx-auto" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  You have not searched anything yet
-                </h3>
-                <p className="text-gray-500">
-                  Start typing a product name in the input
-                </p>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsSearchOpen(false)}
-                className="absolute top-4 right-4 rounded-full p-2"
-              >
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Search Bar Navigation */}
+      {isSearchOpen && <SearchBar setIsSearchOpen={setIsSearchOpen} />}
     </header>
   );
 }
