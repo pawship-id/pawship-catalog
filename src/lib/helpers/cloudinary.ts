@@ -1,5 +1,8 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
+import path from "path";
+import os from "os";
+import { writeFile } from "fs/promises";
 
 export interface UploadResult {
   secureUrl: string;
@@ -14,15 +17,29 @@ cloudinary.config({
 
 /**
  * Helper function to upload files from temporary local path to Cloudinary.
- * @param filePath Temporary file path created by Formidable.
+ * @param file File from uploaded file or string with file path
  * @param folder Target folder in Cloudinary (e.g., 'categories').
  * @returns Promise with secure URL and public ID.
  */
 export const uploadFileToCloudinary = async (
-  filePath: string,
+  file: File | string,
   folder: string = "products",
   resource_type: "image" | "video" | "raw" | "auto" = "image"
 ): Promise<UploadResult> => {
+  let filePath: string;
+
+  if (file instanceof File) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const filename = `${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+    let tempFilePath = path.join(os.tmpdir(), filename);
+
+    await writeFile(tempFilePath, buffer);
+
+    filePath = tempFilePath;
+  } else {
+    filePath = file;
+  }
+
   try {
     const result = await cloudinary.uploader.upload(filePath, {
       folder: `pawship catalog/${folder}`,
@@ -130,3 +147,5 @@ export const deleteFileFromCloudinary = async (
     throw new Error("An error occurred during Cloudinary deletion.");
   }
 };
+
+export const cloudinaryClient = cloudinary;

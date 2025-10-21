@@ -6,7 +6,7 @@ import { GripVertical, ImagePlus, X, Plus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { showErrorAlert } from "@/lib/helpers/sweetalert2";
+import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
 import { VariantRow, VariantType } from "@/lib/types/product";
 
 type VariantEditorProps = {
@@ -213,8 +213,57 @@ export function VariantEditor({
     ]);
   }
 
-  function removeSelected() {
-    onChange(value.filter((v) => !v.selected));
+  async function removeSelected() {
+    const itemsToDelete = value.filter((v) => v.selected);
+
+    const deletionPromises = itemsToDelete.map(async (item) => {
+      // only delete if the item has a public id
+      if (item.image?.imagePublicId) {
+        try {
+          // call the API to delete files from Cloudinary
+          const response = await fetch("/api/delete-file", {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ publicId: item.image.imagePublicId }),
+          });
+
+          if (!response.ok) {
+            // if the API responds with an error, log it and proceed to the next item.
+            // don't throw an error here so that other items can still be processed.
+            const errorBody = await response.json();
+            console.error(
+              `Failed to delete Cloudinary image for ID ${item.codeRow}:`,
+              errorBody.message || "Unknown error"
+            );
+            return { success: false, codeRow: item.codeRow };
+          }
+
+          console.log(
+            `Cloudinary image successfully deleted for ID: ${item.codeRow}`
+          );
+          return { success: true, codeRow: item.codeRow };
+        } catch (error) {
+          // handle network errors or other errors
+          console.error(
+            `Network error while deleting image for ID ${item.codeRow}:`,
+            error
+          );
+          return { success: false, codeRow: item.codeRow };
+        }
+      }
+
+      // if there is no publicId, assume it is successful (nothing to delete)
+      return { success: true, codeRow: item.codeRow };
+    });
+
+    // wait for all Promise deletion to complete
+    await Promise.all(deletionPromises);
+
+    // update state: Delete rows that have 'selected: true'
+    const remainingItems = value.filter((v) => !v.selected);
+    onChange(remainingItems);
   }
 
   function handleFilePick(id: string) {
@@ -223,19 +272,76 @@ export function VariantEditor({
     el.click();
   }
 
-  function handleFileChange(
+  async function handleFileChange(
     e: React.ChangeEvent<HTMLInputElement>,
     id: string
   ) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateRow(id, {
-        image: String(reader.result),
+
+    // find row
+    let findRow = value.find((el) => el.codeRow === id);
+
+    // confirm update image, when image already exists
+    let isConfirmed = false; // default set false (do not change image)
+
+    if (findRow?.image) {
+      let result = await showConfirmAlert(
+        "This variant image already exists. Are you sure you want to replace it with a new image?",
+        "I'm sure"
+      );
+
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      isConfirmed = true;
+    }
+
+    try {
+      // append formData input image & folder
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("folder", "products");
+
+      // call API upload-file
+      let response = await fetch("/api/upload-file", {
+        method: "POST",
+        body: formData,
       });
-    };
-    reader.readAsDataURL(file);
+
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(errorBody.message || "Internal server error");
+      }
+
+      const { data } = await response.json();
+
+      // if the image already exists and confim update image, delete the previous image.
+      if (findRow?.image && isConfirmed) {
+        let responseDeletedFile = await fetch("/api/delete-file", {
+          method: "DELETE",
+          body: JSON.stringify({ publicId: findRow.image.imagePublicId }),
+        });
+
+        if (!responseDeletedFile.ok) {
+          const errorBody = await response.json();
+          throw new Error(errorBody.message || "Internal server error");
+        }
+      }
+
+      updateRow(id, {
+        image: {
+          imageUrl: data.secureUrl,
+          imagePublicId: data.publicId,
+        },
+      });
+    } catch (error) {
+      console.log(
+        error,
+        "function handleFileChange /components/admin/products/variant-editor.tsx"
+      );
+    }
   }
 
   return (
@@ -445,14 +551,15 @@ export function VariantEditor({
                     </td>
                     <td className="px-2">
                       <div className="flex items-center gap-2">
-                        {row.image ? (
+                        {row.image?.imageUrl ? (
                           <img
                             src={
-                              row.image ||
+                              row.image.imageUrl ||
                               "/placeholder.svg?height=32&width=32&query=variant-image"
                             }
                             alt="Gambar variasi"
                             className="h-8 w-8 rounded object-cover"
+                            onClick={() => handleFilePick(row.codeRow)}
                           />
                         ) : (
                           <button

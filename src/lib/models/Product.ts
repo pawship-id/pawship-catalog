@@ -67,6 +67,7 @@ const ProductSchema = new Schema<IProduct>(
       required: [true, "Please input a product description"],
     },
     sizeProduct: {
+      _id: false,
       type: {
         imageUrl: {
           type: String,
@@ -77,6 +78,7 @@ const ProductSchema = new Schema<IProduct>(
       },
     },
     productMedia: {
+      _id: false,
       type: [
         {
           imageUrl: String,
@@ -88,6 +90,7 @@ const ProductSchema = new Schema<IProduct>(
       type: [String],
     },
     exclusive: {
+      _id: false,
       type: {
         enabled: {
           type: Boolean,
@@ -99,6 +102,7 @@ const ProductSchema = new Schema<IProduct>(
       },
     },
     preOrder: {
+      _id: false,
       type: {
         enabled: {
           type: Boolean,

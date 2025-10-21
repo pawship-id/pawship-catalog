@@ -3,14 +3,12 @@ import {
   uploadFileToCloudinary,
   UploadResult,
 } from "@/lib/helpers/cloudinary";
-import dbConnect from "@/lib/mongodb";
-import { ProductForm, VariantRow } from "@/lib/types/product";
-import mongoose, { Types } from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import os from "os";
-import { writeFile } from "fs/promises";
+import { generateSlug } from "@/lib/helpers";
+import { Types } from "mongoose";
+import dbConnect from "@/lib/mongodb";
 import ProductVariant from "@/lib/models/ProductVariant";
+import Product from "@/lib/models/Product";
 
 // POST: create new user
 export async function POST(req: NextRequest) {
@@ -19,10 +17,11 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
 
     let tags = formData.get("tags") as string;
+    let productName = formData.get("productName") as string;
 
     let data = {
       sku: formData.get("sku") as string,
-      productName: formData.get("productName") as string,
+      productName: productName,
       categoryId: formData.get("categoryId") as string,
       moq: Number(formData.get("moq")),
       productDescription: formData.get("productDescription") as string,
@@ -33,19 +32,15 @@ export async function POST(req: NextRequest) {
       variantRows: [] as Types.ObjectId[],
       exclusive: JSON.parse(formData.get("exclusive") as string),
       preOrder: JSON.parse(formData.get("preOrder") as string),
+      marketingLinks: JSON.parse(formData.get("marketingLinks") as string),
+      slug: generateSlug(productName),
     };
 
     const sizeProduct = formData.get("sizeProduct") as File | null;
     if (sizeProduct) {
-      const buffer = Buffer.from(await sizeProduct.arrayBuffer());
-      const filename = `${Date.now()}-${sizeProduct.name.replace(/\s/g, "_")}`;
-      let tempFilePath = path.join(os.tmpdir(), filename);
-
-      await writeFile(tempFilePath, buffer);
-
       let uploadResult: UploadResult = await uploadFileToCloudinary(
-        tempFilePath,
-        "product"
+        sizeProduct,
+        "products/size"
       );
 
       data.sizeProduct = {
@@ -58,7 +53,7 @@ export async function POST(req: NextRequest) {
     if (productMedia && productMedia.length) {
       let uploadResult: UploadResult[] = await bulkUploadFileToCloudinary(
         productMedia,
-        "product"
+        "products"
       );
 
       data.productMedia = uploadResult.map((el) => ({
@@ -71,80 +66,19 @@ export async function POST(req: NextRequest) {
       (formData.get("variantRows") as string) || "[]"
     );
 
-    if (variantRows && variantRows.length) {
-      // upload, ambil url, save database
-      let variantData: any[] = [];
-      for (const variant of variantRows) {
-        const { image, ...bodyVariant } = variant;
+    const resultVariantData = await ProductVariant.insertMany(variantRows, {
+      rawResult: false,
+    });
 
-        if (image && typeof image === "string") {
-          const uploadResult: UploadResult = await uploadFileToCloudinary(
-            image,
-            "product"
-          );
+    data.variantRows = resultVariantData.map((doc) => doc._id);
 
-          bodyVariant.image = {
-            imageUrl: uploadResult.secureUrl,
-            imagePublicId: uploadResult.publicId,
-          };
-        }
-
-        variantData.push(bodyVariant);
-      }
-
-      const resultVariantData = await ProductVariant.insertMany(variantData, {
-        rawResult: false,
-      });
-
-      const variantIds = resultVariantData.map((doc) => doc._id);
-
-      data.variantRows = variantIds;
-    }
-
-    console.log(data);
-
-    // 1. upload dlu size dan product image jika ada
-    // 2. ambil public url, simpan ke database
-
-    // const variantRowsData = formData.get("variantRows");
-    // let image = variantRowsData ? JSON.parse(variantRowsData as string) : null;
-    // console.log(image[0]);
-
-    // const base64Image = `data:image/*;base64,${Buffer.from(image[0].image).toString("base64")}`;
-    // console.log("image:", base64Image);
-
-    // let uploadResult: UploadResult = await uploadFileToCloudinary(
-    //   image[0].image,
-    //   "product"
-    // );
-
-    // const session = await mongoose.startSession();
-    // session.startTransaction();
-
-    // try {
-    //   // 1. upload gambar size ke cloudinary
-    //   let blobSizeProduct = body.sizeProduct?.imageUrl;
-
-    //   if (blobSizeProduct) {
-    //     let base64SizeProduct = `data:image/*;base64,${Buffer.from(blobSizeProduct).toString("base64")}`;
-    //     let uploadResult: UploadResult = await uploadFileToCloudinary(
-    //       base64SizeProduct,
-    //       "product"
-    //     );
-
-    //     console.log("berhasil");
-    //   }
-    // } catch (error) {
-    //   console.log(error);
-    // }
-
-    // const product = await User.create(body);
+    const product = await Product.create(data);
 
     return NextResponse.json(
       {
         success: true,
-        // data: product,
-        message: `Product with SKU  successfully created`,
+        data: product,
+        message: `Product with SKU ${product.sku} successfully created`,
       },
       { status: 201 }
     );

@@ -6,7 +6,10 @@ export interface VariantType {
 export interface VariantRow {
   codeRow: string;
   position: number;
-  image?: File | string | null;
+  image?: {
+    imageUrl?: string;
+    imagePublicId?: string;
+  };
   sku: string;
   attrs: Record<string, string>;
   name: string;

@@ -40,6 +40,15 @@ interface ProductFormProps {
   productId?: string;
 }
 
+const getVariantRows = (): VariantRow[] => {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  const storedData = localStorage.getItem("variantRows");
+  return JSON.parse(storedData || "[]") as VariantRow[];
+};
+
 const initialFormState: ProductForm = {
   sku: "",
   productName: "",
@@ -52,7 +61,7 @@ const initialFormState: ProductForm = {
   exclusive: { enabled: false, country: [] as string[] },
   preOrder: { enabled: false, leadTime: "" },
   variantTypes: [] as VariantType[],
-  variantRows: [] as VariantRow[],
+  variantRows: getVariantRows(),
   marketingLinks: [] as string[],
 };
 
@@ -70,7 +79,8 @@ export default function FormProduct({
   );
   const [showSizeProductModal, setShowSizeProductModal] = useState(false);
 
-  const [variantRows, setVariantRows] = useState<VariantRow[]>([]);
+  const [variantRows, setVariantRows] =
+    useState<VariantRow[]>(getVariantRows());
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
 
   const [loadingFetchCategory, setLoadingFetchCategory] = useState(false);
@@ -209,7 +219,9 @@ export default function FormProduct({
 
       showSuccessAlert(undefined, response.message);
 
-      // router.push("/dashboard/categories");
+      localStorage.removeItem("variantRows");
+
+      router.push("/dashboard/products");
     } catch (err: any) {
       showErrorAlert(undefined, err.message);
     } finally {
@@ -220,6 +232,10 @@ export default function FormProduct({
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("variantRows", JSON.stringify(variantRows));
+  }, [variantRows]);
 
   return (
     <>
