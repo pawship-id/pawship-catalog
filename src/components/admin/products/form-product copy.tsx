@@ -147,10 +147,10 @@ export default function FormProduct({
     e.preventDefault();
     setLoading(true);
 
-    // create FormData for file upload
+    // Create FormData for file upload
     const formDataToSend = new FormData();
 
-    // add basic fields
+    // Add basic fields
     formDataToSend.append("sku", formData.sku);
     formDataToSend.append("productName", formData.productName);
     formDataToSend.append("categoryId", formData.categoryId);
@@ -158,34 +158,34 @@ export default function FormProduct({
     formDataToSend.append("productDescription", formData.productDescription);
     formDataToSend.append("tags", formData.tags || "");
 
-    // add size product image if exists
+    // Add size product image if exists
     if (formData.sizeProduct) {
       formDataToSend.append("sizeProduct", formData.sizeProduct);
     }
 
-    // add product media files
+    // Add product media files
     if (formData.productMedia && formData.productMedia.length > 0) {
-      formData.productMedia.forEach((file) => {
+      formData.productMedia.forEach((file, index) => {
         formDataToSend.append("productMedia", file);
       });
     }
 
-    // add exclusive data as JSON string
+    // Add exclusive data as JSON string
     formDataToSend.append("exclusive", JSON.stringify(formData.exclusive));
 
-    // add preOrder data as JSON string
+    // Add preOrder data as JSON string
     formDataToSend.append("preOrder", JSON.stringify(formData.preOrder));
 
-    // add variant types as JSON string
+    // Add variant types as JSON string
     formDataToSend.append(
       "variantTypes",
       JSON.stringify(formData.variantTypes)
     );
 
-    // convert variant rows to JSON string
+    // Convert variant rows to JSON string
     formDataToSend.append("variantRows", JSON.stringify(formData.variantRows));
 
-    // add marketing links as JSON string
+    // Add marketing links as JSON string
     formDataToSend.append(
       "marketingLinks",
       JSON.stringify(formData.marketingLinks)

@@ -51,6 +51,50 @@ export const uploadFileToCloudinary = async (
 };
 
 /**
+ * Helper function to upload files to Cloudinary.
+ * @param filePath Array of File uploaded.
+ * @param folder Target folder in Cloudinary (e.g., 'categories').
+ * @returns Promise with secure URL and public ID.
+ */
+export const bulkUploadFileToCloudinary = async (
+  filePath: File[],
+  folder: string = "products",
+  resource_type: "image" | "video" | "raw" | "auto" = "image"
+): Promise<UploadResult[]> => {
+  try {
+    const uploadPromises = filePath.map(async (file) => {
+      const arrayBuffer = await file.arrayBuffer();
+      let buffer = Buffer.from(arrayBuffer);
+
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: `pawship catalog/${folder}`,
+            resource_type: resource_type,
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(buffer);
+      });
+    });
+
+    const result = await Promise.all(uploadPromises);
+
+    return result.map((item: any) => ({
+      secureUrl: item.secure_url,
+      publicId: item.public_id,
+    }));
+  } catch (error) {
+    console.error("Bulk Cloudinary Upload Error:", error);
+
+    throw new Error("Failed to upload file to storage service.");
+  }
+};
+
+/**
  * Helper function to delete a file from Cloudinary using its public ID.
  * @param publicId The public ID of the image stored in Cloudinary.
  * @returns Promise<void>

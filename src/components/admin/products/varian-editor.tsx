@@ -7,24 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { showErrorAlert } from "@/lib/helpers/sweetalert2";
-
-export interface VariantType {
-  id: string;
-  name: string;
-  values: string[];
-}
-
-export interface VariantRow {
-  id: string;
-  position: number;
-  image?: string;
-  sku: string;
-  attrs: Record<string, string>;
-  name: string;
-  stock?: string;
-  price?: any;
-  selected?: boolean;
-}
+import { VariantRow, VariantType } from "@/lib/types/product";
 
 type VariantEditorProps = {
   value: VariantRow[];
@@ -67,7 +50,7 @@ export function VariantEditor({
   );
 
   const [defaultStockPrice, setDefaultStockPrice] = useState({
-    stockDefault: "",
+    stockDefault: 0,
     priceDefault: "",
   });
 
@@ -141,7 +124,7 @@ export function VariantEditor({
     onChange(updatedRows);
 
     setDefaultStockPrice({
-      stockDefault: "",
+      stockDefault: 0,
       priceDefault: "",
     });
   };
@@ -151,7 +134,7 @@ export function VariantEditor({
   );
 
   function updateRow(id: string, patch: Partial<VariantRow>) {
-    onChange(value.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    onChange(value.map((r) => (r.codeRow === id ? { ...r, ...patch } : r)));
   }
 
   function removeType(name: string) {
@@ -179,7 +162,6 @@ export function VariantEditor({
     const next: VariantType = {
       id: makeId(),
       name: trimmedName,
-      values: [],
     };
     onTypesChange([...variantTypes, next]);
     setInputValue("");
@@ -221,7 +203,7 @@ export function VariantEditor({
     onChange([
       ...value,
       {
-        id,
+        codeRow: id,
         position: value.length + 1,
         attrs,
         sku: "",
@@ -249,7 +231,9 @@ export function VariantEditor({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      updateRow(id, { image: String(reader.result) });
+      updateRow(id, {
+        image: String(reader.result),
+      });
     };
     reader.readAsDataURL(file);
   }
@@ -378,7 +362,7 @@ export function VariantEditor({
               onChange={(e) =>
                 setDefaultStockPrice({
                   ...defaultStockPrice,
-                  stockDefault: e.target.value,
+                  stockDefault: Number(e.target.value),
                 })
               }
             />
@@ -445,13 +429,13 @@ export function VariantEditor({
               </thead>
               <tbody>
                 {value.map((row) => (
-                  <tr key={row.id} className="h-14 border-b align-middle">
+                  <tr key={row.codeRow} className="h-14 border-b align-middle">
                     <td className="px-4">
                       <input
                         type="checkbox"
                         checked={!!row.selected}
                         onChange={(e) =>
-                          updateRow(row.id, { selected: e.target.checked })
+                          updateRow(row.codeRow, { selected: e.target.checked })
                         }
                         aria-label="Pilih baris"
                       />
@@ -473,7 +457,7 @@ export function VariantEditor({
                         ) : (
                           <button
                             type="button"
-                            onClick={() => handleFilePick(row.id)}
+                            onClick={() => handleFilePick(row.codeRow)}
                             className="flex h-8 w-8 items-center justify-center rounded border cursor-pointer"
                             aria-label="Tambah gambar"
                           >
@@ -482,12 +466,12 @@ export function VariantEditor({
                         )}
                         <input
                           ref={(el) => {
-                            fileInputs.current[row.id] = el;
+                            fileInputs.current[row.codeRow] = el;
                           }}
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => handleFileChange(e, row.id)}
+                          onChange={(e) => handleFileChange(e, row.codeRow)}
                         />
                       </div>
                     </td>
@@ -495,14 +479,14 @@ export function VariantEditor({
                       <Input
                         value={row.sku}
                         onChange={(e) =>
-                          updateRow(row.id, { sku: e.target.value })
+                          updateRow(row.codeRow, { sku: e.target.value })
                         }
                         className="border-gray-300"
                         placeholder="MonaPeach:L"
                       />
                     </td>
                     {typeNames.map((tName) => (
-                      <td key={`${row.id}-${tName}`} className="px-2">
+                      <td key={`${row.codeRow}-${tName}`} className="px-2">
                         <Input
                           className="border-gray-300"
                           value={row.attrs?.[tName] || ""}
@@ -512,7 +496,7 @@ export function VariantEditor({
                               [tName]: e.target.value,
                             };
                             const name = buildNameFromAttrs(attrs, typeNames);
-                            updateRow(row.id, { attrs, name });
+                            updateRow(row.codeRow, { attrs, name });
                           }}
                           placeholder={tName}
                         />
@@ -523,7 +507,7 @@ export function VariantEditor({
                         className="border-gray-300"
                         value={row.name}
                         onChange={(e) =>
-                          updateRow(row.id, { name: e.target.value })
+                          updateRow(row.codeRow, { name: e.target.value })
                         }
                         placeholder="Peach-L"
                       />
@@ -532,9 +516,11 @@ export function VariantEditor({
                       <Input
                         className="border-gray-300"
                         type="number"
-                        value={row.stock || ""}
+                        value={row.stock || 0}
                         onChange={(e) =>
-                          updateRow(row.id, { stock: e.target.value })
+                          updateRow(row.codeRow, {
+                            stock: Number(e.target.value),
+                          })
                         }
                         placeholder="0"
                       />
@@ -548,7 +534,7 @@ export function VariantEditor({
                             inputMode="decimal"
                             value={row.price?.[item.currency] ?? ""}
                             onChange={(e) =>
-                              updateRow(row.id, {
+                              updateRow(row.codeRow, {
                                 price: {
                                   ...row.price,
                                   [item.currency]: e.target.value
