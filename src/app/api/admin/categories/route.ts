@@ -5,6 +5,7 @@ import Category from "@/lib/models/Category";
 import dbConnect from "@/lib/mongodb";
 import path from "path";
 import os from "os";
+import { generateSlug } from "@/lib/helpers";
 
 // GET: read all category
 export async function GET() {
@@ -77,6 +78,8 @@ export async function POST(req: NextRequest) {
       body.imageUrl = uploadResult.secureUrl;
       body.imagePublicId = uploadResult.publicId;
     }
+
+    body.slug = generateSlug(name);
 
     const category = await Category.create(body);
 

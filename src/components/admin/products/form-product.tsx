@@ -56,7 +56,7 @@ const initialFormState: ProductForm = {
   moq: 1,
   productDescription: "",
   sizeProduct: null,
-  productMedia: [] as File[],
+  productMedia: [],
   tags: "",
   exclusive: { enabled: false, country: [] as string[] },
   preOrder: { enabled: false, leadTime: "" },
@@ -157,51 +157,58 @@ export default function FormProduct({
     e.preventDefault();
     setLoading(true);
 
-    // create FormData for file upload
-    const formDataToSend = new FormData();
-
-    // add basic fields
-    formDataToSend.append("sku", formData.sku);
-    formDataToSend.append("productName", formData.productName);
-    formDataToSend.append("categoryId", formData.categoryId);
-    formDataToSend.append("moq", formData.moq.toString());
-    formDataToSend.append("productDescription", formData.productDescription);
-    formDataToSend.append("tags", formData.tags || "");
-
-    // add size product image if exists
-    if (formData.sizeProduct) {
-      formDataToSend.append("sizeProduct", formData.sizeProduct);
-    }
-
-    // add product media files
-    if (formData.productMedia && formData.productMedia.length > 0) {
-      formData.productMedia.forEach((file) => {
-        formDataToSend.append("productMedia", file);
-      });
-    }
-
-    // add exclusive data as JSON string
-    formDataToSend.append("exclusive", JSON.stringify(formData.exclusive));
-
-    // add preOrder data as JSON string
-    formDataToSend.append("preOrder", JSON.stringify(formData.preOrder));
-
-    // add variant types as JSON string
-    formDataToSend.append(
-      "variantTypes",
-      JSON.stringify(formData.variantTypes)
-    );
-
-    // convert variant rows to JSON string
-    formDataToSend.append("variantRows", JSON.stringify(formData.variantRows));
-
-    // add marketing links as JSON string
-    formDataToSend.append(
-      "marketingLinks",
-      JSON.stringify(formData.marketingLinks)
-    );
-
     try {
+      if (!formData.categoryId || formData.categoryId.trim() === "") {
+        throw new Error("Please input a category");
+      }
+
+      // create FormData for file upload
+      const formDataToSend = new FormData();
+
+      // add basic fields
+      formDataToSend.append("sku", formData.sku);
+      formDataToSend.append("productName", formData.productName);
+      formDataToSend.append("categoryId", formData.categoryId);
+      formDataToSend.append("moq", formData.moq.toString());
+      formDataToSend.append("productDescription", formData.productDescription);
+      formDataToSend.append("tags", formData.tags || "");
+
+      // add size product image if exists
+      if (formData.sizeProduct) {
+        formDataToSend.append("sizeProduct", formData.sizeProduct);
+      }
+
+      // add product media files
+      if (formData.productMedia && formData.productMedia.length > 0) {
+        formData.productMedia.forEach((file) => {
+          formDataToSend.append("productMedia", file);
+        });
+      }
+
+      // add exclusive data as JSON string
+      formDataToSend.append("exclusive", JSON.stringify(formData.exclusive));
+
+      // add preOrder data as JSON string
+      formDataToSend.append("preOrder", JSON.stringify(formData.preOrder));
+
+      // add variant types as JSON string
+      formDataToSend.append(
+        "variantTypes",
+        JSON.stringify(formData.variantTypes)
+      );
+
+      // convert variant rows to JSON string
+      formDataToSend.append(
+        "variantRows",
+        JSON.stringify(formData.variantRows)
+      );
+
+      // add marketing links as JSON string
+      formDataToSend.append(
+        "marketingLinks",
+        JSON.stringify(formData.marketingLinks)
+      );
+
       let response: ApiResponse<ProductData>;
 
       if (!isEditMode) {
@@ -265,6 +272,7 @@ export default function FormProduct({
                 <Input
                   id="sku"
                   placeholder="Enter product ID / SKU"
+                  value={formData.sku}
                   onChange={(e) =>
                     setFormData({ ...formData, sku: e.target.value })
                   }
@@ -284,6 +292,7 @@ export default function FormProduct({
                 <Input
                   id="productName"
                   placeholder="Enter product name"
+                  value={formData.productName}
                   onChange={(e) =>
                     setFormData({ ...formData, productName: e.target.value })
                   }
@@ -302,6 +311,7 @@ export default function FormProduct({
                   Category *
                 </Label>
                 <Select
+                  value={formData.categoryId}
                   onValueChange={(value) =>
                     setFormData({ ...formData, categoryId: value })
                   }
@@ -348,9 +358,9 @@ export default function FormProduct({
                   <Input
                     id="moq"
                     type="number"
-                    defaultValue={1}
                     min={1}
                     placeholder="Enter MOQ"
+                    value={formData.moq || 1}
                     onChange={(e) =>
                       setFormData({ ...formData, moq: Number(e.target.value) })
                     }
@@ -372,6 +382,7 @@ export default function FormProduct({
               <Textarea
                 id="productDescription"
                 placeholder="Enter description"
+                value={formData.productDescription}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -485,10 +496,18 @@ export default function FormProduct({
 
                     if (files.length) {
                       // Limit to maximum 9 images
-                      const limitedFiles = files.slice(0, 9);
+                      const filesToProcess = files.slice(0, 9);
 
-                      setFormData({ ...formData, productMedia: limitedFiles });
-                      console.log("Selected files:", limitedFiles);
+                      setFormData((prev) => {
+                        const existingMedia = prev.productMedia || [];
+                        const combinedMedia = [
+                          ...existingMedia,
+                          ...filesToProcess,
+                        ].slice(0, 9);
+                        return { ...prev, productMedia: combinedMedia };
+                      });
+
+                      console.log("Selected files:", filesToProcess);
                     }
                   }}
                 />
@@ -539,6 +558,7 @@ export default function FormProduct({
                   id="tags"
                   placeholder="Enter tags"
                   className="border-gray-300 py-5"
+                  value={formData.tags}
                   onChange={(e) =>
                     setFormData({ ...formData, tags: e.target.value })
                   }
@@ -700,10 +720,12 @@ export default function FormProduct({
                   onChange={(next) => {
                     setVariantRows(next);
 
-                    setFormData((prev) => ({
-                      ...prev,
-                      variantRows: next,
-                    }));
+                    setFormData((prev) => {
+                      return {
+                        ...prev,
+                        variantRows: next,
+                      };
+                    });
                   }}
                   variantTypes={variantTypes}
                   onTypesChange={(next) => {
@@ -800,9 +822,17 @@ export default function FormProduct({
 
             {/* submit button */}
             {currentTabIndex === tabMenu.length - 1 && (
-              <Button type="submit" className="w-36 cursor-pointer">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-36 cursor-pointer"
+              >
                 <Save />
-                Submit
+                {loading
+                  ? "Loading..."
+                  : isEditMode
+                    ? "Update Category"
+                    : "Create Category"}
               </Button>
             )}
           </div>

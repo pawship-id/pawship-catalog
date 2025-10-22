@@ -77,15 +77,25 @@ const ProductSchema = new Schema<IProduct>(
         },
       },
     },
-    productMedia: {
-      _id: false,
-      type: [
-        {
-          imageUrl: String,
-          imagePublicId: String,
+    productMedia: [
+      {
+        _id: false, // Opsional: Untuk mencegah Mongoose membuat _id otomatis di setiap item array
+        imageUrl: {
+          type: String,
+          required: true, // Opsional: Tambahkan validasi
         },
-      ],
-    },
+        imagePublicId: {
+          type: String,
+          required: true, // Opsional: Tambahkan validasi
+        },
+        type: {
+          // Ini adalah tipe media: 'image' atau 'video'
+          type: String,
+          enum: ["image", "video"], // Disarankan: Batasi tipe string yang valid
+          required: true,
+        },
+      },
+    ],
     tags: {
       type: [String],
     },

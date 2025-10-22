@@ -7,6 +7,7 @@ import { writeFile } from "fs/promises";
 export interface UploadResult {
   secureUrl: string;
   publicId: string;
+  type?: "video" | "image";
 }
 
 cloudinary.config({
@@ -75,11 +76,12 @@ export const uploadFileToCloudinary = async (
  */
 export const bulkUploadFileToCloudinary = async (
   filePath: File[],
-  folder: string = "products",
-  resource_type: "image" | "video" | "raw" | "auto" = "image"
+  folder: string = "products"
 ): Promise<UploadResult[]> => {
   try {
     const uploadPromises = filePath.map(async (file) => {
+      console.log(file, "ini fileee");
+
       const arrayBuffer = await file.arrayBuffer();
       let buffer = Buffer.from(arrayBuffer);
 
@@ -87,7 +89,7 @@ export const bulkUploadFileToCloudinary = async (
         const stream = cloudinary.uploader.upload_stream(
           {
             folder: `pawship catalog/${folder}`,
-            resource_type: resource_type,
+            resource_type: file.type.split("/")[0] as "video" | "image",
           },
           (error, result) => {
             if (error) reject(error);
@@ -103,6 +105,7 @@ export const bulkUploadFileToCloudinary = async (
     return result.map((item: any) => ({
       secureUrl: item.secure_url,
       publicId: item.public_id,
+      type: item.resource_type,
     }));
   } catch (error) {
     console.error("Bulk Cloudinary Upload Error:", error);

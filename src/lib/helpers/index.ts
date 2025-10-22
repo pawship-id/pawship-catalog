@@ -15,9 +15,7 @@ export function isRetail(role: string) {
   id -> the ID data from the database
 */
 export function generateSlug(text: string) {
-  if (text.includes("/")) {
-    text = text = text.replace(/[^a-zA-Z0-9]/g, "-");
-  }
+  text = text.replace(/[^a-zA-Z0-9]/g, "-");
 
   const now = new Date();
   const day = now.getDate().toString().padStart(2, "0");
