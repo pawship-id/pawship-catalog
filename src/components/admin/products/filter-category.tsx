@@ -60,7 +60,7 @@ export default function FilterCategory() {
           ))
         ) : (
           <SelectItem value="no-categories" disabled>
-            No parent categories available
+            No categories available
           </SelectItem>
         )}
       </SelectContent>

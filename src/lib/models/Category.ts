@@ -55,19 +55,19 @@ CategorySchema.plugin(softDelete, {
 });
 
 // middleware to encrypt passwords before they are stored
-CategorySchema.pre("save", async function (next) {
-  let processedName = this.name;
+// CategorySchema.pre("save", async function (next) {
+//   let processedName = this.name;
 
-  // handle "/" characters by replacing with "-"
-  if (processedName.includes("/")) {
-    processedName = processedName.replace(/\//g, "-");
-  }
+//   // handle "/" characters by replacing with "-"
+//   if (processedName.includes("/")) {
+//     processedName = processedName.replace(/\//g, "-");
+//   }
 
-  // handle spaces with split and join
-  this.slug = processedName.toLowerCase().split(" ").join("-");
+//   // handle spaces with split and join
+//   this.slug = processedName.toLowerCase().split(" ").join("-");
 
-  next();
-});
+//   next();
+// });
 
 const Category =
   mongoose.models.Category || mongoose.model("Category", CategorySchema);

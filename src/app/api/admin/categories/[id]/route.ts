@@ -10,6 +10,7 @@ import {
   UploadResult,
 } from "@/lib/helpers/cloudinary";
 import { CategoryData } from "@/lib/types/category";
+import { generateSlug } from "@/lib/helpers";
 
 interface Context {
   params: Promise<{ id: string }>;
@@ -100,6 +101,8 @@ export async function PUT(req: NextRequest, { params }: Context) {
     if (findCategory.imageUrl && findCategory.imagePublicId && isNewImage) {
       await deleteFileFromCloudinary(findCategory.imagePublicId);
     }
+
+    body.slug = generateSlug(name);
 
     const category = await Category.findByIdAndUpdate(id, body, {
       new: true,

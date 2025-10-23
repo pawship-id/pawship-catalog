@@ -8,7 +8,7 @@ export default function CreateProductPage() {
         <h1 className="text-3xl font-playfair font-bold text-foreground">
           Form Add Product
         </h1>
-        <p className="text-muted-foreground text-lg">Create New Product</p>
+        <p className="text-muted-foreground text-lg">Edit Product Data</p>
       </div>
       <FormProduct />
     </div>
