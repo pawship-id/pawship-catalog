@@ -9,31 +9,21 @@ import { Types } from "mongoose";
 import dbConnect from "@/lib/mongodb";
 import ProductVariant from "@/lib/models/ProductVariant";
 import Product from "@/lib/models/Product";
+import { VariantRowForm } from "@/lib/types/product";
 
 // GET: read all product
 export async function GET() {
   await dbConnect();
 
   try {
-    const rawProducts = await Product.find({})
+    const products = await Product.find({})
       .select("productName slug categoryId productDescription productMedia")
       .populate({
-        path: "categoryId",
+        path: "categoryDetail",
         select: "name",
       })
       .sort({ createdAt: -1 })
-      .lean();
-
-    const products = rawProducts.map((product) => {
-      const categoryObject = product.categoryId;
-
-      delete product.categoryId;
-
-      return {
-        ...product,
-        category: categoryObject,
-      };
-    });
+      .exec();
 
     return NextResponse.json(
       {
@@ -71,7 +61,6 @@ export async function POST(req: NextRequest) {
       sizeProduct: {},
       productMedia: [] as { imageUrl: string; imagePublicId: string }[],
       variantTypes: JSON.parse(formData.get("variantTypes") as string),
-      variantRows: [] as Types.ObjectId[],
       exclusive: JSON.parse(formData.get("exclusive") as string),
       preOrder: JSON.parse(formData.get("preOrder") as string),
       marketingLinks: JSON.parse(formData.get("marketingLinks") as string),
@@ -111,17 +100,20 @@ export async function POST(req: NextRequest) {
       }));
     }
 
+    const product = await Product.create(data);
+
     const variantRows = JSON.parse(
       (formData.get("variantRows") as string) || "[]"
     );
 
-    const resultVariantData = await ProductVariant.insertMany(variantRows, {
+    const variantRowsData = variantRows.map((el: VariantRowForm) => ({
+      ...el,
+      productId: product._id,
+    }));
+
+    await ProductVariant.insertMany(variantRowsData, {
       rawResult: false,
     });
-
-    data.variantRows = resultVariantData.map((doc) => doc._id);
-
-    const product = await Product.create(data);
 
     return NextResponse.json(
       {

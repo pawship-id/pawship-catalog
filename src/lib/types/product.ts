@@ -3,7 +3,7 @@ export interface VariantType {
   name: string;
 }
 
-export interface VariantRow {
+export interface VariantRowForm {
   codeRow: string;
   position: number;
   image?: {
@@ -13,9 +13,31 @@ export interface VariantRow {
   sku: string;
   attrs: Record<string, string>;
   name: string;
+  productId?: string;
   stock?: number;
   price?: any;
   selected?: boolean;
+}
+
+export interface VariantRow {
+  codeRow: string;
+  position: number;
+  image?: {
+    imageUrl: string;
+    imagePublicId: string;
+    type?: string;
+  };
+  sku: string;
+  attrs: Record<string, string>;
+  name: string;
+  product: ProductData;
+  stock?: number;
+  price?: any;
+  deleted?: boolean;
+  deletedAt?: Date;
+  deletedBy?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface ProductForm {
@@ -30,7 +52,7 @@ export interface ProductForm {
   exclusive: { enabled: boolean; country: string[] | null };
   preOrder: { enabled: boolean; leadTime: string };
   variantTypes?: VariantType[];
-  variantRows?: VariantRow[];
+  variantRows?: VariantRowForm[];
   marketingLinks: string[];
 }
 
@@ -38,7 +60,8 @@ export interface ProductData {
   _id: string;
   slug: string;
   productName: string;
-  category: {
+  categoryId: string;
+  categoryDetail: {
     _id: string;
     name: string;
   };
@@ -52,10 +75,10 @@ export interface ProductData {
   sku?: string;
   moq?: number;
   sizeProduct?: File | string | null;
-  tags?: string;
+  tags?: string[];
   exclusive?: { enabled: boolean; country: string[] | null };
   variantTypes?: VariantType[];
-  variantRows?: VariantRow[];
+  productVariantsData?: VariantRow[];
   marketingLinks?: string[];
   deleted?: boolean;
   deletedAt?: Date;

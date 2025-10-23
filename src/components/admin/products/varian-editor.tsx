@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
-import { VariantRow, VariantType } from "@/lib/types/product";
+import { VariantRowForm, VariantType } from "@/lib/types/product";
 
 type VariantEditorProps = {
-  value: VariantRow[];
-  onChange: (rows: VariantRow[]) => void;
+  value: VariantRowForm[];
+  onChange: (rows: VariantRowForm[]) => void;
   variantTypes: VariantType[];
   onTypesChange: (types: VariantType[]) => void;
   className?: string;
@@ -133,7 +133,7 @@ export function VariantEditor({
     (option) => !existingTypeNames.has(option.toLowerCase())
   );
 
-  function updateRow(id: string, patch: Partial<VariantRow>) {
+  function updateRow(id: string, patch: Partial<VariantRowForm>) {
     onChange(value.map((r) => (r.codeRow === id ? { ...r, ...patch } : r)));
   }
 

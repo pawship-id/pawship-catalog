@@ -29,7 +29,7 @@ import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 import {
   ProductData,
   ProductForm,
-  VariantRow,
+  VariantRowForm,
   VariantType,
 } from "@/lib/types/product";
 import { ApiResponse } from "@/lib/types/api";
@@ -40,13 +40,13 @@ interface ProductFormProps {
   productId?: string;
 }
 
-const getVariantRows = (): VariantRow[] => {
+const getVariantRows = (): VariantRowForm[] => {
   if (typeof window === "undefined") {
     return [];
   }
 
   const storedData = localStorage.getItem("variantRows");
-  return JSON.parse(storedData || "[]") as VariantRow[];
+  return JSON.parse(storedData || "[]") as VariantRowForm[];
 };
 
 const initialFormState: ProductForm = {
@@ -80,7 +80,7 @@ export default function FormProduct({
   const [showSizeProductModal, setShowSizeProductModal] = useState(false);
 
   const [variantRows, setVariantRows] =
-    useState<VariantRow[]>(getVariantRows());
+    useState<VariantRowForm[]>(getVariantRows());
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
 
   const [loadingFetchCategory, setLoadingFetchCategory] = useState(false);

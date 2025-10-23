@@ -11,7 +11,7 @@ export interface IProductVariant extends Document {
   name: string;
   stock?: number;
   price?: any;
-  selected?: boolean;
+  productId: Types.ObjectId;
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: Types.ObjectId;
@@ -52,8 +52,10 @@ const ProductVariantSchema = new Schema<IProductVariant>(
     price: {
       type: Schema.Types.Mixed,
     },
-    selected: {
-      type: Boolean,
+    productId: {
+      type: Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
     },
   },
   { timestamps: true }

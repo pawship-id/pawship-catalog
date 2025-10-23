@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, MoreVertical } from "lucide-react";
+import { Edit, Eye, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,7 +110,7 @@ export default function TableProduct() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline">{item.category.name}</Badge>
+                  <Badge variant="outline">{item.categoryDetail.name}</Badge>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -125,7 +125,12 @@ export default function TableProduct() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link href={`/dashboard/categories/edit/1`}>
+                        <Link href={`/dashboard/products/${item._id}/detail`}>
+                          <Eye className="mr-2 h-4 w-4" /> Detail
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link href={`/dashboard/products/${item._id}/edit`}>
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </Link>
                       </DropdownMenuItem>

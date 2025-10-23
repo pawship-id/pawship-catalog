@@ -79,19 +79,18 @@ const ProductSchema = new Schema<IProduct>(
     },
     productMedia: [
       {
-        _id: false, // Opsional: Untuk mencegah Mongoose membuat _id otomatis di setiap item array
+        _id: false,
         imageUrl: {
           type: String,
-          required: true, // Opsional: Tambahkan validasi
+          required: true,
         },
         imagePublicId: {
           type: String,
-          required: true, // Opsional: Tambahkan validasi
+          required: true,
         },
         type: {
-          // Ini adalah tipe media: 'image' atau 'video'
           type: String,
-          enum: ["image", "video"], // Disarankan: Batasi tipe string yang valid
+          enum: ["image", "video"],
           required: true,
         },
       },
@@ -126,12 +125,6 @@ const ProductSchema = new Schema<IProduct>(
     variantTypes: {
       type: [VariantTypeSchema],
     },
-    variantRows: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "ProductVarian", // Nama model yang direferensikan
-      },
-    ],
     marketingLinks: {
       type: [String],
     },
@@ -148,6 +141,23 @@ ProductSchema.plugin(softDelete, {
   deletedBy: true,
   overrideMethods: "all",
 });
+
+ProductSchema.virtual("productVariantsData", {
+  ref: "ProductVariant",
+  localField: "_id",
+  foreignField: "productId",
+  justOne: false,
+});
+
+ProductSchema.virtual("categoryDetail", {
+  ref: "Category",
+  localField: "categoryId",
+  foreignField: "_id",
+  justOne: true,
+});
+
+ProductSchema.set("toObject", { virtuals: true });
+ProductSchema.set("toJSON", { virtuals: true });
 
 const Product =
   mongoose.models.Product || mongoose.model("Product", ProductSchema);
