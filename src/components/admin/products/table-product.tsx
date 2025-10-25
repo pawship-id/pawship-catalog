@@ -110,7 +110,11 @@ export default function TableProduct() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline">{item.categoryDetail.name}</Badge>
+                  {item.categoryDetail ? (
+                    <Badge variant="outline">{item.categoryDetail.name}</Badge>
+                  ) : (
+                    "-"
+                  )}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
