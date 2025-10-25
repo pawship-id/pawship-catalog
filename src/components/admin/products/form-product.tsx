@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { CategoryData } from "@/lib/types/category";
 import { createData, getAll, updateData } from "@/lib/apiService";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +34,7 @@ import {
 } from "@/lib/types/product";
 import { ApiResponse } from "@/lib/types/api";
 import { useRouter } from "next/navigation";
+import TagInput from "./input-tag";
 
 interface ProductFormProps {
   initialData?: any;
@@ -50,14 +51,13 @@ const getVariantRows = (): VariantRowForm[] => {
 };
 
 const initialFormState: ProductForm = {
-  sku: "",
   productName: "",
   categoryId: "",
   moq: 1,
   productDescription: "",
   sizeProduct: null,
   productMedia: [],
-  tags: "",
+  tags: [] as string[],
   exclusive: { enabled: false, country: [] as string[] },
   preOrder: { enabled: false, leadTime: "" },
   variantTypes: [] as VariantType[],
@@ -166,12 +166,11 @@ export default function FormProduct({
       const formDataToSend = new FormData();
 
       // add basic fields
-      formDataToSend.append("sku", formData.sku);
       formDataToSend.append("productName", formData.productName);
       formDataToSend.append("categoryId", formData.categoryId);
       formDataToSend.append("moq", formData.moq.toString());
       formDataToSend.append("productDescription", formData.productDescription);
-      formDataToSend.append("tags", formData.tags || "");
+      formDataToSend.append("tags", JSON.stringify(formData.tags));
 
       // add size product image if exists
       if (formData.sizeProduct) {
@@ -244,6 +243,8 @@ export default function FormProduct({
     localStorage.setItem("variantRows", JSON.stringify(variantRows));
   }, [variantRows]);
 
+  const [inputTagValue, setInputTagValue] = useState<string[]>([]);
+
   return (
     <>
       <form
@@ -261,45 +262,23 @@ export default function FormProduct({
           </TabsList>
 
           <TabsContent value="product-details" className="space-y-4 my-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="sku"
-                  className="text-base font-medium text-gray-700"
-                >
-                  Product ID / SKU *
-                </Label>
-                <Input
-                  id="sku"
-                  placeholder="Enter product ID / SKU"
-                  value={formData.sku}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sku: e.target.value })
-                  }
-                  className="border-gray-300 py-5"
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label
-                  htmlFor="productName"
-                  className="text-base font-medium text-gray-700"
-                >
-                  Product Name *
-                </Label>
-                <Input
-                  id="productName"
-                  placeholder="Enter product name"
-                  value={formData.productName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, productName: e.target.value })
-                  }
-                  className="border-gray-300 py-5"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="productName"
+                className="text-base font-medium text-gray-700"
+              >
+                Product Name *
+              </Label>
+              <Input
+                id="productName"
+                placeholder="Enter product name"
+                value={formData.productName}
+                onChange={(e) =>
+                  setFormData({ ...formData, productName: e.target.value })
+                }
+                className="border-gray-300 py-5"
+                required
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -553,20 +532,17 @@ export default function FormProduct({
               >
                 Tags
               </Label>
-              <div className="space-y-1">
-                <Input
-                  id="tags"
-                  placeholder="Enter tags"
-                  className="border-gray-300 py-5"
-                  value={formData.tags}
-                  onChange={(e) =>
-                    setFormData({ ...formData, tags: e.target.value })
-                  }
-                />
-                <small>
-                  Separate multiple tags with commas (e.g., cat, dog).
-                </small>
-              </div>
+              <TagInput
+                onChange={(value) => {
+                  setInputTagValue(value);
+
+                  setFormData({
+                    ...formData,
+                    tags: value,
+                  });
+                }}
+                tags={inputTagValue}
+              />
             </div>
 
             <div className="space-y-4">
@@ -594,12 +570,15 @@ export default function FormProduct({
 
               {formData.exclusive.enabled && (
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="exclusiveCountry"
-                    className="text-base font-medium text-gray-700"
-                  >
-                    Country
-                  </Label>
+                  <div className="my-2">
+                    <Label
+                      htmlFor="exclusiveCountry"
+                      className="text-base font-medium text-gray-700"
+                    >
+                      Exclude Country
+                    </Label>
+                    <small>The countries checked are excluded countries</small>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-2 border-1 p-4 rounded-lg">
                     {[

@@ -1,8 +1,6 @@
 import Product from "@/lib/models/Product";
 import dbConnect from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
-const ProductVariant = require("@/lib/models/ProductVariant");
-const Category = require("@/lib/models/Category");
 interface Context {
   params: Promise<{ id: string }>;
 }

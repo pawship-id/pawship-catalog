@@ -1,9 +1,8 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 import softDelete from "mongoose-delete";
-import { VariantRow, VariantType } from "@/lib/types/product";
+import { VariantType } from "@/lib/types/product";
 
 export interface IProduct extends Document {
-  sku: string;
   productName: string;
   categoryId: Types.ObjectId;
   moq: number;
@@ -45,10 +44,6 @@ const VariantTypeSchema = new Schema<VariantType>(
 
 const ProductSchema = new Schema<IProduct>(
   {
-    sku: {
-      type: String,
-      required: [true, "Please input a SKU"],
-    },
     productName: {
       type: String,
       required: [true, "Please input a product name"],

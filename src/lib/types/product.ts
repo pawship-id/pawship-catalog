@@ -41,14 +41,13 @@ export interface VariantRow {
 }
 
 export interface ProductForm {
-  sku: string;
   productName: string;
   categoryId: string;
   moq: number;
   productDescription: string;
   sizeProduct?: File | string | null;
   productMedia?: File[] | null;
-  tags?: string;
+  tags?: string[];
   exclusive: { enabled: boolean; country: string[] | null };
   preOrder: { enabled: boolean; leadTime: string };
   variantTypes?: VariantType[];
@@ -72,7 +71,6 @@ export interface ProductData {
     type: string;
   }[];
   preOrder?: { enabled: boolean; leadTime: string };
-  sku?: string;
   moq?: number;
   sizeProduct?: File | string | null;
   tags?: string[];

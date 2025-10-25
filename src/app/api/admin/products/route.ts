@@ -52,7 +52,6 @@ export async function POST(req: NextRequest) {
     let productName = formData.get("productName") as string;
 
     let data = {
-      sku: formData.get("sku") as string,
       productName: productName,
       categoryId: formData.get("categoryId") as string,
       moq: Number(formData.get("moq")),
