@@ -1,3 +1,5 @@
+import { TagData, TagForm } from "./tag";
+
 export interface VariantType {
   id: string;
   name: string;
@@ -47,7 +49,7 @@ export interface ProductForm {
   productDescription: string;
   sizeProduct?: File | string | null;
   productMedia?: File[] | null;
-  tags?: string[];
+  tags?: TagForm[];
   exclusive: { enabled: boolean; country: string[] | null };
   preOrder: { enabled: boolean; leadTime: string };
   variantTypes?: VariantType[];
@@ -73,7 +75,7 @@ export interface ProductData {
   preOrder?: { enabled: boolean; leadTime: string };
   moq?: number;
   sizeProduct?: File | string | null;
-  tags?: string[];
+  tags?: TagData[];
   exclusive?: { enabled: boolean; country: string[] | null };
   variantTypes?: VariantType[];
   productVariantsData?: VariantRow[];

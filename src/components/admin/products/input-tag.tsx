@@ -1,33 +1,80 @@
-import { useState } from "react";
+"use client";
+import { useEffect, useState } from "react";
 import { X, Plus } from "lucide-react";
+import { TagData, TagForm } from "@/lib/types/tag";
+import { getAll } from "@/lib/apiService";
 
 interface TagInputProps {
-  onChange: (tag: string[]) => void;
-  tags: string[];
+  onChange: (tags: TagForm[]) => void;
+  tags: TagForm[];
 }
 
 export default function TagInput({ onChange, tags }: TagInputProps) {
   const [inputTagValue, setInputTagValue] = useState("");
   const [isSelectTagOpen, setIsSelectTagOpen] = useState(false);
-  const tagsData = ["Bip", "Harness"];
 
-  const addTag = (tag: string) => {
-    const trimmed = tag.trim();
-    if (trimmed && !tags.includes(trimmed)) {
-      onChange([...tags, trimmed]);
+  const [tagData, setTagData] = useState<TagData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const addTag = (tagName: string) => {
+    const trimmed = tagName.trim();
+    if (!trimmed) return;
+
+    // check if the tag is already in the available in database.
+    const isExistingTag = tagData.some(
+      (t) => t.tagName.toLowerCase() === trimmed.toLowerCase()
+    );
+
+    // check if it has been added before
+    const isDuplicate = tags.some(
+      (t) => t.tagName.toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (!isDuplicate) {
+      const newTag: TagForm = {
+        tagName: trimmed.toLowerCase(),
+        isNew: !isExistingTag,
+      };
+
+      onChange([...tags, newTag]);
     }
+
     setInputTagValue("");
   };
 
   const removeTag = (tag: string) => {
-    onChange(tags.filter((t) => t !== tag));
+    onChange(tags.filter((t) => t.tagName !== tag));
   };
 
-  const filteredTags = tagsData.filter(
+  const filteredTags = tagData.filter(
     (option) =>
-      !tags.map((t) => t.toLowerCase()).includes(option.toLowerCase()) &&
-      option.toLowerCase().includes(inputTagValue.toLowerCase())
+      !tags
+        .map((t) => t.tagName.toLowerCase())
+        .includes(option.tagName.toLowerCase()) &&
+      option.tagName.toLowerCase().includes(inputTagValue.toLowerCase())
   );
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await getAll<TagData>("/api/admin/tags");
+
+      if (response.data) {
+        setTagData(response.data);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   return (
     <div className="space-y-1 relative">
@@ -37,17 +84,17 @@ export default function TagInput({ onChange, tags }: TagInputProps) {
         onClick={() => setIsSelectTagOpen(true)}
       >
         {/* Badge tags */}
-        {tags.map((tag) => (
+        {tags.map((tag, index) => (
           <div
-            key={tag}
+            key={index}
             className="flex items-center gap-1 bg-[#DC655E]/10 text-[#DC655E] text-sm px-2 py-1 rounded-full"
           >
-            {tag}
+            {tag.tagName}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                removeTag(tag);
+                removeTag(tag.tagName);
               }}
               className="hover:text-red-500 cursor-pointer"
             >
@@ -91,18 +138,22 @@ export default function TagInput({ onChange, tags }: TagInputProps) {
             </div>
           )}
 
-          {filteredTags.length > 0 ? (
+          {loading ? (
+            <p className="text-foreground p-3">Loading...</p>
+          ) : error ? (
+            <p className="text-foreground p-3">Error: {error}</p>
+          ) : filteredTags.length > 0 ? (
             <>
               <div className="border-gray-100"></div>
               <div className="p-1">
-                {filteredTags.map((option) => (
+                {filteredTags.map((option, index) => (
                   <button
                     type="button"
-                    key={option}
-                    onClick={() => addTag(option)}
+                    key={index}
+                    onClick={() => addTag(option.tagName)}
                     className="w-full p-2 text-left text-sm hover:bg-gray-100 rounded"
                   >
-                    {option}
+                    {option.tagName}
                   </button>
                 ))}
               </div>

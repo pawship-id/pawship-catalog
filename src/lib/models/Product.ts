@@ -15,7 +15,7 @@ export interface IProduct extends Document {
     imageUrl: string;
     imagePublicId: string;
   }[];
-  tags?: string[];
+  tags?: Types.ObjectId[];
   exclusive: {
     enabled: boolean;
     country: string[];
@@ -90,9 +90,12 @@ const ProductSchema = new Schema<IProduct>(
         },
       },
     ],
-    tags: {
-      type: [String],
-    },
+    tags: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Tag",
+      },
+    ],
     exclusive: {
       _id: false,
       type: {

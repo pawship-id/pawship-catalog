@@ -35,6 +35,7 @@ import {
 import { ApiResponse } from "@/lib/types/api";
 import { useRouter } from "next/navigation";
 import TagInput from "./input-tag";
+import { TagForm } from "@/lib/types/tag";
 
 interface ProductFormProps {
   initialData?: any;
@@ -57,7 +58,7 @@ const initialFormState: ProductForm = {
   productDescription: "",
   sizeProduct: null,
   productMedia: [],
-  tags: [] as string[],
+  tags: [] as TagForm[],
   exclusive: { enabled: false, country: [] as string[] },
   preOrder: { enabled: false, leadTime: "" },
   variantTypes: [] as VariantType[],
@@ -73,6 +74,10 @@ export default function FormProduct({
   const [loading, setLoading] = useState(false);
   const isEditMode = !!productId;
   const router = useRouter();
+
+  const [inputTagValue, setInputTagValue] = useState<
+    { isNew: boolean; tagName: string }[]
+  >([]);
 
   const [previewSizeProduct, setPreviewSizeProduct] = useState<string | null>(
     null
@@ -111,6 +116,7 @@ export default function FormProduct({
     { value: "variations-pricing", label: "Variation & Pricing" },
     { value: "additional", label: "Additional" },
   ];
+
   const [activeTab, setActiveTab] = useState(tabMenu[0].value);
   const currentTabIndex = tabMenu.findIndex((tab) => tab.value === activeTab);
 
@@ -129,6 +135,7 @@ export default function FormProduct({
   };
 
   const [newMarketingLink, setNewMarketingLink] = useState("");
+
   const addMarketingLink = () => {
     if (
       newMarketingLink.trim() !== "" &&
@@ -242,8 +249,6 @@ export default function FormProduct({
   useEffect(() => {
     localStorage.setItem("variantRows", JSON.stringify(variantRows));
   }, [variantRows]);
-
-  const [inputTagValue, setInputTagValue] = useState<string[]>([]);
 
   return (
     <>

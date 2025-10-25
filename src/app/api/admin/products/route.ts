@@ -10,6 +10,8 @@ import dbConnect from "@/lib/mongodb";
 import ProductVariant from "@/lib/models/ProductVariant";
 import Product from "@/lib/models/Product";
 import { VariantRowForm } from "@/lib/types/product";
+import Tag from "@/lib/models/Tag";
+import { TagForm } from "@/lib/types/tag";
 
 // GET: read all product
 export async function GET() {
@@ -50,13 +52,27 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
 
     let productName = formData.get("productName") as string;
+    let tagData = JSON.parse(formData.get("tags") as string);
+
+    const tags = await Promise.all(
+      tagData.map(async (item: TagForm) => {
+        let tag;
+        if (item.isNew) {
+          tag = await Tag.create({ tagName: item.tagName });
+        } else {
+          tag = await Tag.findOne({ tagName: item.tagName });
+        }
+
+        return tag._id;
+      })
+    );
 
     let data = {
       productName: productName,
       categoryId: formData.get("categoryId") as string,
       moq: Number(formData.get("moq")),
       productDescription: formData.get("productDescription") as string,
-      tags: [] as string[],
+      tags: tags,
       sizeProduct: {},
       productMedia: [] as { imageUrl: string; imagePublicId: string }[],
       variantTypes: JSON.parse(formData.get("variantTypes") as string),
@@ -65,12 +81,6 @@ export async function POST(req: NextRequest) {
       marketingLinks: JSON.parse(formData.get("marketingLinks") as string),
       slug: generateSlug(productName),
     };
-
-    let tags = formData.get("tags") as string;
-
-    if (tags) {
-      data.tags = tags.trim().split(",");
-    }
 
     const sizeProduct = formData.get("sizeProduct") as File | null;
     if (sizeProduct) {
@@ -118,7 +128,7 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         data: product,
-        message: `Product with SKU ${product.sku}  successfully created`,
+        message: `Product ${product.productName} successfully created`,
       },
       { status: 201 }
     );

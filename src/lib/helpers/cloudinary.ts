@@ -80,8 +80,6 @@ export const bulkUploadFileToCloudinary = async (
 ): Promise<UploadResult[]> => {
   try {
     const uploadPromises = filePath.map(async (file) => {
-      console.log(file, "ini fileee");
-
       const arrayBuffer = await file.arrayBuffer();
       let buffer = Buffer.from(arrayBuffer);
 

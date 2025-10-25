@@ -1,4 +1,7 @@
 import Product from "@/lib/models/Product";
+import ProductVariant from "@/lib/models/ProductVariant";
+import Tag from "@/lib/models/Tag";
+import Category from "@/lib/models/Category";
 import dbConnect from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 interface Context {
@@ -13,6 +16,7 @@ export async function GET(req: NextRequest, { params }: Context) {
 
     const product = await Product.findById(id)
       .populate("productVariantsData")
+      .populate("tags", "_id tagName")
       .populate({
         path: "categoryDetail",
         select: "name",
