@@ -1,119 +1,159 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Product, TCurrency } from "@/lib/types/product";
-import { products } from "@/lib/data/products";
+import { ProductData, TCurrency, VariantRow } from "@/lib/types/product";
 import { Filter, ChevronRight, ChevronLeft, X } from "lucide-react";
 import SortDropdown from "@/components/catalog/sort-dropdown";
 import ProductGrid from "@/components/catalog/product-grid";
 import FilterSidebar from "@/components/catalog/filter-sidebar";
+import { useCurrency } from "@/context/CurrencyContext";
 
 type TSelectedFilter = {
   categories: string[];
   sizes: string[];
-  stocks: string;
   priceRange: [number, number];
+  stocks: string;
+  sortBy?: string;
 };
 
-const mockProducts = products;
-
 interface MainContentProps {
-  slugData: string;
-  type: "tag" | "category";
+  products: ProductData[];
 }
 
-export default function MainContent({ slugData, type }: MainContentProps) {
-  const [products, setProducts] = useState(
-    mockProducts.filter((product) =>
-      type === "tag"
-        ? product.tag.toLowerCase() === slugData.toLowerCase()
-        : product.category.toLowerCase() === slugData.toLowerCase()
-    )
-  );
+const extractAttributes = (variants: VariantRow[]) => {
+  let attributes: Record<string, Set<string>> = {};
 
-  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
+  variants.forEach((el) => {
+    let variantAttrs = el.attrs;
+
+    for (let key in variantAttrs) {
+      if (!attributes[key]) {
+        attributes[key] = new Set<string>();
+      }
+      attributes[key].add(variantAttrs[key]);
+    }
+  });
+
+  return Object.fromEntries(
+    Object.entries(attributes).map(([k, v]) => [k, [...v]])
+  );
+};
+
+export const filterProducts = (
+  products: any[],
+  searchQuery: string,
+  selectedFilters: TSelectedFilter,
+  sortBy: string,
+  currency: TCurrency
+) => {
+  let filtered = products.map((product: ProductData) => {
+    const variants = product.productVariantsData ?? [];
+
+    const prices = variants
+      .map((v: VariantRow) => v.price?.[currency])
+      .filter((p: number) => typeof p === "number");
+
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+
+    const totalStock = variants.reduce(
+      (sum: number, v: VariantRow) => sum + (v.stock ?? 0),
+      0
+    );
+
+    const attributes = extractAttributes(variants);
+
+    return {
+      ...product,
+      minPrice,
+      maxPrice,
+      totalStock,
+      attributes,
+      availableSizes: attributes["Size"] || [],
+    };
+  });
+
+  // 🔍 Search
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter((p) => p.productName.toLowerCase().includes(q));
+  }
+
+  // 📏 Size
+  if (selectedFilters.sizes.length > 0) {
+    filtered = filtered.filter((p) =>
+      p.availableSizes.some((s: string) => selectedFilters.sizes.includes(s))
+    );
+  }
+
+  // 💰 Price
+  const [min, max] = selectedFilters.priceRange;
+  if (min || max) {
+    filtered = filtered.filter((p) => {
+      if (min && max) return p.minPrice >= min && p.minPrice <= max;
+      if (min) return p.minPrice >= min;
+      if (max) return p.minPrice <= max;
+      return true;
+    });
+  }
+
+  // 📦 Stock Filter ✅
+  if (selectedFilters.stocks) {
+    if (selectedFilters.stocks === "Ready") {
+      filtered = filtered.filter((p) => p.totalStock >= 1);
+    } else if (selectedFilters.stocks === "Pre-Order") {
+      filtered = filtered.filter((p) => p.totalStock < 1);
+    }
+  }
+
+  // 🔽 Sorting
+  switch (sortBy) {
+    case "price-low":
+      filtered.sort((a, b) => a.minPrice - b.minPrice);
+      break;
+    case "price-high":
+      filtered.sort((a, b) => b.minPrice - a.minPrice);
+      break;
+    case "newest":
+      filtered.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      break;
+    case "name":
+      filtered.sort((a, b) => a.productName.localeCompare(b.productName));
+      break;
+  }
+
+  return filtered;
+};
+
+export default function MainContent({ products }: MainContentProps) {
+  const [filteredProducts, setFilteredProducts] = useState(products);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState<TSelectedFilter>({
     categories: [],
     sizes: [],
     priceRange: [0, 0],
     stocks: "",
+    sortBy: "",
   });
+
   const [sortBy, setSortBy] = useState("sorting by");
 
-  const [currency, setCurrency] = useState<TCurrency>("IDR");
+  const { currency } = useCurrency();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
 
   useEffect(() => {
-    let filtered = products;
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (product) =>
-          product.name.toLowerCase().includes(searchQuery.toLowerCase())
-        // product.tags.some((tag) =>
-        //   tag.toLowerCase().includes(searchQuery.toLowerCase())
-        // )
-      );
-    }
-
-    // Size filter
-    if (selectedFilters.sizes.length > 0) {
-      filtered = filtered.filter((product) =>
-        product.sizes.some((size: string) =>
-          selectedFilters.sizes.includes(size)
-        )
-      );
-    }
-
-    // Price range filter
-    if (
-      selectedFilters.priceRange[0] !== 0 ||
-      selectedFilters.priceRange[1] !== 0
-    ) {
-      filtered = filtered.filter((product) => {
-        const price = product.price[currency];
-
-        const [min, max] = selectedFilters.priceRange;
-
-        if (min > 0 && max > 0) {
-          return price >= min && price <= max;
-        }
-        if (min > 0) {
-          return price >= min;
-        }
-        if (max > 0) {
-          return price <= max;
-        }
-      });
-    }
-
-    // In stock filter
-    if (selectedFilters.stocks) {
-      filtered = filtered.filter(
-        (product: Product) => product.inStock === selectedFilters.stocks
-      );
-    }
-
-    // Sort products
-    switch (sortBy) {
-      case "price-low":
-        filtered.sort((a, b) => a.price[currency] - b.price[currency]);
-        break;
-      case "price-high":
-        filtered.sort((a, b) => b.price[currency] - a.price[currency]);
-        break;
-      case "newest":
-        filtered.sort((a, b) => (a.tag === "New Arrivals" ? -1 : 1));
-        break;
-      case "name":
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-    }
-
+    const filtered = filterProducts(
+      products,
+      searchQuery,
+      selectedFilters, // sizes, stocks, priceRange
+      sortBy,
+      currency
+    );
     setFilteredProducts(filtered);
     setCurrentPage(1);
   }, [products, searchQuery, selectedFilters, sortBy, currency]);
@@ -138,6 +178,20 @@ export default function MainContent({ slugData, type }: MainContentProps) {
     if (currentPage < totalPages) {
       handlePageChange(currentPage + 1);
     }
+  };
+
+  const extractSizesFromVariants = (products: ProductData[]) => {
+    const sizes = [] as string[];
+
+    products.forEach((product) => {
+      product.productVariantsData?.forEach((variant) => {
+        const size = variant.attrs?.["Size"];
+
+        if (size && !sizes.includes(size)) sizes.push(size.toUpperCase());
+      });
+    });
+
+    return sizes;
   };
 
   return (
@@ -191,6 +245,7 @@ export default function MainContent({ slugData, type }: MainContentProps) {
               </div>
               <div className="p-4">
                 <FilterSidebar
+                  sizes={extractSizesFromVariants(products)}
                   selectedFilters={selectedFilters}
                   onFiltersChange={setSelectedFilters}
                   catagoryTab={false}

@@ -1,3 +1,4 @@
+import { VariantRow } from "@/lib/types/product";
 import {
   ChevronDown,
   DollarSign,
@@ -13,6 +14,7 @@ type TSelectedFilter = {
   sizes: string[];
   stocks: string;
   priceRange: [number, number];
+  sortBy?: string;
 };
 
 type TSection = "categories" | "sizes" | "priceRange" | "stocks";
@@ -21,12 +23,14 @@ interface FilterSidebarProps {
   selectedFilters: TSelectedFilter;
   onFiltersChange: React.Dispatch<React.SetStateAction<TSelectedFilter>>;
   catagoryTab?: boolean;
+  sizes: string[];
 }
 
 export default function FilterSidebar({
   selectedFilters,
   onFiltersChange,
   catagoryTab = true,
+  sizes,
 }: FilterSidebarProps) {
   const [expandedSections, setExpandedSections] = useState({
     categories: true,
@@ -42,8 +46,11 @@ export default function FilterSidebar({
     }));
   };
 
+  if (sizes.length === 0) {
+    sizes = ["S", "M", "L", "XL"];
+  }
+
   const categories = ["Bibs/Collar", "Harness", "Costume", "Basic"];
-  const sizes = ["XS", "S", "M", "L", "XL"];
   const stocks = ["Ready", "Pre-Order"];
 
   const handleFilterChange = (
@@ -52,27 +59,30 @@ export default function FilterSidebar({
   ) => {
     const newFilters = { ...selectedFilters };
 
-    if (typeof value === "string") {
-      if (filterType === "categories" || filterType === "sizes") {
-        if (newFilters[filterType].includes(value)) {
-          // condition to uncheck
-          newFilters[filterType] = newFilters[filterType].filter(
-            (item) => item !== value
-          );
-        } else {
-          // condition to check
-          newFilters[filterType] = [...newFilters[filterType], value];
+    switch (filterType) {
+      case "categories":
+      case "sizes":
+        if (typeof value === "string") {
+          newFilters[filterType] = newFilters[filterType].includes(
+            value.toUpperCase()
+          )
+            ? newFilters[filterType].filter((v) => v !== value.toUpperCase())
+            : [...newFilters[filterType], value.toUpperCase()];
         }
-      } else if (filterType === "stocks") {
-        newFilters[filterType] = value;
-      }
-    } else {
-      if (filterType === "priceRange") {
-        const min = value[0] ? value[0] : 0;
-        const max = value[1] ? value[1] : 0;
+        break;
 
-        newFilters[filterType] = [min, max];
-      }
+      case "stocks":
+        if (typeof value === "string") {
+          newFilters.stocks = newFilters.stocks === value ? "" : value;
+        }
+        break;
+
+      case "priceRange":
+        if (Array.isArray(value)) {
+          const [min, max] = value;
+          newFilters.priceRange = [isNaN(min) ? 0 : min, isNaN(max) ? 0 : max];
+        }
+        break;
     }
 
     onFiltersChange(newFilters);
@@ -253,7 +263,7 @@ export default function FilterSidebar({
           >
             <h4 className="text-lg font-semibold text-gray-800 flex items-center space-x-2">
               <Target className="text-blue-400" size={20} />
-              <span>Stocks</span>
+              <span>Stock</span>
             </h4>
             <ChevronDown
               className={`text-gray-500 transition-transform duration-200 ${
@@ -264,24 +274,32 @@ export default function FilterSidebar({
           </button>
 
           {expandedSections.stocks && (
-            <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
-              {stocks.map((stock) => (
-                <label
-                  key={stock}
-                  className="flex items-center space-x-3 cursor-pointer group"
-                >
-                  <input
-                    type="radio"
-                    name="stocks" // semua radio harus punya name yang sama
-                    checked={selectedFilters.stocks === stock}
-                    onChange={() => handleFilterChange("stocks", stock)}
-                    className="w-4 h-4 text-orange-600 border-gray-300 focus:ring-orange-500 focus:ring-2"
-                  />
-                  <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
-                    {stock}
-                  </span>
-                </label>
-              ))}
+            <div className="space-y-2 pl-1">
+              {stocks.map((el, index) => {
+                return (
+                  <label
+                    key={index}
+                    className="flex items-center space-x-3 cursor-pointer group"
+                  >
+                    <input
+                      type="radio"
+                      name="stock-option"
+                      value={el}
+                      checked={selectedFilters.stocks === el}
+                      onChange={(e) =>
+                        onFiltersChange({
+                          ...selectedFilters,
+                          stocks: e.target.value,
+                        })
+                      }
+                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    />
+                    <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
+                      {el}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
           )}
         </div>

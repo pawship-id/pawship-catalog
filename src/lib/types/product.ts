@@ -83,7 +83,7 @@ export interface ProductData {
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;
-  createdAt?: Date;
+  createdAt: Date;
   updatedAt?: Date;
 }
 

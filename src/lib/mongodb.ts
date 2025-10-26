@@ -30,6 +30,14 @@ async function dbConnect() {
     });
   }
   cached.conn = await cached.promise;
+
+  await import("@/lib/models/User");
+  await import("@/lib/models/User");
+  await import("@/lib/models/ResellerCategory");
+  await import("@/lib/models/Tag");
+  await import("@/lib/models/ProductVariant");
+  await import("@/lib/models/Product");
+
   return cached.conn;
 }
 

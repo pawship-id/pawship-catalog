@@ -5,7 +5,6 @@ import {
 } from "@/lib/helpers/cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 import { generateSlug } from "@/lib/helpers";
-import { Types } from "mongoose";
 import dbConnect from "@/lib/mongodb";
 import ProductVariant from "@/lib/models/ProductVariant";
 import Product from "@/lib/models/Product";

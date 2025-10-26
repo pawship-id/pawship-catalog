@@ -59,6 +59,16 @@ CategorySchema.plugin(softDelete, {
   overrideMethods: "all",
 });
 
+CategorySchema.virtual("products", {
+  ref: "Product",
+  localField: "_id",
+  foreignField: "categoryId",
+  justOne: false,
+});
+
+CategorySchema.set("toObject", { virtuals: true });
+CategorySchema.set("toJSON", { virtuals: true });
+
 const Category =
   mongoose.models.Category || mongoose.model("Category", CategorySchema);
 

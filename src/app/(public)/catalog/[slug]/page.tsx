@@ -39,21 +39,6 @@ export default function CatalogBySlugPage() {
     fetchCategory();
   }, []);
 
-  // decode to return to "Bibs/Collar"
-  const decodedSlug = decodeURIComponent(slug);
-
-  let page = decodedSlug
-    .split("-")
-    .map((item) => item[0].toUpperCase() + item.substring(1))
-    .join(" ");
-
-  // collection of featured products on the landing page
-  const collections = ["All", "New Arrivals", "Best Sellers", "Sale"];
-
-  const type = collections.includes(page) ? "tag" : "category";
-
-  console.log(loading, error, category);
-
   if (loading) {
     return <Loading />;
   }
@@ -92,7 +77,7 @@ export default function CatalogBySlugPage() {
       </section>
 
       {/* Content */}
-      <MainContent slugData={page} type={type} />
+      <MainContent products={category.products} />
     </div>
   );
 }

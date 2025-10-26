@@ -1,7 +1,4 @@
 import Product from "@/lib/models/Product";
-import ProductVariant from "@/lib/models/ProductVariant";
-import Tag from "@/lib/models/Tag";
-import Category from "@/lib/models/Category";
 import dbConnect from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 interface Context {

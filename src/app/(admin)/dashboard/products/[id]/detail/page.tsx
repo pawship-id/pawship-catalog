@@ -63,7 +63,7 @@ export default function DetailProduct() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
         <Button
           variant="ghost"
           className="cursor-pointer"
