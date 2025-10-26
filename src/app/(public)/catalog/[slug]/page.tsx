@@ -15,7 +15,7 @@ export default function CatalogBySlugPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCategory = async () => {
+  const fetchCategoryBySlug = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -36,7 +36,7 @@ export default function CatalogBySlugPage() {
   };
 
   useEffect(() => {
-    fetchCategory();
+    fetchCategoryBySlug();
   }, []);
 
   if (loading) {
