@@ -31,23 +31,25 @@ export async function GET(req: NextRequest, { params }: Context) {
       category = await Category.findOne({ slug: identifier }); // by Slug
     }
 
-    category = await category.populate({
-      path: "products",
-      match: { deleted: { $ne: true } },
-      populate: [
-        {
-          path: "productVariantsData",
-        },
-        {
-          path: "tags",
-          select: "_id tagName",
-        },
-        {
-          path: "categoryDetail",
-          select: "name",
-        },
-      ],
-    });
+    if (category) {
+      category = await category.populate({
+        path: "products",
+        match: { deleted: { $ne: true } },
+        populate: [
+          {
+            path: "productVariantsData",
+          },
+          {
+            path: "tags",
+            select: "_id tagName",
+          },
+          {
+            path: "categoryDetail",
+            select: "name",
+          },
+        ],
+      });
+    }
 
     if (!category) {
       return NextResponse.json(

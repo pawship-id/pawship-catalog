@@ -18,11 +18,22 @@ export async function GET() {
 
   try {
     const products = await Product.find({})
-      .select("productName slug categoryId productDescription productMedia")
-      .populate({
-        path: "categoryDetail",
-        select: "name",
-      })
+      .select(
+        "productName slug categoryId productDescription productMedia tags createdAt"
+      )
+      .populate([
+        {
+          path: "productVariantsData",
+        },
+        {
+          path: "tags",
+          select: "_id tagName",
+        },
+        {
+          path: "categoryDetail",
+          select: "name",
+        },
+      ])
       .sort({ createdAt: -1 })
       .exec();
 

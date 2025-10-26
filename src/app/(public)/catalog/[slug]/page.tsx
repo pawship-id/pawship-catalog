@@ -1,5 +1,5 @@
 "use client";
-import MainContent from "@/components/catalog/slug/main-content";
+import MainContent from "@/components/catalog/main-content";
 import Loading from "@/components/loading";
 import ErrorPublicPage from "@/components/error-public-page";
 import { getById } from "@/lib/apiService";
@@ -77,7 +77,7 @@ export default function CatalogBySlugPage() {
       </section>
 
       {/* Content */}
-      <MainContent products={category.products} />
+      <MainContent products={category.products} filterCategory={false} />
     </div>
   );
 }

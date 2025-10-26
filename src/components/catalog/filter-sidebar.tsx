@@ -1,13 +1,15 @@
-import { VariantRow } from "@/lib/types/product";
+import { getAll, getById } from "@/lib/apiService";
+import { CategoryData } from "@/lib/types/category";
 import {
   ChevronDown,
   DollarSign,
   Filter,
+  LoaderCircle,
   Shirt,
   ShoppingBag,
   Target,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 type TSelectedFilter = {
   categories: string[];
@@ -50,7 +52,6 @@ export default function FilterSidebar({
     sizes = ["S", "M", "L", "XL"];
   }
 
-  const categories = ["Bibs/Collar", "Harness", "Costume", "Basic"];
   const stocks = ["Ready", "Pre-Order"];
 
   const handleFilterChange = (
@@ -61,6 +62,12 @@ export default function FilterSidebar({
 
     switch (filterType) {
       case "categories":
+        if (typeof value === "string") {
+          newFilters[filterType] = newFilters[filterType].includes(value)
+            ? newFilters[filterType].filter((v) => v !== value)
+            : [...newFilters[filterType], value];
+        }
+        break;
       case "sizes":
         if (typeof value === "string") {
           newFilters[filterType] = newFilters[filterType].includes(
@@ -105,6 +112,33 @@ export default function FilterSidebar({
     handleFilterChange("priceRange", newRange);
   };
 
+  const [categories, setCategories] = useState<CategoryData[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCategory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await getAll<CategoryData>("/api/admin/categories");
+
+      if (response.data) {
+        setCategories(response.data);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (catagoryTab) {
+      fetchCategory();
+    }
+  }, []);
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
       {/* Header */}
@@ -145,24 +179,43 @@ export default function FilterSidebar({
 
             {expandedSections.categories && (
               <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
-                {categories.map((category) => (
-                  <label
-                    key={category}
-                    className="flex items-center space-x-3 cursor-pointer group"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedFilters.categories.includes(category)}
-                      onChange={() =>
-                        handleFilterChange("categories", category)
-                      }
-                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
-                    />
-                    <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
-                      {category}
-                    </span>
-                  </label>
-                ))}
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="text-center">
+                      <LoaderCircle
+                        className="animate-spin text-gray-700"
+                        size={24}
+                      />
+                    </div>
+                  </div>
+                ) : error ? (
+                  <p className="text-sm text-gray-700">Error: {error}</p>
+                ) : categories?.length ? (
+                  categories?.map((category, index) => (
+                    <label
+                      key={index}
+                      className="flex items-center space-x-3 cursor-pointer group"
+                      htmlFor={`${category.name}-${index}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFilters.categories.includes(
+                          category.name
+                        )}
+                        onChange={() =>
+                          handleFilterChange("categories", category.name)
+                        }
+                        id={`${category.name}-${index}`}
+                        className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                      />
+                      <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
+                        {category.name}
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-700">No category found</p>
+                )}
               </div>
             )}
           </div>

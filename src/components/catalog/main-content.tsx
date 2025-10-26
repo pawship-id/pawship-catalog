@@ -6,6 +6,7 @@ import SortDropdown from "@/components/catalog/sort-dropdown";
 import ProductGrid from "@/components/catalog/product-grid";
 import FilterSidebar from "@/components/catalog/filter-sidebar";
 import { useCurrency } from "@/context/CurrencyContext";
+import { extractSizesFromProduct, filterProducts } from "@/lib/helpers/product";
 
 type TSelectedFilter = {
   categories: string[];
@@ -17,117 +18,13 @@ type TSelectedFilter = {
 
 interface MainContentProps {
   products: ProductData[];
+  filterCategory?: boolean;
 }
 
-const extractAttributes = (variants: VariantRow[]) => {
-  let attributes: Record<string, Set<string>> = {};
-
-  variants.forEach((el) => {
-    let variantAttrs = el.attrs;
-
-    for (let key in variantAttrs) {
-      if (!attributes[key]) {
-        attributes[key] = new Set<string>();
-      }
-      attributes[key].add(variantAttrs[key]);
-    }
-  });
-
-  return Object.fromEntries(
-    Object.entries(attributes).map(([k, v]) => [k, [...v]])
-  );
-};
-
-export const filterProducts = (
-  products: any[],
-  searchQuery: string,
-  selectedFilters: TSelectedFilter,
-  sortBy: string,
-  currency: TCurrency
-) => {
-  let filtered = products.map((product: ProductData) => {
-    const variants = product.productVariantsData ?? [];
-
-    const prices = variants
-      .map((v: VariantRow) => v.price?.[currency])
-      .filter((p: number) => typeof p === "number");
-
-    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-
-    const totalStock = variants.reduce(
-      (sum: number, v: VariantRow) => sum + (v.stock ?? 0),
-      0
-    );
-
-    const attributes = extractAttributes(variants);
-
-    return {
-      ...product,
-      minPrice,
-      maxPrice,
-      totalStock,
-      attributes,
-      availableSizes: attributes["Size"] || [],
-    };
-  });
-
-  // 🔍 Search
-  if (searchQuery.trim()) {
-    const q = searchQuery.toLowerCase();
-    filtered = filtered.filter((p) => p.productName.toLowerCase().includes(q));
-  }
-
-  // 📏 Size
-  if (selectedFilters.sizes.length > 0) {
-    filtered = filtered.filter((p) =>
-      p.availableSizes.some((s: string) => selectedFilters.sizes.includes(s))
-    );
-  }
-
-  // 💰 Price
-  const [min, max] = selectedFilters.priceRange;
-  if (min || max) {
-    filtered = filtered.filter((p) => {
-      if (min && max) return p.minPrice >= min && p.minPrice <= max;
-      if (min) return p.minPrice >= min;
-      if (max) return p.minPrice <= max;
-      return true;
-    });
-  }
-
-  // 📦 Stock Filter ✅
-  if (selectedFilters.stocks) {
-    if (selectedFilters.stocks === "Ready") {
-      filtered = filtered.filter((p) => p.totalStock >= 1);
-    } else if (selectedFilters.stocks === "Pre-Order") {
-      filtered = filtered.filter((p) => p.totalStock < 1);
-    }
-  }
-
-  // 🔽 Sorting
-  switch (sortBy) {
-    case "price-low":
-      filtered.sort((a, b) => a.minPrice - b.minPrice);
-      break;
-    case "price-high":
-      filtered.sort((a, b) => b.minPrice - a.minPrice);
-      break;
-    case "newest":
-      filtered.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      break;
-    case "name":
-      filtered.sort((a, b) => a.productName.localeCompare(b.productName));
-      break;
-  }
-
-  return filtered;
-};
-
-export default function MainContent({ products }: MainContentProps) {
+export default function MainContent({
+  products,
+  filterCategory = true,
+}: MainContentProps) {
   const [filteredProducts, setFilteredProducts] = useState(products);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState<TSelectedFilter>({
@@ -178,20 +75,6 @@ export default function MainContent({ products }: MainContentProps) {
     if (currentPage < totalPages) {
       handlePageChange(currentPage + 1);
     }
-  };
-
-  const extractSizesFromVariants = (products: ProductData[]) => {
-    const sizes = [] as string[];
-
-    products.forEach((product) => {
-      product.productVariantsData?.forEach((variant) => {
-        const size = variant.attrs?.["Size"];
-
-        if (size && !sizes.includes(size)) sizes.push(size.toUpperCase());
-      });
-    });
-
-    return sizes;
   };
 
   return (
@@ -245,10 +128,10 @@ export default function MainContent({ products }: MainContentProps) {
               </div>
               <div className="p-4">
                 <FilterSidebar
-                  sizes={extractSizesFromVariants(products)}
+                  sizes={extractSizesFromProduct(products)}
                   selectedFilters={selectedFilters}
                   onFiltersChange={setSelectedFilters}
-                  catagoryTab={false}
+                  catagoryTab={filterCategory}
                 />
               </div>
             </div>
