@@ -6,6 +6,7 @@ import { ProductData, VariantRow } from "@/lib/types/product";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/context/CurrencyContext";
 import { TagData } from "@/lib/types/tag";
+import { isNewArrival } from "@/lib/helpers/product";
 
 interface ProductCardProps {
   product: ProductData;
@@ -42,16 +43,6 @@ export default function ProductCard({ product }: ProductCardProps) {
   //       )
   //     : 0;
 
-  const isNewArrival = (createdAt: string | Date) => {
-    const createdDate = new Date(createdAt);
-    const now = new Date();
-
-    const diffInMs = createdDate.getTime() - now.getTime();
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-    return diffInDays <= 30;
-  };
-
   return (
     <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col max-w-xs">
       {/* Badges */}
@@ -80,7 +71,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       {/* Main Image */}
       <div
-        onClick={() => router.push(`/product/magician-bip-set`)}
+        onClick={() => router.push(`/product/${product.slug}`)}
         className="relative aspect-square overflow-hidden cursor-pointer"
         onMouseEnter={() => {
           if (productMedia?.length > 1) setCurrentImageIndex(1);

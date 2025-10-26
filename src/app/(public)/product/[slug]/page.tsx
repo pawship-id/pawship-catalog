@@ -1,29 +1,31 @@
 "use client";
-import { ProductGallery } from "@/components/product/product-galery";
+import React, { useEffect, useState } from "react";
+import ErrorPublicPage from "@/components/error-public-page";
+import LoadingPage from "@/components/loading";
 import PricingDisplay from "@/components/product/product-pricing";
 import ProductTabs from "@/components/product/product-tabs";
 import RelatedProduct from "@/components/product/related-product";
 import VariantSelector from "@/components/product/variant-selector";
+import { ProductGallery } from "@/components/product/product-galery";
 import { Separator } from "@/components/ui/separator";
+import { getById } from "@/lib/apiService";
+import { ProductData, VariantRow } from "@/lib/types/product";
 import { Download, ShoppingCart } from "lucide-react";
-import React, { useState } from "react";
+import { useParams } from "next/navigation";
+import { enrichProduct, hasTag } from "@/lib/helpers/product";
+import { useCurrency } from "@/context/CurrencyContext";
 
 export default function ProductDetailPage() {
-  const [selectedVariants, setSelectedVariants] = useState<
-    Record<string, string>
-  >({});
-  const [quantity, setQuantity] = useState(1);
+  const params = useParams();
+  const slug = params.slug as string;
 
-  const handleVariantChange = (variantId: string, value: string) => {
-    setSelectedVariants((prev) => ({
-      ...prev,
-      [variantId]: value,
-    }));
-  };
+  const { currency } = useCurrency();
 
-  const handleQuantityChange = (newQuantity: number) => {
-    setQuantity(newQuantity);
-  };
+  const [selectedVariant, setSelectedVariant] = useState<VariantRow>();
+
+  const [product, setProduct] = useState<ProductData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const renderCTAButtons = () => {
     return (
@@ -53,13 +55,52 @@ export default function ProductDetailPage() {
     );
   };
 
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await getById<ProductData>("/api/admin/products", slug);
+
+      if (response.data) {
+        setProduct(response.data);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProduct();
+  }, []);
+
+  if (loading) {
+    return <LoadingPage />;
+  }
+
+  if (error) {
+    return <ErrorPublicPage errorMessage={error} />;
+  }
+
+  if (!product) {
+    return <ErrorPublicPage errorMessage="Page Not Found" />;
+  }
+
+  const isEssentialOrBasic = hasTag(product.tags, "Essentials").isFound
+    ? hasTag(product.tags, "Essentials")
+    : hasTag(product.tags, "Basic");
+
+  const enrichProductData = enrichProduct(product, currency);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div>
             {/* Product Gallery */}
-            <ProductGallery />
+            <ProductGallery product={product} />
 
             <div className="hidden lg:block">
               <ProductTabs />
@@ -72,26 +113,38 @@ export default function ProductDetailPage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <h1 className="text-3xl font-bold text-gray-900">
-                  Magician BIP Set
+                  {product?.productName}
                 </h1>
               </div>
               {/* optional */}
-              <p className="text-lg text-gray-600">Lorem Ipsum</p>
+              <p className="text-lg text-gray-600">
+                {product.categoryDetail.name}
+              </p>
+
               {/* if product essential or basic */}
-              <div className="flex gap-2">
-                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                  Essentials
-                </span>
-              </div>
+              {isEssentialOrBasic.isFound && (
+                <div className="flex gap-2">
+                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                    {isEssentialOrBasic.tagToCheck}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Pricing Display */}
-            <PricingDisplay />
+            {selectedVariant && (
+              <PricingDisplay
+                variantProduct={selectedVariant}
+                moq={product.moq}
+              />
+            )}
 
             {/* Variant Selector */}
             <VariantSelector
-              onVariantChange={handleVariantChange}
-              onQuantityChange={handleQuantityChange}
+              productVariant={product.productVariantsData || []}
+              moq={product.moq || 1}
+              attributes={enrichProductData.attributes}
+              setSelectedVariant={setSelectedVariant}
             />
 
             {/* CTA Buttons */}

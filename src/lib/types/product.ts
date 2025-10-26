@@ -33,7 +33,7 @@ export interface VariantRow {
   attrs: Record<string, string>;
   name: string;
   product: ProductData;
-  stock?: number;
+  stock: number;
   price?: any;
   deleted?: boolean;
   deletedAt?: Date;
@@ -73,7 +73,7 @@ export interface ProductData {
     type: string;
   }[];
   preOrder?: { enabled: boolean; leadTime: string };
-  moq?: number;
+  moq: number;
   sizeProduct?: File | string | null;
   tags?: TagData[];
   exclusive?: { enabled: boolean; country: string[] | null };
@@ -85,6 +85,14 @@ export interface ProductData {
   deletedBy?: string;
   createdAt: Date;
   updatedAt?: Date;
+}
+
+export interface EnrichedProduct {
+  minPrice: number;
+  maxPrice: number;
+  totalStock: number;
+  attributes: Record<string, any>;
+  availableSizes: string[];
 }
 
 export type TCurrency = "IDR" | "SGD" | "USD";

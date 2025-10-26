@@ -1,4 +1,5 @@
 import { ProductData, VariantRow } from "../types/product";
+import { TagData } from "../types/tag";
 
 export type TSelectedFilter = {
   categories: string[];
@@ -6,6 +7,43 @@ export type TSelectedFilter = {
   priceRange: [number, number];
   stocks: string;
   sortBy?: string;
+};
+
+/**
+ * Process the product variant list to add additional information:
+ * - MinPrice & MaxPrice based on variant
+ * - TotalStock of all variants
+ * - Variant attributes
+ * - AvailableSizes from attributes["Size"]
+ *
+ * @param products Array of raw products
+ * @param currency key for variant prices
+ * @returns an array of products enriched with additional info
+ */
+export const enrichProduct = (product: ProductData, currency: string) => {
+  const variants = product.productVariantsData ?? [];
+
+  const prices = variants
+    .map((v: VariantRow) => v.price?.[currency])
+    .filter((p: number) => typeof p === "number");
+
+  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+
+  const totalStock = variants.reduce(
+    (sum: number, v: VariantRow) => sum + (v.stock ?? 0),
+    0
+  );
+
+  const attributes = extractAttributesVariant(variants);
+
+  return {
+    minPrice,
+    maxPrice,
+    totalStock,
+    attributes,
+    availableSizes: attributes["Size"] || [],
+  };
 };
 
 // in function to extract attributes from each variant
@@ -51,32 +89,10 @@ export const filterProducts = (
   sortBy: string,
   currency: string
 ) => {
-  let filtered = products.map((product: ProductData) => {
-    const variants = product.productVariantsData ?? [];
-
-    const prices = variants
-      .map((v: VariantRow) => v.price?.[currency])
-      .filter((p: number) => typeof p === "number");
-
-    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-
-    const totalStock = variants.reduce(
-      (sum: number, v: VariantRow) => sum + (v.stock ?? 0),
-      0
-    );
-
-    const attributes = extractAttributesVariant(variants);
-
-    return {
-      ...product,
-      minPrice,
-      maxPrice,
-      totalStock,
-      attributes,
-      availableSizes: attributes["Size"] || [],
-    };
-  });
+  let filtered = products.map((product) => ({
+    ...product,
+    ...enrichProduct(product, currency),
+  }));
 
   // 🔍 Search
   if (searchQuery.trim()) {
@@ -140,4 +156,32 @@ export const filterProducts = (
   }
 
   return filtered;
+};
+
+// function to check whether the arrival is new (<= 30 days) or not
+export const isNewArrival = (createdAt: string | Date) => {
+  const createdDate = new Date(createdAt);
+  const now = new Date();
+
+  const diffInMs = createdDate.getTime() - now.getTime();
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  return diffInDays <= 30;
+};
+
+// function to check certain tags on a product
+export const hasTag = (
+  productTags: TagData[] = [],
+  tagToCheck: string
+): { tagToCheck: string; isFound: boolean } => {
+  const lowerCheckTags = [tagToCheck].map((tag) => tag.toLowerCase());
+
+  const lowerProductTags = productTags.map((tag) => tag.tagName.toLowerCase());
+
+  let result = {
+    tagToCheck: tagToCheck,
+    isFound: lowerProductTags.some((tag) => lowerCheckTags.includes(tag)),
+  };
+
+  return result;
 };
