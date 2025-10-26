@@ -14,12 +14,14 @@ import { Download, ShoppingCart } from "lucide-react";
 import { useParams } from "next/navigation";
 import { enrichProduct, hasTag } from "@/lib/helpers/product";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useSession } from "next-auth/react";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
 
   const { currency } = useCurrency();
+  const { data: session } = useSession();
 
   const [selectedVariant, setSelectedVariant] = useState<{
     selectedVariantTypes: Record<string, string | undefined>;
@@ -33,10 +35,31 @@ export default function ProductDetailPage() {
   const renderCTAButtons = () => {
     return (
       <div className="space-y-3">
-        <button className="w-full bg-primary/90 hover:bg-primary text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
-          <ShoppingCart className="w-5 h-5" />
-          Add to Cart
-        </button>
+        {session?.user.role === "reseller" ? (
+          <button className="w-full bg-primary/90 hover:bg-primary text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+            <ShoppingCart className="w-5 h-5" />
+            Add to Cart
+          </button>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            {/* Add to Cart */}
+            <button
+              className="w-full bg-primary/90 hover:bg-primary text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+              onClick={() => console.log("Add to cart")}
+            >
+              <ShoppingCart className="w-5 h-5" />
+              Add to Cart
+            </button>
+
+            {/* Buy Now */}
+            <button
+              className="w-full border-1 border-primary cursor-pointer bg-white hover:bg-secondary text-primary py-3 px-6 rounded-lg font-semibold transition-colors"
+              onClick={() => console.log("Buy now")}
+            >
+              Buy Now
+            </button>
+          </div>
+        )}
 
         <Separator className="mb-5 mt-5" />
 

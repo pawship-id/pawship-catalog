@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, X } from "lucide-react";
 import ShareButton from "./share-button";
 import { TagData } from "@/lib/types/tag";
 import { VariantRow } from "@/lib/types/product";
@@ -33,12 +33,14 @@ export function ProductGallery({
 }: ProductGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const variantImageUrl: string | undefined =
     typeof selectedVariant?.selectedVariantDetail?.image === "string"
       ? selectedVariant.selectedVariantDetail.image
       : selectedVariant?.selectedVariantDetail?.image?.imageUrl;
 
+  // Sync selected variant image
   useEffect(() => {
     if (!variantImageUrl) {
       setCurrentIndex(0);
@@ -49,14 +51,10 @@ export function ProductGallery({
       (item) => item.imageUrl === variantImageUrl
     );
 
-    if (index !== -1) {
-      setCurrentIndex(index);
-    } else {
-      setCurrentIndex(0);
-    }
+    setCurrentIndex(index !== -1 ? index : 0);
   }, [variantImageUrl, productMedia]);
 
-  if (productMedia.length === 0) return null;
+  if (!productMedia || productMedia.length === 0) return null;
 
   const currentAsset = productMedia[currentIndex];
   const isVideo = currentAsset.type === "video";
@@ -106,39 +104,54 @@ export function ProductGallery({
               }`}
             />
           </button>
-          <ShareButton url={`http://localhost:3000/product/${product.slug}`} />
+
+          <ShareButton
+            url={`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/product/${product.slug}`}
+          />
         </div>
 
-        {/* Asset */}
-        {isVideo ? (
-          <video
-            src={currentAsset.imageUrl}
-            controls
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <img
-            src={currentAsset.imageUrl}
-            alt={product.productName}
-            className="w-full h-full object-cover"
-          />
-        )}
+        {/* Asset View Clickable */}
+        <div
+          onClick={() => setIsViewerOpen(true)}
+          className="w-full h-full cursor-pointer"
+        >
+          {isVideo ? (
+            <video
+              src={currentAsset.imageUrl}
+              controls
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img
+              src={currentAsset.imageUrl}
+              alt={product.productName}
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
 
         {/* Nav Controls */}
         {productMedia.length > 1 && (
           <>
             <button
-              onClick={prev}
+              onClick={(e) => {
+                e.stopPropagation();
+                prev();
+              }}
               className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/50 hover:bg-white rounded-full opacity-0 group-hover:opacity-100"
             >
               <ChevronLeft />
             </button>
+
             <button
-              onClick={next}
+              onClick={(e) => {
+                e.stopPropagation();
+                next();
+              }}
               className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/50 hover:bg-white rounded-full opacity-0 group-hover:opacity-100"
             >
               <ChevronRight />
@@ -171,6 +184,58 @@ export function ProductGallery({
               )}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* ✅ Modal Image Viewer */}
+      {isViewerOpen && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+          <button
+            onClick={() => setIsViewerOpen(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          {/* Previous Button */}
+          {productMedia.length > 1 && (
+            <button
+              onClick={prev}
+              className="absolute left-4 text-white hover:text-gray-300 z-10"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+          )}
+
+          {/* Next Button */}
+          {productMedia.length > 1 && (
+            <button
+              onClick={next}
+              className="absolute right-4 text-white hover:text-gray-300 z-10"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
+          )}
+
+          <div className="max-w-4xl max-h-[80vh] w-full h-full flex items-center justify-center">
+            {isVideo ? (
+              <video
+                src={currentAsset.imageUrl}
+                controls
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="max-w-full max-h-[90vh] rounded-lg"
+              />
+            ) : (
+              <img
+                src={currentAsset.imageUrl}
+                alt={product.productName}
+                className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              />
+            )}
+          </div>
         </div>
       )}
     </div>
