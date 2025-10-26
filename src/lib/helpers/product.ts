@@ -37,12 +37,22 @@ export const enrichProduct = (product: ProductData, currency: string) => {
 
   const attributes = extractAttributesVariant(variants);
 
+  const variantImages = variants
+    .filter((el) => el.image)
+    .map((el) => {
+      return {
+        ...el.image,
+        type: "image",
+      };
+    });
+
   return {
     minPrice,
     maxPrice,
     totalStock,
     attributes,
     availableSizes: attributes["Size"] || [],
+    variantImages,
   };
 };
 

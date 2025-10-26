@@ -21,7 +21,10 @@ export default function ProductDetailPage() {
 
   const { currency } = useCurrency();
 
-  const [selectedVariant, setSelectedVariant] = useState<VariantRow>();
+  const [selectedVariant, setSelectedVariant] = useState<{
+    selectedVariantTypes: Record<string, string | undefined>;
+    selectedVariantDetail: VariantRow;
+  }>();
 
   const [product, setProduct] = useState<ProductData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,7 +103,29 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div>
             {/* Product Gallery */}
-            <ProductGallery product={product} />
+            <ProductGallery
+              product={{
+                productName: product.productName,
+                slug: product.slug,
+                tags: product.tags || [],
+                createdAt: product.createdAt,
+              }}
+              productMedia={[
+                ...[
+                  ...(product.productMedia || []),
+                  ...(enrichProductData.variantImages || []),
+                ].filter(
+                  (
+                    img
+                  ): img is {
+                    imageUrl: string;
+                    imagePublicId: string;
+                    type: string;
+                  } => !!img.imageUrl && !!img.imagePublicId && !!img.type
+                ),
+              ]}
+              selectedVariant={selectedVariant}
+            />
 
             <div className="hidden lg:block">
               <ProductTabs />
@@ -134,7 +159,7 @@ export default function ProductDetailPage() {
             {/* Pricing Display */}
             {selectedVariant && (
               <PricingDisplay
-                variantProduct={selectedVariant}
+                selectedVariant={selectedVariant}
                 moq={product.moq}
               />
             )}

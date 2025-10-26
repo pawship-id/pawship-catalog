@@ -11,12 +11,15 @@ interface PriceTier {
 }
 
 interface PricingDisplayProps {
-  variantProduct: VariantRow;
+  selectedVariant: {
+    selectedVariantTypes: Record<string, string | undefined>;
+    selectedVariantDetail: VariantRow;
+  };
   moq: number;
 }
 
 export default function PricingDisplay({
-  variantProduct,
+  selectedVariant,
   moq,
 }: PricingDisplayProps) {
   // Static data
@@ -33,7 +36,7 @@ export default function PricingDisplay({
     <div className="space-y-4">
       <div className="space-y-4">
         <div className="text-2xl font-semibold text-gray-900">
-          {format(variantProduct.price[currency])}
+          {format(selectedVariant.selectedVariantDetail.price[currency])}
         </div>
 
         {session?.user.role === "reseller" && (

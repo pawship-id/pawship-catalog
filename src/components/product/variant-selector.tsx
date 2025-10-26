@@ -7,7 +7,10 @@ interface VariantSelectorProps {
   productVariant: VariantRow[];
   attributes: Record<string, string[]>; // attributes from enrichProductData
   moq: number;
-  setSelectedVariant: (value: VariantRow) => void;
+  setSelectedVariant: (value: {
+    selectedVariantTypes: Record<string, string | undefined>;
+    selectedVariantDetail: VariantRow;
+  }) => void;
 }
 
 const VariantSelector: React.FC<VariantSelectorProps> = ({
@@ -87,7 +90,10 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
 
   useEffect(() => {
     if (selectedVariantDetail) {
-      setSelectedVariant(selectedVariantDetail);
+      setSelectedVariant({
+        selectedVariantTypes,
+        selectedVariantDetail,
+      });
 
       if (quantity >= 1 && quantity > selectedVariantDetail.stock) {
         setQuantity(selectedVariantDetail.stock);
