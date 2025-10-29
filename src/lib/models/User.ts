@@ -124,6 +124,16 @@ UserSchema.methods.createPasswordResetToken = function () {
   return resetToken;
 };
 
+UserSchema.virtual("resellerSchema", {
+  ref: "ResellerCategory",
+  localField: "resellerCategoryId",
+  foreignField: "_id",
+  justOne: true,
+});
+
+UserSchema.set("toObject", { virtuals: true });
+UserSchema.set("toJSON", { virtuals: true });
+
 const User = mongoose.models.User || mongoose.model("User", UserSchema);
 
 export default User;

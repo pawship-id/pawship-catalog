@@ -86,7 +86,7 @@ export default function ProductDetailPage() {
       setLoading(true);
       setError(null);
 
-      const response = await getById<ProductData>("/api/admin/products", slug);
+      const response = await getById<ProductData>("/api/public/products", slug);
 
       if (response.data) {
         setProduct(response.data);
