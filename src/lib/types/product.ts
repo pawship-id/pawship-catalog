@@ -22,6 +22,7 @@ export interface VariantRowForm {
 }
 
 export interface VariantRow {
+  _id: string;
   codeRow: string;
   position: number;
   image?: {

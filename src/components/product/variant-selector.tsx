@@ -6,23 +6,26 @@ import { VariantRow } from "@/lib/types/product";
 interface VariantSelectorProps {
   productVariant: VariantRow[];
   attributes: Record<string, string[]>; // attributes from enrichProductData
-  moq: number;
   setSelectedVariant: (value: {
     selectedVariantTypes: Record<string, string | undefined>;
     selectedVariantDetail: VariantRow;
   }) => void;
+  moq: number;
+  quantity: number;
+  setQuantity: (qty: number) => void;
 }
 
 const VariantSelector: React.FC<VariantSelectorProps> = ({
   productVariant,
   attributes,
-  moq,
   setSelectedVariant,
+  moq,
+  quantity,
+  setQuantity,
 }) => {
   const [selectedVariantTypes, setSelectedVariantTypes] = useState<
     Record<string, string | undefined>
   >({});
-  const [quantity, setQuantity] = useState(moq);
   const [inputValue, setInputValue] = useState(moq.toString());
 
   // handle select/unselect variant
@@ -51,7 +54,13 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
 
   // commit quantity according to stock
   const commitQuantity = (val: number) => {
-    const clamped = Math.max(moq, Math.min(maxStock, val));
+    let clamped = val;
+
+    if (val > maxStock) {
+      clamped = moq;
+    } else if (val < moq) {
+      clamped = val;
+    }
 
     setQuantity(clamped);
     setInputValue(clamped.toString());
@@ -101,6 +110,10 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
       }
     }
   }, [selectedVariantDetail]);
+
+  useEffect(() => {
+    setInputValue(quantity.toString());
+  }, [quantity]);
 
   return (
     <div className="space-y-6">

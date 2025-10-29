@@ -1,21 +1,20 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Minus,
   Plus,
   Trash2,
   ShoppingBag,
   ArrowLeft,
-  Heart,
-  Star,
-  Truck,
   Mail,
   User,
   MapPin,
   Phone,
 } from "lucide-react";
 import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
+import { getById } from "@/lib/apiService";
+import { ProductData, VariantRow } from "@/lib/types/product";
+import { useCurrency } from "@/context/CurrencyContext";
 
 interface CartItem {
   id: number;
@@ -39,7 +38,10 @@ interface ShippingAddress {
   province: string;
 }
 
-const CartPage = () => {
+export default function CartPage() {
+  const [cartItemData, setCartItemData] = useState<any[]>([]);
+  const { currency, format } = useCurrency();
+
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
     fullName: "",
     email: "",
@@ -95,13 +97,21 @@ const CartPage = () => {
     },
   ]);
 
+  console.log(cartItemData, "<<");
+
   const updateQuantity = (id: number, newQuantity: number) => {
     if (newQuantity < 1) return;
-    setCartItems((items) =>
+
+    setCartItemData((items) =>
       items.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
+        item.variantId === id ? { ...item, quantity: newQuantity } : item
       )
     );
+
+    // update localStorage
+    let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+
+    console.log(cartItem);
   };
 
   const removeItem = (id: number) => {
@@ -115,14 +125,6 @@ const CartPage = () => {
   const shipping = subtotal > 50 ? 0 : 9.99;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
-
-  function formatCurrency(amount: number) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }
 
   if (cartItems.length === 0) {
     return (
@@ -149,6 +151,54 @@ const CartPage = () => {
     );
   }
 
+  const fetchCartItem = async () => {
+    let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+
+    const detailCartItem = (
+      await Promise.all(
+        cartItem.map(async (el: any) => {
+          const product = await getById<ProductData>(
+            "/api/admin/products",
+            el.productId
+          );
+
+          if (!product?.data) return [];
+
+          const variantsProduct =
+            product.data.productVariantsData
+              ?.filter((variant) =>
+                el.variants.some((item: any) => item.variantId === variant._id)
+              )
+              .map((variant) => {
+                const matchedItem = el.variants.find(
+                  (item: any) => item.variantId === variant._id
+                );
+                return {
+                  ...variant,
+                  quantity: matchedItem?.quantity || 1,
+                };
+              }) || [];
+
+          return variantsProduct.map((variant) => ({
+            productId: product.data?._id,
+            productName: product.data?.productName,
+            variantId: variant._id,
+            variantName: variant.name,
+            price: variant.price,
+            quantity: variant.quantity,
+            image: variant.image,
+          }));
+        })
+      )
+    ).flat();
+
+    setCartItemData(detailCartItem);
+  };
+
+  useEffect(() => {
+    fetchCartItem();
+  }, []);
+
   return (
     <div className="bg-secondary min-h-screen">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -166,26 +216,25 @@ const CartPage = () => {
                 </div>
 
                 <div className="divide-y divide-gray-200">
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="py-4">
+                  {cartItemData.map((item: any) => (
+                    <div key={item.variantId} className="py-4">
                       {/* Desktop Cart Item - Full size for >= 750px */}
                       <div className="hidden min-[750px]:flex items-start space-x-4">
                         <img
-                          src={item.image}
+                          src={item.image?.imageUrl}
                           alt={item.name}
                           className="w-30 h-30 object-cover rounded-lg"
                         />
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                            {item.name}
+                            {item.productName}
                           </h3>
                           <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                            <span>Size: {item.size}</span>
-                            <span>Color: {item.color}</span>
+                            Variant: {item.variantName}
                           </div>
 
-                          {!item.inStock ? (
+                          {/* {!item.inStock ? (
                             <div className="text-red-600 text-sm font-medium mb-2">
                               Out of Stock
                             </div>
@@ -193,28 +242,31 @@ const CartPage = () => {
                             <div className="text-orange-600 text-sm font-medium mb-2">
                               Pre-Order
                             </div>
-                          )}
+                          )} */}
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <span className="text-lg font-bold text-gray-800">
-                                ${item.price}
+                                {format(item.price[currency])}
                               </span>
-                              {item.originalPrice && (
+                              {/* {item.originalPrice && (
                                 <span className="text-sm text-gray-500 line-through">
                                   ${item.originalPrice}
                                 </span>
-                              )}
+                              )} */}
                             </div>
 
                             <div className="flex items-center space-x-3">
                               <div className="flex items-center border border-gray-300 rounded-lg">
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity - 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity - 1
+                                    )
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
+                                  // disabled={!item.inStock}
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
@@ -223,17 +275,20 @@ const CartPage = () => {
                                 </span>
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity + 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity + 1
+                                    )
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
+                                  // disabled={!item.inStock}
                                 >
                                   <Plus className="h-4 w-4" />
                                 </button>
                               </div>
 
                               <button
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeItem(item.variantId)}
                                 className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                               >
                                 <Trash2 className="h-5 w-5" />
@@ -246,21 +301,20 @@ const CartPage = () => {
                       {/* Compact Desktop Cart Item - For >= 416px && < 750px */}
                       <div className="hidden min-[416px]:max-[750px]:flex items-start space-x-3">
                         <img
-                          src={item.image}
+                          src={item.image?.imageUrl}
                           alt={item.name}
                           className="w-25 h-25 object-cover rounded-lg"
                         />
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base font-semibold text-gray-800 mb-1">
-                            {item.name}
+                            {item.productName}
                           </h3>
                           <div className="flex items-center space-x-3 text-xs text-gray-600 mb-2">
-                            <span>Size: {item.size}</span>
-                            <span>Color: {item.color}</span>
+                            Variant: {item.variantName}
                           </div>
 
-                          {!item.inStock ? (
+                          {/* {!item.inStock ? (
                             <div className="text-red-600 text-xs font-medium mb-2">
                               Out of Stock
                             </div>
@@ -268,18 +322,18 @@ const CartPage = () => {
                             <div className="text-orange-600 text-xs font-medium mb-2">
                               Pre-order
                             </div>
-                          )}
+                          )} */}
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <span className="text-base font-bold text-gray-800">
-                                ${item.price}
+                                {format(item.price[currency])}
                               </span>
-                              {item.originalPrice && (
+                              {/* {item.originalPrice && (
                                 <span className="text-xs text-gray-500 line-through">
                                   ${item.originalPrice}
                                 </span>
-                              )}
+                              )} */}
                             </div>
 
                             <div className="flex items-center space-x-2">
@@ -298,7 +352,10 @@ const CartPage = () => {
                                 </span>
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity + 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity + 1
+                                    )
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors"
                                   disabled={!item.inStock}
@@ -308,7 +365,7 @@ const CartPage = () => {
                               </div>
 
                               <button
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeItem(item.variantId)}
                                 className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -324,7 +381,7 @@ const CartPage = () => {
                           {/* Product Image */}
                           <div className="w-25 h-25 flex-shrink-0">
                             <img
-                              src={item.image}
+                              src={item.image?.imageUrl}
                               alt={item.name}
                               className="w-full h-full object-cover rounded-lg"
                             />
@@ -334,29 +391,29 @@ const CartPage = () => {
                           <div className="flex-1 min-w-0 space-y-1">
                             {/* Product Name with overflow hidden */}
                             <h3 className="text-sm font-semibold text-gray-800 truncate">
-                              {item.name}
+                              {item.productName}
                             </h3>
 
                             {/* Variant Name with overflow hidden and smaller text */}
                             <div className="text-xs text-gray-600 truncate">
-                              {item.size} • {item.color}
+                              Variant: {item.variantName}
                             </div>
 
                             {/* Price */}
                             <div className="flex items-center space-x-2">
                               <span className="text-sm font-bold text-gray-800">
-                                ${item.price}
+                                {format(item.price[currency])}
                               </span>
-                              {item.originalPrice && (
+                              {/* {item.originalPrice && (
                                 <span className="text-xs text-gray-500 line-through">
                                   ${item.originalPrice}
                                 </span>
-                              )}
+                              )} */}
                             </div>
 
                             {/* Stock Status */}
                             <div>
-                              {!item.inStock ? (
+                              {/* {!item.inStock ? (
                                 <span className="text-xs text-red-600 font-medium">
                                   Out of Stock
                                 </span>
@@ -364,11 +421,11 @@ const CartPage = () => {
                                 <span className="text-xs text-orange-600 font-medium">
                                   Pre-order
                                 </span>
-                              )}
+                              )} */}
                             </div>
 
                             {/* Bottom Row: Quantity Controls and Delete Button */}
-                            {/* <div className="flex items-center justify-between pt-1">
+                            <div className="flex items-center justify-between pt-1">
                               <div className="flex items-center border border-gray-300 rounded-lg">
                                 <button
                                   onClick={() =>
@@ -384,7 +441,10 @@ const CartPage = () => {
                                 </span>
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity + 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity + 1
+                                    )
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors"
                                   disabled={!item.inStock}
@@ -394,14 +454,14 @@ const CartPage = () => {
                               </div>
 
                               <button
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeItem(item.variantId)}
                                 className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
-                            </div> */}
+                            </div>
                             <div className="flex items-center space-x-2">
-                              <div className="flex items-center border border-gray-300 rounded-md">
+                              {/* <div className="flex items-center border border-gray-300 rounded-md">
                                 <button
                                   onClick={() =>
                                     updateQuantity(item.id, item.quantity - 1)
@@ -416,21 +476,21 @@ const CartPage = () => {
                                 </span>
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity + 1)
+                                    updateQuantity(item.variantId, item.quantity + 1)
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors"
                                   disabled={!item.inStock}
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>
-                              </div>
+                              </div> */}
 
-                              <button
-                                onClick={() => removeItem(item.id)}
+                              {/* <button
+                                onClick={() => removeItem(item.variantId)}
                                 className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
                               >
                                 <Trash2 className="h-4 w-4" />
-                              </button>
+                              </button> */}
                             </div>
                           </div>
                         </div>
@@ -580,23 +640,23 @@ const CartPage = () => {
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span>{format(subtotal)}</span>
                   </div>
 
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping</span>
-                    <span>{formatCurrency(shipping)}</span>
+                    <span>{format(shipping)}</span>
                   </div>
 
                   <div className="flex justify-between text-gray-600">
                     <span>Tax</span>
-                    <span>{formatCurrency(tax)}</span>
+                    <span>{format(tax)}</span>
                   </div>
 
                   <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between text-lg font-semibold text-gray-800">
                       <span>Total</span>
-                      {formatCurrency(total)}
+                      {format(total)}
                     </div>
                   </div>
                 </div>
@@ -620,6 +680,4 @@ const CartPage = () => {
       </div>
     </div>
   );
-};
-
-export default CartPage;
+}

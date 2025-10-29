@@ -8,13 +8,16 @@ import RelatedProduct from "@/components/product/related-product";
 import VariantSelector from "@/components/product/variant-selector";
 import { ProductGallery } from "@/components/product/product-galery";
 import { Separator } from "@/components/ui/separator";
-import { getById } from "@/lib/apiService";
+import { createData, getById } from "@/lib/apiService";
 import { ProductData, VariantRow } from "@/lib/types/product";
 import { Download, ShoppingCart } from "lucide-react";
 import { useParams } from "next/navigation";
 import { enrichProduct, hasTag } from "@/lib/helpers/product";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useSession } from "next-auth/react";
+import { ApiResponse } from "@/lib/types/api";
+import { IOrderDetail, OrderData, OrderForm } from "@/lib/types/order";
+import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -32,6 +35,132 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [quantity, setQuantity] = useState(product?.moq || 1);
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await getById<ProductData>("/api/public/products", slug);
+
+      if (response.data) {
+        setProduct(response.data);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProduct();
+  }, []);
+
+  const [formData, setFormData] = useState({
+    orderDate: new Date(),
+    invoiceNumber: "INV-00001",
+    totalAmount: 0,
+    status: "pending" as "pending" | "confirm" | "process" | "done",
+    shippingAddress: {
+      address: "",
+      country: "",
+      city: "",
+      district: "",
+      zipCode: "",
+    },
+    orderDetails: [] as IOrderDetail[],
+  });
+
+  if (loading) {
+    return <LoadingPage />;
+  }
+
+  if (error) {
+    return <ErrorPublicPage errorMessage={error} />;
+  }
+
+  if (!product) {
+    return <ErrorPublicPage errorMessage="Page Not Found" />;
+  }
+
+  const handleAddToCart = async () => {
+    let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+
+    if (selectedVariant) {
+      const { selectedVariantDetail } = selectedVariant;
+
+      // check whether the product is already in the cart
+      const existingProductIndex = cartItem.findIndex(
+        (el: any) => el.productId === product._id
+      );
+
+      let updatedCart: any[] = [];
+
+      if (existingProductIndex !== -1) {
+        // if the product already exists
+        const existingProduct = cartItem[existingProductIndex];
+
+        // check if the variant already exists
+        const existingVariantIndex = existingProduct.variants.findIndex(
+          (v: any) => v.variantId === selectedVariantDetail._id
+        );
+
+        let updatedVariants = [...existingProduct.variants];
+
+        if (existingVariantIndex !== -1) {
+          // if the variant already exists → add quantity
+          updatedVariants[existingVariantIndex] = {
+            ...updatedVariants[existingVariantIndex],
+            quantity: updatedVariants[existingVariantIndex].quantity + quantity,
+          };
+        } else {
+          // if the variant doesn't exist yet → add a new variant
+          updatedVariants.push({
+            variantId: selectedVariantDetail._id,
+            quantity,
+          });
+        }
+
+        // product updates in cart
+        const updatedProduct = {
+          ...existingProduct,
+          variants: updatedVariants,
+        };
+
+        // update cart array
+        updatedCart = [
+          ...cartItem.slice(0, existingProductIndex),
+          updatedProduct,
+          ...cartItem.slice(existingProductIndex + 1),
+        ];
+      } else {
+        // if the product does not exist → add new
+        updatedCart = [
+          {
+            productId: product._id,
+            variants: [
+              {
+                variantId: selectedVariantDetail._id,
+                quantity,
+              },
+            ],
+          },
+          ...cartItem,
+        ];
+      }
+
+      // save to localStorage
+      localStorage.setItem("cartItem", JSON.stringify(updatedCart));
+      cartItem = updatedCart;
+    }
+
+    setQuantity(1);
+
+    showSuccessAlert(undefined, "Successfully added product to cart");
+  };
+
   const renderCTAButtons = () => {
     return (
       <div className="space-y-3">
@@ -45,7 +174,7 @@ export default function ProductDetailPage() {
             {/* Add to Cart */}
             <button
               className="w-full bg-primary/90 hover:bg-primary text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
-              onClick={() => console.log("Add to cart")}
+              onClick={handleAddToCart}
             >
               <ShoppingCart className="w-5 h-5" />
               Add to Cart
@@ -80,39 +209,6 @@ export default function ProductDetailPage() {
       </div>
     );
   };
-
-  const fetchProduct = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await getById<ProductData>("/api/public/products", slug);
-
-      if (response.data) {
-        setProduct(response.data);
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProduct();
-  }, []);
-
-  if (loading) {
-    return <LoadingPage />;
-  }
-
-  if (error) {
-    return <ErrorPublicPage errorMessage={error} />;
-  }
-
-  if (!product) {
-    return <ErrorPublicPage errorMessage="Page Not Found" />;
-  }
 
   const isEssentialOrBasic = hasTag(product.tags, "Essentials").isFound
     ? hasTag(product.tags, "Essentials")
@@ -190,6 +286,8 @@ export default function ProductDetailPage() {
             {/* Variant Selector */}
             <VariantSelector
               productVariant={product.productVariantsData || []}
+              quantity={quantity || 1}
+              setQuantity={setQuantity}
               moq={product.moq || 1}
               attributes={enrichProductData.attributes}
               setSelectedVariant={setSelectedVariant}
