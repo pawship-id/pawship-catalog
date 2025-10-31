@@ -1,24 +1,38 @@
 export interface IOrderDetail {
   productId: string;
+  productName: string;
   quantity: number;
-  subtotal: number;
+  stock?: number;
+  variantId: string;
+  variantName: string;
+  price: any;
+  image: {
+    imagePublicId: string;
+    imageUrl: string;
+  };
+  subTotal: number;
 }
 
 export interface IShippingAddress {
-  address: string;
+  fullName: string;
+  email: string;
+  phone: string;
   country: string;
   city: string;
   district: string;
   zipCode: string;
+  address: string;
 }
 
 export interface OrderForm {
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
-  status: "pending" | "confirm" | "process" | "done";
+  status: "pending confirmation" | "paid" | "processing" | "shipped";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
+  shippingCost: number;
+  currency: string;
 }
 
 export interface OrderData {
@@ -26,7 +40,7 @@ export interface OrderData {
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
-  status: "pending" | "confirm" | "process" | "done";
+  status: "pending confirmation" | "paid" | "processing" | "shipped";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   deleted?: boolean;

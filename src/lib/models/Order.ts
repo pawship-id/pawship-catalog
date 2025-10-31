@@ -5,37 +5,48 @@ export interface IOrder extends Document {
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
-  status: "pending" | "confirm" | "process" | "done";
+  status: "pending confirmation" | "paid" | "processing" | "shipped";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
+  currency: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 const OrderDetailSchema = new Schema<IOrderDetail>(
   {
-    productId: {
-      type: Schema.Types.ObjectId,
-      ref: "Product",
+    productName: { type: String, required: true },
+    quantity: { type: Number, required: true },
+    variantId: { type: String, required: true },
+    variantName: { type: String, required: true },
+    price: {
+      type: Object,
       required: true,
     },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
+    image: {
+      imagePublicId: { type: String, required: true },
+      imageUrl: { type: String, required: true },
     },
-    subtotal: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
+    subTotal: { type: Number, required: true },
   },
   { _id: false }
 );
 
 const ShippingAddressSchema = new Schema<IShippingAddress>(
   {
+    fullName: {
+      type: String,
+      required: [true, "Please input a full name"],
+    },
+    email: {
+      type: String,
+      required: [true, "Please input a email"],
+    },
+    phone: {
+      type: String,
+      required: [true, "Please input a phone number"],
+    },
     address: {
       type: String,
       required: [true, "Please input a address"],
@@ -82,8 +93,8 @@ const OrderSchema = new Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: ["pending", "confirm", "process", "done"],
-      default: "pending",
+      enum: ["pending confirmation", "paid", "processing", "shipped"],
+      default: "pending confirmation",
     },
     shippingAddress: {
       type: ShippingAddressSchema,
@@ -95,6 +106,10 @@ const OrderSchema = new Schema<IOrder>(
         (val: IOrderDetail[]) => val.length > 0,
         "Order must have at least one detail",
       ],
+    },
+    currency: {
+      type: String,
+      required: true,
     },
   },
   { timestamps: true }

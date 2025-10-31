@@ -1,19 +1,23 @@
 import Order from "@/lib/models/Order";
 import dbConnect from "@/lib/mongodb";
+import { IOrderDetail, OrderForm } from "@/lib/types/order";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
   try {
-    const body = await req.json();
-    console.log(body);
+    const body: OrderForm = await req.json();
 
-    // const order = await Order.create(body);
+    body.orderDetails.forEach((el: IOrderDetail) => {
+      delete el.stock;
+    });
+
+    const order = await Order.create(body);
 
     return NextResponse.json(
       {
         success: true,
-        // data: order,
+        data: order,
         message: `Order successfully created`,
       },
       { status: 201 }

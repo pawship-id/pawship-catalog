@@ -8,16 +8,14 @@ import RelatedProduct from "@/components/product/related-product";
 import VariantSelector from "@/components/product/variant-selector";
 import { ProductGallery } from "@/components/product/product-galery";
 import { Separator } from "@/components/ui/separator";
-import { createData, getById } from "@/lib/apiService";
+import { getById } from "@/lib/apiService";
 import { ProductData, VariantRow } from "@/lib/types/product";
 import { Download, ShoppingCart } from "lucide-react";
 import { useParams } from "next/navigation";
 import { enrichProduct, hasTag } from "@/lib/helpers/product";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useSession } from "next-auth/react";
-import { ApiResponse } from "@/lib/types/api";
-import { IOrderDetail, OrderData, OrderForm } from "@/lib/types/order";
-import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import { showSuccessAlert } from "@/lib/helpers/sweetalert2";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -27,7 +25,7 @@ export default function ProductDetailPage() {
   const { data: session } = useSession();
 
   const [selectedVariant, setSelectedVariant] = useState<{
-    selectedVariantTypes: Record<string, string | undefined>;
+    selectedVariantTypes: Record<string, string>;
     selectedVariantDetail: VariantRow;
   }>();
 
@@ -36,6 +34,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [quantity, setQuantity] = useState(product?.moq || 1);
+  const [disabledAddToCart, setDisabledAddToCart] = useState(true);
 
   const fetchProduct = async () => {
     try {
@@ -58,20 +57,20 @@ export default function ProductDetailPage() {
     fetchProduct();
   }, []);
 
-  const [formData, setFormData] = useState({
-    orderDate: new Date(),
-    invoiceNumber: "INV-00001",
-    totalAmount: 0,
-    status: "pending" as "pending" | "confirm" | "process" | "done",
-    shippingAddress: {
-      address: "",
-      country: "",
-      city: "",
-      district: "",
-      zipCode: "",
-    },
-    orderDetails: [] as IOrderDetail[],
-  });
+  useEffect(() => {
+    let isDisabled = true;
+    if (selectedVariant?.selectedVariantTypes) {
+      const selectedTypeCount = Object.keys(
+        selectedVariant.selectedVariantTypes
+      ).length;
+      const selectedVariantCount = Object.keys(
+        selectedVariant.selectedVariantDetail.attrs
+      ).length;
+      isDisabled = selectedTypeCount !== selectedVariantCount;
+    }
+
+    setDisabledAddToCart(isDisabled);
+  }, [selectedVariant]);
 
   if (loading) {
     return <LoadingPage />;
@@ -91,81 +90,43 @@ export default function ProductDetailPage() {
     if (selectedVariant) {
       const { selectedVariantDetail } = selectedVariant;
 
-      // check whether the product is already in the cart
-      const existingProductIndex = cartItem.findIndex(
-        (el: any) => el.productId === product._id
+      const existingVariantIndex = cartItem.findIndex(
+        (el: any) => el.variantId === selectedVariantDetail._id
       );
 
-      let updatedCart: any[] = [];
-
-      if (existingProductIndex !== -1) {
-        // if the product already exists
-        const existingProduct = cartItem[existingProductIndex];
-
-        // check if the variant already exists
-        const existingVariantIndex = existingProduct.variants.findIndex(
-          (v: any) => v.variantId === selectedVariantDetail._id
-        );
-
-        let updatedVariants = [...existingProduct.variants];
-
-        if (existingVariantIndex !== -1) {
-          // if the variant already exists → add quantity
-          updatedVariants[existingVariantIndex] = {
-            ...updatedVariants[existingVariantIndex],
-            quantity: updatedVariants[existingVariantIndex].quantity + quantity,
-          };
-        } else {
-          // if the variant doesn't exist yet → add a new variant
-          updatedVariants.push({
-            variantId: selectedVariantDetail._id,
-            quantity,
-          });
-        }
-
-        // product updates in cart
-        const updatedProduct = {
-          ...existingProduct,
-          variants: updatedVariants,
-        };
-
-        // update cart array
-        updatedCart = [
-          ...cartItem.slice(0, existingProductIndex),
-          updatedProduct,
-          ...cartItem.slice(existingProductIndex + 1),
-        ];
+      if (existingVariantIndex !== -1) {
+        cartItem[existingVariantIndex].quantity += quantity;
       } else {
-        // if the product does not exist → add new
-        updatedCart = [
+        cartItem = [
           {
+            variantId: selectedVariantDetail._id,
             productId: product._id,
-            variants: [
-              {
-                variantId: selectedVariantDetail._id,
-                quantity,
-              },
-            ],
+            quantity,
           },
           ...cartItem,
         ];
       }
 
-      // save to localStorage
-      localStorage.setItem("cartItem", JSON.stringify(updatedCart));
-      cartItem = updatedCart;
+      localStorage.setItem("cartItem", JSON.stringify(cartItem));
+      setQuantity(1);
+
+      showSuccessAlert(undefined, "Successfully added product to cart");
     }
-
-    setQuantity(1);
-
-    showSuccessAlert(undefined, "Successfully added product to cart");
   };
 
   const renderCTAButtons = () => {
     return (
       <div className="space-y-3">
         {session?.user.role === "reseller" ? (
-          <button className="w-full bg-primary/90 hover:bg-primary text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+          <button
+            className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+              disabledAddToCart
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-primary/90 hover:bg-primary text-white cursor-pointer"
+            }`}
+            onClick={handleAddToCart}
+            disabled={disabledAddToCart}
+          >
             <ShoppingCart className="w-5 h-5" />
             Add to Cart
           </button>
@@ -173,8 +134,13 @@ export default function ProductDetailPage() {
           <div className="grid grid-cols-2 gap-3 mt-4">
             {/* Add to Cart */}
             <button
-              className="w-full bg-primary/90 hover:bg-primary text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+              className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                disabledAddToCart
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-primary/90 hover:bg-primary text-white cursor-pointer"
+              }`}
               onClick={handleAddToCart}
+              disabled={disabledAddToCart}
             >
               <ShoppingCart className="w-5 h-5" />
               Add to Cart

@@ -7,7 +7,7 @@ interface VariantSelectorProps {
   productVariant: VariantRow[];
   attributes: Record<string, string[]>; // attributes from enrichProductData
   setSelectedVariant: (value: {
-    selectedVariantTypes: Record<string, string | undefined>;
+    selectedVariantTypes: Record<string, string>;
     selectedVariantDetail: VariantRow;
   }) => void;
   moq: number;
@@ -24,16 +24,21 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
   setQuantity,
 }) => {
   const [selectedVariantTypes, setSelectedVariantTypes] = useState<
-    Record<string, string | undefined>
+    Record<string, string>
   >({});
   const [inputValue, setInputValue] = useState(moq.toString());
 
   // handle select/unselect variant
   const handleVariantSelect = (attribute: string, value: string) => {
-    setSelectedVariantTypes((prev) => ({
-      ...prev,
-      [attribute]: prev[attribute] === value ? undefined : value,
-    }));
+    setSelectedVariantTypes((prev) => {
+      if (prev[attribute] === value) {
+        const updated = { ...prev };
+        delete updated[attribute];
+        return updated;
+      } else {
+        return { ...prev, [attribute]: value };
+      }
+    });
   };
 
   // filter variants that match selected Variant Types
@@ -109,7 +114,7 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
         setInputValue(selectedVariantDetail.stock.toString());
       }
     }
-  }, [selectedVariantDetail]);
+  }, [selectedVariantTypes]);
 
   useEffect(() => {
     setInputValue(quantity.toString());
