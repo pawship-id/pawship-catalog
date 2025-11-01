@@ -43,8 +43,8 @@ export default function CartPage() {
       | "processing"
       | "shipped",
     shippingAddress: {
-      fullName: session?.user.fullName || "",
-      email: session?.user.email || "",
+      fullName: "",
+      email: "",
       phone: "",
       country: "",
       city: "",
@@ -55,6 +55,7 @@ export default function CartPage() {
     shippingCost: 0,
     orderDetails: [] as IOrderDetail[],
     currency,
+    orderType: session?.user.role === "reseller" ? "B2B" : "B2C",
   });
 
   const router = useRouter();
@@ -227,7 +228,6 @@ export default function CartPage() {
   useEffect(() => {
     fetchCartItem();
   }, [currency]);
-
   if (isLoading) {
     return <LoadingPage />;
   }

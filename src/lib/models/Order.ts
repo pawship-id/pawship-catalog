@@ -9,6 +9,7 @@ export interface IOrder extends Document {
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
+  orderType: "B2C" | "B2B";
   currency: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -110,6 +111,11 @@ const OrderSchema = new Schema<IOrder>(
     currency: {
       type: String,
       required: true,
+    },
+    orderType: {
+      type: String,
+      enum: ["B2C", "B2B"],
+      default: "B2C",
     },
   },
   { timestamps: true }

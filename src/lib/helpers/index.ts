@@ -28,3 +28,12 @@ export function generateSlug(text: string) {
 
   return text.toLowerCase().split(" ").join("-") + "-" + id;
 }
+
+export const currencyFormat = (amount: number, currency: string) => {
+  const locale =
+    currency === "IDR" ? "id-ID" : currency === "SGD" ? "en-SG" : "en-US";
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+  }).format(amount);
+};

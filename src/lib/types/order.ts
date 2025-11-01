@@ -29,6 +29,7 @@ export interface OrderForm {
   invoiceNumber: string;
   totalAmount: number;
   status: "pending confirmation" | "paid" | "processing" | "shipped";
+  orderType: "B2C" | "B2B";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
@@ -41,8 +42,11 @@ export interface OrderData {
   invoiceNumber: string;
   totalAmount: number;
   status: "pending confirmation" | "paid" | "processing" | "shipped";
+  orderType: "B2C" | "B2B";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
+  shippingCost: number;
+  currency: string;
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;

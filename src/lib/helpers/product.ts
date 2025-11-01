@@ -173,7 +173,7 @@ export const isNewArrival = (createdAt: string | Date) => {
   const createdDate = new Date(createdAt);
   const now = new Date();
 
-  const diffInMs = createdDate.getTime() - now.getTime();
+  const diffInMs = now.getTime() - createdDate.getTime();
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
   return diffInDays <= 30;

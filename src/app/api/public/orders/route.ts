@@ -1,4 +1,5 @@
 import Order from "@/lib/models/Order";
+import ProductVariant from "@/lib/models/ProductVariant";
 import dbConnect from "@/lib/mongodb";
 import { IOrderDetail, OrderForm } from "@/lib/types/order";
 import { NextRequest, NextResponse } from "next/server";
@@ -13,6 +14,17 @@ export async function POST(req: NextRequest) {
     });
 
     const order = await Order.create(body);
+
+    for (const detail of order.orderDetails) {
+      const variantProduct = await ProductVariant.findById(detail.variantId);
+      if (variantProduct) {
+        variantProduct.stock = Math.max(
+          0,
+          variantProduct.stock - detail.quantity
+        );
+        await variantProduct.save();
+      }
+    }
 
     return NextResponse.json(
       {
