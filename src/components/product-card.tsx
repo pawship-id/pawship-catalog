@@ -2,12 +2,14 @@
 import React, { useState } from "react";
 import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "./ui/button";
-import { Product } from "@/lib/types/product";
+import { ProductData, VariantRow } from "@/lib/types/product";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/context/CurrencyContext";
+import { TagData } from "@/lib/types/tag";
+import { isNewArrival } from "@/lib/helpers/product";
 
 interface ProductCardProps {
-  product: Product;
+  product: ProductData;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
@@ -23,51 +25,65 @@ export default function ProductCard({ product }: ProductCardProps) {
     setTimeout(() => setIsAddingToCart(false), 1500);
   };
 
-  const discount =
-    product.originalPrice && product.originalPrice[currency]
-      ? Math.round(
-          ((product.originalPrice[currency] - product.price[currency]) /
-            product.originalPrice[currency]) *
-            100
-        )
-      : 0;
+  const productMedia =
+    product.productMedia?.length > 0 ? product.productMedia.slice(0, 2) : [];
+
+  const variants: VariantRow[] | undefined = product.productVariantsData;
+
+  const minPrice = Math.min(
+    ...(variants || []).map((v: VariantRow) => v.price[currency] ?? Infinity)
+  );
+
+  // const discount =
+  //   product.originalPrice && product.originalPrice[currency]
+  //     ? Math.round(
+  //         ((product.originalPrice[currency] - product.price[currency]) /
+  //           product.originalPrice[currency]) *
+  //           100
+  //       )
+  //     : 0;
 
   return (
     <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col max-w-xs">
       {/* Badges */}
       <div className="absolute top-4 left-4 z-10 flex gap-2">
-        {product.tag === "New Arrivals" && (
-          <span className="bg-emerald-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-            New Arrivals
-          </span>
-        )}
-        {product.tag === "Best Sellers" && (
-          <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-            Best Sellers
-          </span>
-        )}
-        {product.originalPrice && discount > 0 && (
-          <span className="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-            -{discount}%
-          </span>
-        )}
+        {
+          isNewArrival(product.createdAt) ? (
+            <span className="bg-emerald-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              New Arrivals
+            </span>
+          ) : product.tags?.some(
+              (tag: TagData) => tag.tagName.toLowerCase() === "best sellers"
+            ) ? (
+            <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              Best Sellers
+            </span>
+          ) : (
+            <p>diskon</p>
+          )
+          // product.originalPrice && discount > 0 ? (
+          //   <span className="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+          //     -{discount}%
+          //   </span>
+          // ) : null
+        }
       </div>
 
       {/* Main Image */}
       <div
-        onClick={() => router.push(`/product/magician-bip-set`)}
+        onClick={() => router.push(`/product/${product.slug}`)}
         className="relative aspect-square overflow-hidden cursor-pointer"
         onMouseEnter={() => {
-          if (product.images.length > 1) setCurrentImageIndex(1);
+          if (productMedia?.length > 1) setCurrentImageIndex(1);
         }}
         onMouseLeave={() => setCurrentImageIndex(0)}
       >
         <div className="relative w-full h-full">
-          {product.images.map((image, index) => (
+          {productMedia?.map((image, index) => (
             <img
-              key={image.id}
-              src={image.url}
-              alt={image.alt}
+              key={index}
+              src={image.imageUrl}
+              alt={`Image product ${product.productName} - ${index + 1}`}
               className={`aspect-square absolute w-full h-full inset-0 object-cover transition-opacity duration-500 ${
                 index === currentImageIndex ? "opacity-100" : "opacity-0"
               }`}
@@ -76,9 +92,9 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Thumbnails */}
-        {product.images.length > 1 && (
+        {productMedia?.length > 1 && (
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            {product.images.map((_, index) => (
+            {productMedia.map((_, index) => (
               <button
                 key={index}
                 onClick={(e) => {
@@ -101,7 +117,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Name + Wishlist */}
         <div className="flex items-start justify-between mb-3">
           <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-gray-700 transition-colors duration-200 flex-1 pr-2">
-            {product.name}
+            {product.productName}
           </h3>
           <Heart
             onClick={() => setIsLiked(!isLiked)}
@@ -116,13 +132,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Bottom: Price + Button */}
         <div className="mt-auto">
           <div className="mb-3">
-            {product.originalPrice && (
+            {/* {product.originalPrice && (
               <p className="text-base text-gray-400 line-through">
                 {format(product.originalPrice[currency])}
               </p>
-            )}
+            )} */}
             <p className="text-lg font-bold text-gray-900">
-              {format(product.price[currency])}
+              {format(minPrice)}
             </p>
           </div>
 

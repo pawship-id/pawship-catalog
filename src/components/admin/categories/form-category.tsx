@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { createData, getAll, updateData } from "@/lib/apiService";
 import { ApiResponse } from "@/lib/types/api";
 import { CategoryData, CategoryForm } from "@/lib/types/category";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CategoryFormProps {
   initialData?: any;
@@ -28,6 +29,7 @@ const initialFormState: CategoryForm = {
   isDisplayed: false,
   isSubCategory: false,
   parentCategoryId: "",
+  description: "",
 };
 
 export default function FormCategory({
@@ -87,6 +89,7 @@ export default function FormCategory({
     dataToSend.append("name", formData.name);
     dataToSend.append("isDisplayed", formData.isDisplayed.toString());
     dataToSend.append("isSubCategory", formData.isSubCategory.toString());
+    dataToSend.append("description", formData.description.toString());
 
     if (formData.isSubCategory && formData.parentCategoryId) {
       dataToSend.append("parentCategoryId", formData.parentCategoryId);
@@ -136,6 +139,7 @@ export default function FormCategory({
         isDisplayed: initialData.isDisplayed || false,
         isSubCategory: initialData.isSubCategory || false,
         parentCategoryId: initialData.parentCategoryId || "",
+        description: initialData.description || "",
       });
 
       if (initialData.imageUrl) {
@@ -247,6 +251,25 @@ export default function FormCategory({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label
+          htmlFor="productDescription"
+          className="text-base font-medium text-gray-700"
+        >
+          Description *
+        </Label>
+        <Textarea
+          id="productDescription"
+          placeholder="Enter description"
+          className="border-gray-300 py-5"
+          required
+          value={formData.description}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -10,6 +10,8 @@ import {
   UploadResult,
 } from "@/lib/helpers/cloudinary";
 import { CategoryData } from "@/lib/types/category";
+import { generateSlug } from "@/lib/helpers";
+import { isValidObjectId } from "mongoose";
 
 interface Context {
   params: Promise<{ id: string }>;
@@ -19,9 +21,35 @@ interface Context {
 export async function GET(req: NextRequest, { params }: Context) {
   await dbConnect();
   try {
-    const { id } = await params;
+    const identifier = (await params).id;
 
-    const category = await Category.findById(id);
+    let category;
+
+    if (isValidObjectId(identifier)) {
+      category = await Category.findById(identifier); // by ID
+    } else {
+      category = await Category.findOne({ slug: identifier }); // by Slug
+    }
+
+    if (category) {
+      category = await category.populate({
+        path: "products",
+        match: { deleted: { $ne: true } },
+        populate: [
+          {
+            path: "productVariantsData",
+          },
+          {
+            path: "tags",
+            select: "_id tagName",
+          },
+          {
+            path: "categoryDetail",
+            select: "name",
+          },
+        ],
+      });
+    }
 
     if (!category) {
       return NextResponse.json(
@@ -72,12 +100,14 @@ export async function PUT(req: NextRequest, { params }: Context) {
       (formData.get("parentCategoryId") as string) || null;
     const isNewImage = formData.get("isNewImage") === "true";
     const image = formData.get("image") as File | null;
+    const description = formData.get("description") as string;
 
     let body: any = {
       name,
       isDisplayed,
       isSubCategory,
       parentCategoryId,
+      description,
     };
 
     if (isNewImage && image instanceof File) {
@@ -100,6 +130,8 @@ export async function PUT(req: NextRequest, { params }: Context) {
     if (findCategory.imageUrl && findCategory.imagePublicId && isNewImage) {
       await deleteFileFromCloudinary(findCategory.imagePublicId);
     }
+
+    body.slug = generateSlug(name);
 
     const category = await Category.findByIdAndUpdate(id, body, {
       new: true,

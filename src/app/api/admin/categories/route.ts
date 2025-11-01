@@ -5,6 +5,7 @@ import Category from "@/lib/models/Category";
 import dbConnect from "@/lib/mongodb";
 import path from "path";
 import os from "os";
+import { generateSlug } from "@/lib/helpers";
 
 // GET: read all category
 export async function GET() {
@@ -12,7 +13,7 @@ export async function GET() {
 
   try {
     const categories = await Category.find({})
-      .select("name slug imageUrl isDisplayed")
+      .select("name slug imageUrl isDisplayed description")
       .sort({ createdAt: -1 });
 
     return NextResponse.json(
@@ -53,12 +54,14 @@ export async function POST(req: NextRequest) {
       (formData.get("parentCategoryId") as string) || null;
     const isNewImage = formData.get("isNewImage") as string;
     const image = formData.get("image") as File | null;
+    const description = formData.get("description") as string;
 
     let body: any = {
       name,
       isDisplayed,
       isSubCategory,
       parentCategoryId,
+      description,
     };
 
     // if there is a new image and image is not null
@@ -77,6 +80,8 @@ export async function POST(req: NextRequest) {
       body.imageUrl = uploadResult.secureUrl;
       body.imagePublicId = uploadResult.publicId;
     }
+
+    body.slug = generateSlug(name);
 
     const category = await Category.create(body);
 

@@ -86,8 +86,8 @@ export default function TableCategory() {
                   {item.imageUrl ? (
                     <div className="h-30 w-30 bg-muted rounded-md flex items-center justify-center">
                       <img
-                        src="https://down-id.img.susercontent.com/file/sg-11134201-7rdxd-m0e23s2x3gz40b@resize_w900_nl.webp"
-                        alt="Magician BIP Set"
+                        src={item.imageUrl}
+                        alt={item.name}
                         className="w-full h-full object-cover rounded-md"
                       />
                     </div>

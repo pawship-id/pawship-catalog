@@ -1,7 +1,10 @@
+import { ProductData } from "@/lib/types/product";
+
 export interface CategoryForm {
   name: string;
   image: File | string | null;
   isDisplayed: boolean;
+  description: string;
   isSubCategory: boolean;
   parentCategoryId?: string;
   imageUrl?: string;
@@ -13,6 +16,8 @@ export interface CategoryData {
   name: string;
   slug: string;
   imageUrl: string; // secureUrl
+  products: ProductData[];
+  description: string;
   isDisplayed: boolean;
   imagePublicId?: string;
   isSubCategory?: boolean;

@@ -1,27 +1,51 @@
-import MainContent from "@/components/catalog/slug/main-content";
-import React from "react";
+"use client";
+import MainContent from "@/components/catalog/main-content";
+import Loading from "@/components/loading";
+import ErrorPublicPage from "@/components/error-public-page";
+import { getById } from "@/lib/apiService";
+import { CategoryData } from "@/lib/types/category";
+import { useParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
-interface CatalogBySlugProps {
-  params: { slug: string };
-}
+export default function CatalogBySlugPage() {
+  const params = useParams();
+  const slug = params.slug as string;
 
-export default async function CatalogBySlugPage({
-  params,
-}: CatalogBySlugProps) {
-  let { slug } = await params;
+  const [category, setCategory] = useState<CategoryData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // decode to return to "Bibs/Collar"
-  const decodedSlug = decodeURIComponent(slug);
+  const fetchCategoryBySlug = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  let page = decodedSlug
-    .split("-")
-    .map((item) => item[0].toUpperCase() + item.substring(1))
-    .join(" ");
+      const response = await getById<CategoryData>(
+        "/api/admin/categories",
+        slug
+      );
 
-  // collection of featured products on the landing page
-  const collections = ["All", "New Arrivals", "Best Sellers", "Sale"];
+      if (response.data) {
+        setCategory(response.data);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const type = collections.includes(page) ? "tag" : "category";
+  useEffect(() => {
+    fetchCategoryBySlug();
+  }, []);
+
+  if (loading) {
+    return <Loading />;
+  }
+
+  if (error || !category) {
+    return <ErrorPublicPage errorMessage={error || "Page Not Found"} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
@@ -45,15 +69,15 @@ export default async function CatalogBySlugPage({
                 Shop
               </a>
               <span className="mx-2 text-white">{"/"}</span>
-              <span className="text-white">{page}</span>
+              <span className="text-white">{category.name}</span>
             </nav>
-            <h1 className="text-3xl lg:text-4xl text-white">{page}</h1>
+            <h1 className="text-3xl lg:text-4xl text-white">{category.name}</h1>
           </div>
         </div>
       </section>
 
       {/* Content */}
-      <MainContent slugData={page} type={type} />
+      <MainContent products={category.products} filterCategory={false} />
     </div>
   );
 }

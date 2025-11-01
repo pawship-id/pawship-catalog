@@ -3,6 +3,7 @@ import softDelete from "mongoose-delete";
 
 export interface ICategory extends Document {
   name: string;
+  description: string;
   slug?: string;
   imageUrl?: string;
   isSubCategory: boolean;
@@ -19,6 +20,10 @@ const CategorySchema = new Schema<ICategory>(
     name: {
       type: String,
       required: [true, "Please input a name"],
+    },
+    description: {
+      type: String,
+      required: [true, "Please input a description"],
     },
     slug: {
       type: String,
@@ -54,20 +59,15 @@ CategorySchema.plugin(softDelete, {
   overrideMethods: "all",
 });
 
-// middleware to encrypt passwords before they are stored
-CategorySchema.pre("save", async function (next) {
-  let processedName = this.name;
-
-  // handle "/" characters by replacing with "-"
-  if (processedName.includes("/")) {
-    processedName = processedName.replace(/\//g, "-");
-  }
-
-  // handle spaces with split and join
-  this.slug = processedName.toLowerCase().split(" ").join("-");
-
-  next();
+CategorySchema.virtual("products", {
+  ref: "Product",
+  localField: "_id",
+  foreignField: "categoryId",
+  justOne: false,
 });
+
+CategorySchema.set("toObject", { virtuals: true });
+CategorySchema.set("toJSON", { virtuals: true });
 
 const Category =
   mongoose.models.Category || mongoose.model("Category", CategorySchema);

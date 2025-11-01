@@ -1,130 +1,238 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Minus,
   Plus,
   Trash2,
   ShoppingBag,
   ArrowLeft,
-  Heart,
-  Star,
-  Truck,
   Mail,
   User,
   MapPin,
   Phone,
 } from "lucide-react";
 import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
+import { createData, getById } from "@/lib/apiService";
+import { ProductData } from "@/lib/types/product";
+import { useCurrency } from "@/context/CurrencyContext";
+import { useSession } from "next-auth/react";
+import LoadingPage from "@/components/loading";
+import {
+  IShippingAddress,
+  IOrderDetail,
+  OrderData,
+  OrderForm,
+} from "@/lib/types/order";
+import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
+import { useRouter } from "next/navigation";
 
-interface CartItem {
-  id: number;
-  name: string;
-  price: number;
-  originalPrice?: number;
-  image: string;
-  size: string;
-  color: string;
-  quantity: number;
-  inStock: boolean;
-}
+export default function CartPage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const { data: session } = useSession();
 
-interface ShippingAddress {
-  fullName: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  province: string;
-}
+  const { currency, format } = useCurrency();
 
-const CartPage = () => {
-  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
-    fullName: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    postalCode: "",
-    province: "",
+  const [formData, setFormData] = useState<OrderForm>({
+    orderDate: new Date(),
+    invoiceNumber: "INV-00001",
+    totalAmount: 0,
+    status: "pending confirmation" as
+      | "pending confirmation"
+      | "paid"
+      | "processing"
+      | "shipped",
+    shippingAddress: {
+      fullName: "",
+      email: "",
+      phone: "",
+      country: "",
+      city: "",
+      district: "",
+      zipCode: "",
+      address: "",
+    },
+    shippingCost: 0,
+    orderDetails: [] as IOrderDetail[],
+    currency,
+    orderType: session?.user.role === "reseller" ? "B2B" : "B2C",
   });
 
-  const handleAddressChange = (field: keyof ShippingAddress, value: string) => {
-    setShippingAddress((prev) => ({ ...prev, [field]: value }));
+  const router = useRouter();
+
+  const handleAddressChange = (
+    field: keyof IShippingAddress,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      shippingAddress: { ...prev.shippingAddress, [field]: value },
+    }));
   };
 
   const isAddressValid = () => {
-    return Object.values(shippingAddress).every((value) => value.trim() !== "");
-  };
-
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      name: "Premium Dog Sweater",
-      price: 29.99,
-      originalPrice: 39.99,
-      image:
-        "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=300",
-      size: "Medium",
-      color: "Navy Blue",
-      quantity: 1,
-      inStock: true,
-    },
-    {
-      id: 2,
-      name: "Cat Collar with Bell",
-      price: 15.99,
-      image:
-        "https://images.pexels.com/photos/1404819/pexels-photo-1404819.jpeg?auto=compress&cs=tinysrgb&w=300",
-      size: "Small",
-      color: "Pink",
-      quantity: 2,
-      inStock: true,
-    },
-    {
-      id: 3,
-      name: "Luxury Pet Bed",
-      price: 89.99,
-      image:
-        "https://images.pexels.com/photos/1851164/pexels-photo-1851164.jpeg?auto=compress&cs=tinysrgb&w=300",
-      size: "Large",
-      color: "Beige",
-      quantity: 1,
-      inStock: false,
-    },
-  ]);
-
-  const updateQuantity = (id: number, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
+    return Object.values(formData.shippingAddress).every(
+      (value) => value.trim() !== ""
     );
   };
 
-  const removeItem = (id: number) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
+  const updateQuantity = (id: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+
+    let findProduct = formData.orderDetails.find((el) => el.variantId === id);
+
+    if (!findProduct) {
+      return;
+    }
+
+    // update state setCartItemData
+    const updatedCartItemData = formData.orderDetails.map((item) =>
+      item.variantId === id
+        ? {
+            ...item,
+            quantity: newQuantity,
+            subTotal: newQuantity * item.price[currency],
+          }
+        : item
+    );
+
+    setFormData((prev) => ({
+      ...prev,
+      orderDetails: updatedCartItemData,
+      totalAmount: updatedCartItemData.reduce(
+        (sum: number, element: any) =>
+          sum + element.price[currency] * element.quantity,
+        0
+      ),
+    }));
+
+    // update localStorage
+    let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+
+    let updatedCartItem = cartItem.map((el: any) => {
+      if (el.variantId === id) {
+        el.quantity = newQuantity;
+      }
+
+      return el;
+    });
+
+    localStorage.setItem("cartItem", JSON.stringify(updatedCartItem));
   };
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+  const removeItem = (id: string) => {
+    let filter = formData.orderDetails.filter((item) => item.variantId !== id);
+
+    // update state
+    setFormData((prev) => ({
+      ...prev,
+      orderDetails: filter,
+      totalAmount: filter.reduce(
+        (sum: number, element: any) =>
+          sum + element.price[currency] * element.quantity,
+        0
+      ),
+    }));
+
+    // update localStorage
+    let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+
+    let filterCartItem = cartItem.filter((item: any) => item.variantId !== id);
+
+    localStorage.setItem("cartItem", JSON.stringify(filterCartItem));
+  };
+
+  const totalAmount = formData.orderDetails.reduce(
+    (sum, item) => sum + item.price[currency] * item.quantity,
     0
   );
-  const shipping = subtotal > 50 ? 0 : 9.99;
-  const tax = subtotal * 0.08;
-  const total = subtotal + shipping + tax;
 
-  function formatCurrency(amount: number) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 2,
-    }).format(amount);
+  const handleCheckout = async () => {
+    const result = await showConfirmAlert(
+      "You want to continue checkout? Make sure all data is correct.",
+      "Yes, Checkout Now"
+    );
+
+    if (!result.isConfirmed) return;
+
+    try {
+      let { data } = await createData<OrderData, OrderForm>(
+        "/api/public/orders",
+        formData
+      );
+
+      router.push(`/order-success/${data?._id}`);
+
+      localStorage.removeItem("cartItem");
+    } catch (error) {
+      console.error(error);
+      showConfirmAlert(
+        "Terjadi kesalahan saat checkout. Coba lagi nanti.",
+        "OK"
+      );
+    }
+  };
+
+  const shipping = totalAmount > 50 ? 0 : 9.99;
+  const total = totalAmount + shipping;
+
+  const fetchCartItem = async () => {
+    setIsLoading(true);
+    try {
+      let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+
+      const detailCartItem = await Promise.all(
+        cartItem.map(async (el: any) => {
+          const { data: product } = await getById<ProductData>(
+            "/api/admin/products",
+            el.productId
+          );
+
+          let variant = product?.productVariantsData?.find(
+            (item) => item._id === el.variantId
+          );
+
+          return {
+            productId: product?._id,
+            productName: product?.productName,
+            variantId: el.variantId,
+            variantName: variant?.name,
+            price: variant?.price,
+            quantity: el.quantity,
+            image:
+              variant?.image ||
+              product?.productMedia.find((el) => el.type === "image"),
+            stock: variant?.stock,
+            subTotal: el.quantity * variant?.price[currency],
+          };
+        })
+      );
+
+      setFormData((prev) => ({
+        ...prev,
+        orderDetails: detailCartItem,
+        totalAmount: detailCartItem.reduce(
+          (sum: number, element: any) =>
+            sum + element.price[currency] * element.quantity,
+          0
+        ),
+        currency,
+      }));
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCartItem();
+  }, [currency]);
+  if (isLoading) {
+    return <LoadingPage />;
   }
 
-  if (cartItems.length === 0) {
+  if (!isLoading && formData.orderDetails.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
         <div className="text-center">
@@ -166,26 +274,25 @@ const CartPage = () => {
                 </div>
 
                 <div className="divide-y divide-gray-200">
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="py-4">
+                  {formData.orderDetails.map((item: any) => (
+                    <div key={item.variantId} className="py-4">
                       {/* Desktop Cart Item - Full size for >= 750px */}
                       <div className="hidden min-[750px]:flex items-start space-x-4">
                         <img
-                          src={item.image}
+                          src={item.image?.imageUrl}
                           alt={item.name}
                           className="w-30 h-30 object-cover rounded-lg"
                         />
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                            {item.name}
+                            {item.productName}
                           </h3>
                           <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                            <span>Size: {item.size}</span>
-                            <span>Color: {item.color}</span>
+                            Variant: {item.variantName}
                           </div>
 
-                          {!item.inStock ? (
+                          {/* {!item.inStock ? (
                             <div className="text-red-600 text-sm font-medium mb-2">
                               Out of Stock
                             </div>
@@ -193,28 +300,31 @@ const CartPage = () => {
                             <div className="text-orange-600 text-sm font-medium mb-2">
                               Pre-Order
                             </div>
-                          )}
+                          )} */}
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <span className="text-lg font-bold text-gray-800">
-                                ${item.price}
+                                {format(item.price[currency])}
                               </span>
-                              {item.originalPrice && (
+                              {/* {item.originalPrice && (
                                 <span className="text-sm text-gray-500 line-through">
                                   ${item.originalPrice}
                                 </span>
-                              )}
+                              )} */}
                             </div>
 
                             <div className="flex items-center space-x-3">
                               <div className="flex items-center border border-gray-300 rounded-lg">
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity - 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity - 1
+                                    )
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
+                                  disabled={item.quantity === 0}
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
@@ -223,17 +333,20 @@ const CartPage = () => {
                                 </span>
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity + 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity + 1
+                                    )
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
+                                  disabled={item.quantity >= item.stock}
                                 >
                                   <Plus className="h-4 w-4" />
                                 </button>
                               </div>
 
                               <button
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeItem(item.variantId)}
                                 className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                               >
                                 <Trash2 className="h-5 w-5" />
@@ -246,21 +359,20 @@ const CartPage = () => {
                       {/* Compact Desktop Cart Item - For >= 416px && < 750px */}
                       <div className="hidden min-[416px]:max-[750px]:flex items-start space-x-3">
                         <img
-                          src={item.image}
+                          src={item.image?.imageUrl}
                           alt={item.name}
                           className="w-25 h-25 object-cover rounded-lg"
                         />
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base font-semibold text-gray-800 mb-1">
-                            {item.name}
+                            {item.productName}
                           </h3>
                           <div className="flex items-center space-x-3 text-xs text-gray-600 mb-2">
-                            <span>Size: {item.size}</span>
-                            <span>Color: {item.color}</span>
+                            Variant: {item.variantName}
                           </div>
 
-                          {!item.inStock ? (
+                          {/* {!item.inStock ? (
                             <div className="text-red-600 text-xs font-medium mb-2">
                               Out of Stock
                             </div>
@@ -268,28 +380,31 @@ const CartPage = () => {
                             <div className="text-orange-600 text-xs font-medium mb-2">
                               Pre-order
                             </div>
-                          )}
+                          )} */}
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <span className="text-base font-bold text-gray-800">
-                                ${item.price}
+                                {format(item.price[currency])}
                               </span>
-                              {item.originalPrice && (
+                              {/* {item.originalPrice && (
                                 <span className="text-xs text-gray-500 line-through">
                                   ${item.originalPrice}
                                 </span>
-                              )}
+                              )} */}
                             </div>
 
                             <div className="flex items-center space-x-2">
                               <div className="flex items-center border border-gray-300 rounded-md">
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity - 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity - 1
+                                    )
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
+                                  disabled={item.quantity === 0}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -298,17 +413,20 @@ const CartPage = () => {
                                 </span>
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity + 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity + 1
+                                    )
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
+                                  disabled={item.quantity >= item.stock}
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>
                               </div>
 
                               <button
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeItem(item.variantId)}
                                 className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -324,7 +442,7 @@ const CartPage = () => {
                           {/* Product Image */}
                           <div className="w-25 h-25 flex-shrink-0">
                             <img
-                              src={item.image}
+                              src={item.image?.imageUrl}
                               alt={item.name}
                               className="w-full h-full object-cover rounded-lg"
                             />
@@ -334,29 +452,29 @@ const CartPage = () => {
                           <div className="flex-1 min-w-0 space-y-1">
                             {/* Product Name with overflow hidden */}
                             <h3 className="text-sm font-semibold text-gray-800 truncate">
-                              {item.name}
+                              {item.productName}
                             </h3>
 
                             {/* Variant Name with overflow hidden and smaller text */}
                             <div className="text-xs text-gray-600 truncate">
-                              {item.size} • {item.color}
+                              Variant: {item.variantName}
                             </div>
 
                             {/* Price */}
                             <div className="flex items-center space-x-2">
                               <span className="text-sm font-bold text-gray-800">
-                                ${item.price}
+                                {format(item.price[currency])}
                               </span>
-                              {item.originalPrice && (
+                              {/* {item.originalPrice && (
                                 <span className="text-xs text-gray-500 line-through">
                                   ${item.originalPrice}
                                 </span>
-                              )}
+                              )} */}
                             </div>
 
                             {/* Stock Status */}
                             <div>
-                              {!item.inStock ? (
+                              {/* {!item.inStock ? (
                                 <span className="text-xs text-red-600 font-medium">
                                   Out of Stock
                                 </span>
@@ -364,18 +482,21 @@ const CartPage = () => {
                                 <span className="text-xs text-orange-600 font-medium">
                                   Pre-order
                                 </span>
-                              )}
+                              )} */}
                             </div>
 
                             {/* Bottom Row: Quantity Controls and Delete Button */}
-                            {/* <div className="flex items-center justify-between pt-1">
+                            <div className="flex items-center justify-between pt-1">
                               <div className="flex items-center border border-gray-300 rounded-lg">
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity - 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity - 1
+                                    )
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
+                                  disabled={item.quantity === 0}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -384,50 +505,21 @@ const CartPage = () => {
                                 </span>
                                 <button
                                   onClick={() =>
-                                    updateQuantity(item.id, item.quantity + 1)
+                                    updateQuantity(
+                                      item.variantId,
+                                      item.quantity + 1
+                                    )
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
+                                  disabled={item.quantity >= item.stock}
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>
                               </div>
 
                               <button
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeItem(item.variantId)}
                                 className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div> */}
-                            <div className="flex items-center space-x-2">
-                              <div className="flex items-center border border-gray-300 rounded-md">
-                                <button
-                                  onClick={() =>
-                                    updateQuantity(item.id, item.quantity - 1)
-                                  }
-                                  className="p-1 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </button>
-                                <span className="px-2 py-1 font-medium text-sm">
-                                  {item.quantity}
-                                </span>
-                                <button
-                                  onClick={() =>
-                                    updateQuantity(item.id, item.quantity + 1)
-                                  }
-                                  className="p-1 hover:bg-gray-100 transition-colors"
-                                  disabled={!item.inStock}
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </button>
-                              </div>
-
-                              <button
-                                onClick={() => removeItem(item.id)}
-                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -452,20 +544,22 @@ const CartPage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-                      <User className="w-4 h-4" />
-                      <span>Full Name</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={shippingAddress.fullName}
-                      onChange={(e) =>
-                        handleAddressChange("fullName", e.target.value)
-                      }
-                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
-                      placeholder="Enter your full name"
-                    />
+                  <div className="sm:col-span-2">
+                    <div>
+                      <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                        <User className="w-4 h-4" />
+                        <span>Full Name</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.shippingAddress.fullName}
+                        onChange={(e) =>
+                          handleAddressChange("fullName", e.target.value)
+                        }
+                        className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
+                        placeholder="Enter your full name"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -475,7 +569,7 @@ const CartPage = () => {
                     </label>
                     <input
                       type="email"
-                      value={shippingAddress.email}
+                      value={formData.shippingAddress.email}
                       onChange={(e) =>
                         handleAddressChange("email", e.target.value)
                       }
@@ -491,7 +585,7 @@ const CartPage = () => {
                     </label>
                     <input
                       type="tel"
-                      value={shippingAddress.phone}
+                      value={formData.shippingAddress.phone}
                       onChange={(e) =>
                         handleAddressChange("phone", e.target.value)
                       }
@@ -501,23 +595,18 @@ const CartPage = () => {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Province
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <span>Country</span>
                     </label>
-                    <select
-                      value={shippingAddress.province}
+                    <input
+                      type="text"
+                      value={formData.shippingAddress.country}
                       onChange={(e) =>
-                        handleAddressChange("province", e.target.value)
+                        handleAddressChange("country", e.target.value)
                       }
                       className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
-                    >
-                      <option value="">Select Province</option>
-                      <option value="DKI Jakarta">DKI Jakarta</option>
-                      <option value="West Java">West Java</option>
-                      <option value="Central Java">Central Java</option>
-                      <option value="East Java">East Java</option>
-                      <option value="Bali">Bali</option>
-                    </select>
+                      placeholder="Enter your country"
+                    />
                   </div>
 
                   <div>
@@ -526,7 +615,7 @@ const CartPage = () => {
                     </label>
                     <input
                       type="text"
-                      value={shippingAddress.city}
+                      value={formData.shippingAddress.city}
                       onChange={(e) =>
                         handleAddressChange("city", e.target.value)
                       }
@@ -537,16 +626,31 @@ const CartPage = () => {
 
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Postal Code
+                      District
                     </label>
                     <input
                       type="text"
-                      value={shippingAddress.postalCode}
+                      value={formData.shippingAddress.district}
                       onChange={(e) =>
-                        handleAddressChange("postalCode", e.target.value)
+                        handleAddressChange("district", e.target.value)
                       }
                       className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
-                      placeholder="Enter postal code"
+                      placeholder="Enter district"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Zip Code
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.shippingAddress.zipCode}
+                      onChange={(e) =>
+                        handleAddressChange("zipCode", e.target.value)
+                      }
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
+                      placeholder="Enter zip code"
                     />
                   </div>
 
@@ -555,7 +659,7 @@ const CartPage = () => {
                       Street Address
                     </label>
                     <textarea
-                      value={shippingAddress.address}
+                      value={formData.shippingAddress.address}
                       onChange={(e) =>
                         handleAddressChange("address", e.target.value)
                       }
@@ -580,39 +684,46 @@ const CartPage = () => {
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span>{format(totalAmount)}</span>
                   </div>
 
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping</span>
-                    <span>{formatCurrency(shipping)}</span>
-                  </div>
-
-                  <div className="flex justify-between text-gray-600">
-                    <span>Tax</span>
-                    <span>{formatCurrency(tax)}</span>
+                    <span>{format(shipping)}</span>
                   </div>
 
                   <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between text-lg font-semibold text-gray-800">
                       <span>Total</span>
-                      {formatCurrency(total)}
+                      {format(total)}
                     </div>
                   </div>
                 </div>
 
-                <button
-                  className={`w-full font-semibold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg ${
-                    cartItems.length === 0 || !isAddressValid()
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-primary/90 hover:bg-primary text-white transform hover:scale-105"
-                  }`}
-                  disabled={cartItems.length === 0 || !isAddressValid()}
-                >
-                  {!isAddressValid()
-                    ? "Complete Address to Continue"
-                    : "Place Order"}
-                </button>
+                <div className="space-y-2">
+                  <button
+                    className={`w-full font-semibold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg ${
+                      formData.orderDetails.length === 0 || !isAddressValid()
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-primary/90 hover:bg-primary text-white transform hover:scale-105 cursor-pointer"
+                    }`}
+                    disabled={
+                      formData.orderDetails.length === 0 || !isAddressValid()
+                    }
+                    onClick={handleCheckout}
+                  >
+                    {!isAddressValid()
+                      ? "Complete Address to Continue"
+                      : "Confirm Order via Whatsapp"}
+                  </button>
+                  {isAddressValid() && (
+                    <small>
+                      <span className="text-red-500">*disclaimer note:</span>{" "}
+                      you will be directed to Whatsapp for secure and faster
+                      order confirmation
+                    </small>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -620,6 +731,4 @@ const CartPage = () => {
       </div>
     </div>
   );
-};
-
-export default CartPage;
+}

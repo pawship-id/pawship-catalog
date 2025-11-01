@@ -1,18 +1,22 @@
+import { getAll, getById } from "@/lib/apiService";
+import { CategoryData } from "@/lib/types/category";
 import {
   ChevronDown,
   DollarSign,
   Filter,
+  LoaderCircle,
   Shirt,
   ShoppingBag,
   Target,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 type TSelectedFilter = {
   categories: string[];
   sizes: string[];
   stocks: string;
   priceRange: [number, number];
+  sortBy?: string;
 };
 
 type TSection = "categories" | "sizes" | "priceRange" | "stocks";
@@ -21,12 +25,14 @@ interface FilterSidebarProps {
   selectedFilters: TSelectedFilter;
   onFiltersChange: React.Dispatch<React.SetStateAction<TSelectedFilter>>;
   catagoryTab?: boolean;
+  sizes: string[];
 }
 
 export default function FilterSidebar({
   selectedFilters,
   onFiltersChange,
   catagoryTab = true,
+  sizes,
 }: FilterSidebarProps) {
   const [expandedSections, setExpandedSections] = useState({
     categories: true,
@@ -42,8 +48,10 @@ export default function FilterSidebar({
     }));
   };
 
-  const categories = ["Bibs/Collar", "Harness", "Costume", "Basic"];
-  const sizes = ["XS", "S", "M", "L", "XL"];
+  if (sizes.length === 0) {
+    sizes = ["S", "M", "L", "XL"];
+  }
+
   const stocks = ["Ready", "Pre-Order"];
 
   const handleFilterChange = (
@@ -52,27 +60,36 @@ export default function FilterSidebar({
   ) => {
     const newFilters = { ...selectedFilters };
 
-    if (typeof value === "string") {
-      if (filterType === "categories" || filterType === "sizes") {
-        if (newFilters[filterType].includes(value)) {
-          // condition to uncheck
-          newFilters[filterType] = newFilters[filterType].filter(
-            (item) => item !== value
-          );
-        } else {
-          // condition to check
-          newFilters[filterType] = [...newFilters[filterType], value];
+    switch (filterType) {
+      case "categories":
+        if (typeof value === "string") {
+          newFilters[filterType] = newFilters[filterType].includes(value)
+            ? newFilters[filterType].filter((v) => v !== value)
+            : [...newFilters[filterType], value];
         }
-      } else if (filterType === "stocks") {
-        newFilters[filterType] = value;
-      }
-    } else {
-      if (filterType === "priceRange") {
-        const min = value[0] ? value[0] : 0;
-        const max = value[1] ? value[1] : 0;
+        break;
+      case "sizes":
+        if (typeof value === "string") {
+          newFilters[filterType] = newFilters[filterType].includes(
+            value.toUpperCase()
+          )
+            ? newFilters[filterType].filter((v) => v !== value.toUpperCase())
+            : [...newFilters[filterType], value.toUpperCase()];
+        }
+        break;
 
-        newFilters[filterType] = [min, max];
-      }
+      case "stocks":
+        if (typeof value === "string") {
+          newFilters.stocks = newFilters.stocks === value ? "" : value;
+        }
+        break;
+
+      case "priceRange":
+        if (Array.isArray(value)) {
+          const [min, max] = value;
+          newFilters.priceRange = [isNaN(min) ? 0 : min, isNaN(max) ? 0 : max];
+        }
+        break;
     }
 
     onFiltersChange(newFilters);
@@ -94,6 +111,33 @@ export default function FilterSidebar({
 
     handleFilterChange("priceRange", newRange);
   };
+
+  const [categories, setCategories] = useState<CategoryData[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCategory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await getAll<CategoryData>("/api/admin/categories");
+
+      if (response.data) {
+        setCategories(response.data);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (catagoryTab) {
+      fetchCategory();
+    }
+  }, []);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -135,24 +179,43 @@ export default function FilterSidebar({
 
             {expandedSections.categories && (
               <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
-                {categories.map((category) => (
-                  <label
-                    key={category}
-                    className="flex items-center space-x-3 cursor-pointer group"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedFilters.categories.includes(category)}
-                      onChange={() =>
-                        handleFilterChange("categories", category)
-                      }
-                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
-                    />
-                    <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
-                      {category}
-                    </span>
-                  </label>
-                ))}
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="text-center">
+                      <LoaderCircle
+                        className="animate-spin text-gray-700"
+                        size={24}
+                      />
+                    </div>
+                  </div>
+                ) : error ? (
+                  <p className="text-sm text-gray-700">Error: {error}</p>
+                ) : categories?.length ? (
+                  categories?.map((category, index) => (
+                    <label
+                      key={index}
+                      className="flex items-center space-x-3 cursor-pointer group"
+                      htmlFor={`${category.name}-${index}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFilters.categories.includes(
+                          category.name
+                        )}
+                        onChange={() =>
+                          handleFilterChange("categories", category.name)
+                        }
+                        id={`${category.name}-${index}`}
+                        className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                      />
+                      <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
+                        {category.name}
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-700">No category found</p>
+                )}
               </div>
             )}
           </div>
@@ -253,7 +316,7 @@ export default function FilterSidebar({
           >
             <h4 className="text-lg font-semibold text-gray-800 flex items-center space-x-2">
               <Target className="text-blue-400" size={20} />
-              <span>Stocks</span>
+              <span>Stock</span>
             </h4>
             <ChevronDown
               className={`text-gray-500 transition-transform duration-200 ${
@@ -264,24 +327,32 @@ export default function FilterSidebar({
           </button>
 
           {expandedSections.stocks && (
-            <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
-              {stocks.map((stock) => (
-                <label
-                  key={stock}
-                  className="flex items-center space-x-3 cursor-pointer group"
-                >
-                  <input
-                    type="radio"
-                    name="stocks" // semua radio harus punya name yang sama
-                    checked={selectedFilters.stocks === stock}
-                    onChange={() => handleFilterChange("stocks", stock)}
-                    className="w-4 h-4 text-orange-600 border-gray-300 focus:ring-orange-500 focus:ring-2"
-                  />
-                  <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
-                    {stock}
-                  </span>
-                </label>
-              ))}
+            <div className="space-y-2 pl-1">
+              {stocks.map((el, index) => {
+                return (
+                  <label
+                    key={index}
+                    className="flex items-center space-x-3 cursor-pointer group"
+                  >
+                    <input
+                      type="radio"
+                      name="stock-option"
+                      value={el}
+                      checked={selectedFilters.stocks === el}
+                      onChange={(e) =>
+                        onFiltersChange({
+                          ...selectedFilters,
+                          stocks: e.target.value,
+                        })
+                      }
+                      className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    />
+                    <span className="text-gray-700 group-hover:text-gray-900 transition-colors">
+                      {el}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
           )}
         </div>

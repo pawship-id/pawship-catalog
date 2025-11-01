@@ -5,36 +5,13 @@ import { useMemo, useRef, useState } from "react";
 import { GripVertical, ImagePlus, X, Plus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-export interface VariantType {
-  id: string;
-  name: string;
-  values: string[];
-}
-
-export interface VariantRow {
-  id: string;
-  position: number;
-  image?: string;
-  sku: string;
-  attrs: Record<string, string>;
-  name: string;
-  barcode?: string;
-  stock?: string;
-  price?: {
-    usd?: number;
-    idr?: number;
-    sgd?: number;
-    hkd?: number;
-  };
-  selected?: boolean;
-}
+import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
+import { VariantRowForm, VariantType } from "@/lib/types/product";
 
 type VariantEditorProps = {
-  value: VariantRow[];
-  onChange: (rows: VariantRow[]) => void;
+  value: VariantRowForm[];
+  onChange: (rows: VariantRowForm[]) => void;
   variantTypes: VariantType[];
   onTypesChange: (types: VariantType[]) => void;
   className?: string;
@@ -67,17 +44,97 @@ export function VariantEditor({
     [variantTypes]
   );
 
-  const defaultOptions = ["Warna", "Ukuran"];
+  const defaultOptions = ["Color", "Size"];
   const existingTypeNames = new Set(
     variantTypes.map((t) => t.name.toLowerCase())
   );
+
+  const [defaultStockPrice, setDefaultStockPrice] = useState({
+    stockDefault: 0,
+    priceDefault: "",
+  });
+
+  const currencyList = [
+    {
+      currency: "IDR",
+      rate: 1,
+    },
+    {
+      currency: "USD",
+      rate: 16000,
+    },
+    {
+      currency: "SGD",
+      rate: 11000,
+    },
+    {
+      currency: "HKD",
+      rate: 2000,
+    },
+  ];
+
+  const handleApply = () => {
+    const hasSelectedRows = value.some((row) => row.selected);
+
+    if (!defaultStockPrice.stockDefault) {
+      showErrorAlert(undefined, "Please input a stock");
+      return;
+    }
+
+    if (!defaultStockPrice.priceDefault) {
+      showErrorAlert(undefined, "Please input a price IDR");
+      return;
+    }
+
+    if (!hasSelectedRows) {
+      showErrorAlert(undefined, "Please select row");
+      return; // exit early if no rows are selected
+    }
+
+    const updatedRows = value.map((item) => {
+      // only update selected rows
+      if (!item.selected) {
+        return item;
+      }
+
+      // change price
+      let tempPrice: Record<string, number> = {};
+
+      currencyList.forEach((el) => {
+        if (el.currency === "IDR") {
+          tempPrice[el.currency] =
+            Number(defaultStockPrice.priceDefault) || item.price?.IDR;
+        } else {
+          let price =
+            Number(defaultStockPrice.priceDefault) / el.rate ||
+            item.price[el.currency];
+
+          tempPrice[el.currency] = Number(price.toFixed(1));
+        }
+      });
+
+      return {
+        ...item,
+        stock: defaultStockPrice.stockDefault || item.stock,
+        price: tempPrice,
+        selected: false,
+      };
+    });
+
+    onChange(updatedRows);
+
+    setDefaultStockPrice({
+      stockDefault: 0,
+      priceDefault: "",
+    });
+  };
 
   const availableOptions = defaultOptions.filter(
     (option) => !existingTypeNames.has(option.toLowerCase())
   );
 
-  function updateRow(id: string, patch: Partial<VariantRow>) {
-    onChange(value.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  function updateRow(id: string, patch: Partial<VariantRowForm>) {
+    onChange(value.map((r) => (r.codeRow === id ? { ...r, ...patch } : r)));
   }
 
   function removeType(name: string) {
@@ -105,7 +162,6 @@ export function VariantEditor({
     const next: VariantType = {
       id: makeId(),
       name: trimmedName,
-      values: [],
     };
     onTypesChange([...variantTypes, next]);
     setInputValue("");
@@ -147,19 +203,67 @@ export function VariantEditor({
     onChange([
       ...value,
       {
-        id,
+        codeRow: id,
         position: value.length + 1,
         attrs,
         sku: "",
         name: buildNameFromAttrs(attrs, order),
-        barcode: "",
         image: undefined,
       },
     ]);
   }
 
-  function removeSelected() {
-    onChange(value.filter((v) => !v.selected));
+  async function removeSelected() {
+    const itemsToDelete = value.filter((v) => v.selected);
+
+    const deletionPromises = itemsToDelete.map(async (item) => {
+      // only delete if the item has a public id
+      if (item.image?.imagePublicId) {
+        try {
+          // call the API to delete files from Cloudinary
+          const response = await fetch("/api/delete-file", {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ publicId: item.image.imagePublicId }),
+          });
+
+          if (!response.ok) {
+            // if the API responds with an error, log it and proceed to the next item.
+            // don't throw an error here so that other items can still be processed.
+            const errorBody = await response.json();
+            console.error(
+              `Failed to delete Cloudinary image for ID ${item.codeRow}:`,
+              errorBody.message || "Unknown error"
+            );
+            return { success: false, codeRow: item.codeRow };
+          }
+
+          console.log(
+            `Cloudinary image successfully deleted for ID: ${item.codeRow}`
+          );
+          return { success: true, codeRow: item.codeRow };
+        } catch (error) {
+          // handle network errors or other errors
+          console.error(
+            `Network error while deleting image for ID ${item.codeRow}:`,
+            error
+          );
+          return { success: false, codeRow: item.codeRow };
+        }
+      }
+
+      // if there is no publicId, assume it is successful (nothing to delete)
+      return { success: true, codeRow: item.codeRow };
+    });
+
+    // wait for all Promise deletion to complete
+    await Promise.all(deletionPromises);
+
+    // update state: Delete rows that have 'selected: true'
+    const remainingItems = value.filter((v) => !v.selected);
+    onChange(remainingItems);
   }
 
   function handleFilePick(id: string) {
@@ -168,17 +272,76 @@ export function VariantEditor({
     el.click();
   }
 
-  function handleFileChange(
+  async function handleFileChange(
     e: React.ChangeEvent<HTMLInputElement>,
     id: string
   ) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateRow(id, { image: String(reader.result) });
-    };
-    reader.readAsDataURL(file);
+
+    // find row
+    let findRow = value.find((el) => el.codeRow === id);
+
+    // confirm update image, when image already exists
+    let isConfirmed = false; // default set false (do not change image)
+
+    if (findRow?.image) {
+      let result = await showConfirmAlert(
+        "This variant image already exists. Are you sure you want to replace it with a new image?",
+        "I'm sure"
+      );
+
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      isConfirmed = true;
+    }
+
+    try {
+      // append formData input image & folder
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("folder", "products");
+
+      // call API upload-file
+      let response = await fetch("/api/upload-file", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(errorBody.message || "Internal server error");
+      }
+
+      const { data } = await response.json();
+
+      // if the image already exists and confim update image, delete the previous image.
+      if (findRow?.image && isConfirmed) {
+        let responseDeletedFile = await fetch("/api/delete-file", {
+          method: "DELETE",
+          body: JSON.stringify({ publicId: findRow.image.imagePublicId }),
+        });
+
+        if (!responseDeletedFile.ok) {
+          const errorBody = await response.json();
+          throw new Error(errorBody.message || "Internal server error");
+        }
+      }
+
+      updateRow(id, {
+        image: {
+          imageUrl: data.secureUrl,
+          imagePublicId: data.publicId,
+        },
+      });
+    } catch (error) {
+      console.log(
+        error,
+        "function handleFileChange /components/admin/products/variant-editor.tsx"
+      );
+    }
   }
 
   return (
@@ -231,7 +394,7 @@ export function VariantEditor({
                         handleInputSubmit();
                       }
                     }}
-                    placeholder="Ketik tipe variasi..."
+                    placeholder="Enter variation type..."
                     className="h-8 text-sm"
                     autoFocus
                   />
@@ -296,6 +459,44 @@ export function VariantEditor({
           </Button>
         </div>
 
+        <div className="flex items-center gap-2">
+          <div className="space-y-2">
+            <Input
+              placeholder="Enter stock"
+              className="border-gray-300 w-30"
+              value={defaultStockPrice.stockDefault}
+              onChange={(e) =>
+                setDefaultStockPrice({
+                  ...defaultStockPrice,
+                  stockDefault: Number(e.target.value),
+                })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Input
+              placeholder="Enter IDR price"
+              className="border-gray-300 w-40"
+              value={defaultStockPrice.priceDefault}
+              onChange={(e) =>
+                setDefaultStockPrice({
+                  ...defaultStockPrice,
+                  priceDefault: e.target.value,
+                })
+              }
+            />
+          </div>
+          <Button
+            type="button"
+            className="cursor-pointer"
+            disabled={value.length === 0}
+            size="sm"
+            onClick={handleApply}
+          >
+            Apply
+          </Button>
+        </div>
+
         <div className="w-full mb-2">
           <div className="min-w-max">
             <table className="w-full text-sm border">
@@ -304,7 +505,7 @@ export function VariantEditor({
                   <th className="w-10 px-4 text-left">
                     <input
                       type="checkbox"
-                      aria-label="Pilih semua"
+                      aria-label="select all"
                       onChange={(e) => {
                         const checked = e.target.checked;
                         onChange(
@@ -314,35 +515,33 @@ export function VariantEditor({
                     />
                   </th>
                   <th className="w-8 px-2"></th>
-                  <th className="w-24 px-2 text-left">Gambar</th>
-                  <th className="w-64 px-2 text-left">Kode SKU</th>
+                  <th className="w-24 px-2 text-left">Image</th>
+                  <th className="w-64 px-2 text-left">SKU Code</th>
                   {typeNames.map((n) => (
                     <th key={`head-${n}`} className="w-48 px-2 text-left">
                       {n}
                     </th>
                   ))}
-                  <th className="w-56 px-2 text-left">Nama Variasi</th>
-                  <th className="w-56 px-2 text-left">Barcode</th>
+                  <th className="w-56 px-2 text-left">Variation Name</th>
                   <th className="w-40 px-2 text-left">Stock</th>
-                  {value.length > 0 && (
-                    <>
-                      <th className="w-40 px-2 text-left">Harga (USD)</th>
-                      <th className="w-40 px-2 text-left">Harga (IDR)</th>
-                      <th className="w-40 px-2 text-left">Harga (SGD)</th>
-                      <th className="w-40 px-2 text-left">Harga (HKD)</th>
-                    </>
-                  )}
+                  {value.length && currencyList.length
+                    ? currencyList.map((el, idx) => (
+                        <th key={idx} className="w-40 px-2 text-left">
+                          Price ({el.currency})
+                        </th>
+                      ))
+                    : ""}
                 </tr>
               </thead>
               <tbody>
                 {value.map((row) => (
-                  <tr key={row.id} className="h-14 border-b align-middle">
+                  <tr key={row.codeRow} className="h-14 border-b align-middle">
                     <td className="px-4">
                       <input
                         type="checkbox"
                         checked={!!row.selected}
                         onChange={(e) =>
-                          updateRow(row.id, { selected: e.target.checked })
+                          updateRow(row.codeRow, { selected: e.target.checked })
                         }
                         aria-label="Pilih baris"
                       />
@@ -352,20 +551,21 @@ export function VariantEditor({
                     </td>
                     <td className="px-2">
                       <div className="flex items-center gap-2">
-                        {row.image ? (
+                        {row.image?.imageUrl ? (
                           <img
                             src={
-                              row.image ||
+                              row.image.imageUrl ||
                               "/placeholder.svg?height=32&width=32&query=variant-image"
                             }
                             alt="Gambar variasi"
                             className="h-8 w-8 rounded object-cover"
+                            onClick={() => handleFilePick(row.codeRow)}
                           />
                         ) : (
                           <button
                             type="button"
-                            onClick={() => handleFilePick(row.id)}
-                            className="flex h-8 w-8 items-center justify-center rounded border"
+                            onClick={() => handleFilePick(row.codeRow)}
+                            className="flex h-8 w-8 items-center justify-center rounded border cursor-pointer"
                             aria-label="Tambah gambar"
                           >
                             <ImagePlus className="h-4 w-4" />
@@ -373,12 +573,12 @@ export function VariantEditor({
                         )}
                         <input
                           ref={(el) => {
-                            fileInputs.current[row.id] = el;
+                            fileInputs.current[row.codeRow] = el;
                           }}
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => handleFileChange(e, row.id)}
+                          onChange={(e) => handleFileChange(e, row.codeRow)}
                         />
                       </div>
                     </td>
@@ -386,15 +586,16 @@ export function VariantEditor({
                       <Input
                         value={row.sku}
                         onChange={(e) =>
-                          updateRow(row.id, { sku: e.target.value })
+                          updateRow(row.codeRow, { sku: e.target.value })
                         }
-                        className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
+                        className="border-gray-300"
                         placeholder="MonaPeach:L"
                       />
                     </td>
                     {typeNames.map((tName) => (
-                      <td key={`${row.id}-${tName}`} className="px-2">
+                      <td key={`${row.codeRow}-${tName}`} className="px-2">
                         <Input
+                          className="border-gray-300"
                           value={row.attrs?.[tName] || ""}
                           onChange={(e) => {
                             const attrs = {
@@ -402,7 +603,7 @@ export function VariantEditor({
                               [tName]: e.target.value,
                             };
                             const name = buildNameFromAttrs(attrs, typeNames);
-                            updateRow(row.id, { attrs, name });
+                            updateRow(row.codeRow, { attrs, name });
                           }}
                           placeholder={tName}
                         />
@@ -410,112 +611,50 @@ export function VariantEditor({
                     ))}
                     <td className="px-2">
                       <Input
+                        className="border-gray-300"
                         value={row.name}
                         onChange={(e) =>
-                          updateRow(row.id, { name: e.target.value })
+                          updateRow(row.codeRow, { name: e.target.value })
                         }
                         placeholder="Peach-L"
                       />
                     </td>
                     <td className="px-2">
                       <Input
-                        value={row.barcode || ""}
-                        onChange={(e) =>
-                          updateRow(row.id, { barcode: e.target.value })
-                        }
-                        placeholder="MOPH:L"
-                      />
-                    </td>
-                    <td className="px-2">
-                      <Input
+                        className="border-gray-300"
                         type="number"
-                        value={row.stock}
+                        value={row.stock || 0}
                         onChange={(e) =>
-                          updateRow(row.id, { stock: e.target.value })
+                          updateRow(row.codeRow, {
+                            stock: Number(e.target.value),
+                          })
                         }
                         placeholder="0"
                       />
                     </td>
-                    {value.length > 0 && (
-                      <>
-                        <td className="px-2">
+                    {value.length > 0 &&
+                      currencyList.length &&
+                      currencyList.map((item, idx) => (
+                        <td key={idx} className="px-2">
                           <Input
                             type="number"
                             inputMode="decimal"
-                            value={row.price?.usd ?? ""}
+                            value={row.price?.[item.currency] ?? ""}
                             onChange={(e) =>
-                              updateRow(row.id, {
+                              updateRow(row.codeRow, {
                                 price: {
                                   ...row.price,
-                                  usd: e.target.value
+                                  [item.currency]: e.target.value
                                     ? Number(e.target.value)
-                                    : undefined,
+                                    : "",
                                 },
                               })
                             }
                             placeholder="0"
-                            className="h-8 text-xs"
+                            className="h-8 text-xs border-gray-300"
                           />
                         </td>
-                        <td className="px-2">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            value={row.price?.idr ?? ""}
-                            onChange={(e) =>
-                              updateRow(row.id, {
-                                price: {
-                                  ...row.price,
-                                  idr: e.target.value
-                                    ? Number(e.target.value)
-                                    : undefined,
-                                },
-                              })
-                            }
-                            placeholder="0"
-                            className="h-8 text-xs"
-                          />
-                        </td>
-                        <td className="px-2">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            value={row.price?.sgd ?? ""}
-                            onChange={(e) =>
-                              updateRow(row.id, {
-                                price: {
-                                  ...row.price,
-                                  sgd: e.target.value
-                                    ? Number(e.target.value)
-                                    : undefined,
-                                },
-                              })
-                            }
-                            placeholder="0"
-                            className="h-8 text-xs"
-                          />
-                        </td>
-                        <td className="px-2">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            value={row.price?.hkd ?? ""}
-                            onChange={(e) =>
-                              updateRow(row.id, {
-                                price: {
-                                  ...row.price,
-                                  hkd: e.target.value
-                                    ? Number(e.target.value)
-                                    : undefined,
-                                },
-                              })
-                            }
-                            placeholder="0"
-                            className="h-8 text-xs"
-                          />
-                        </td>
-                      </>
-                    )}
+                      ))}
                   </tr>
                 ))}
                 {value.length === 0 && (
