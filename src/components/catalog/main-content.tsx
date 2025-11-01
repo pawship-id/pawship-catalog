@@ -1,119 +1,56 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Product, TCurrency } from "@/lib/types/product";
-import { products } from "@/lib/data/products";
+import { ProductData, TCurrency, VariantRow } from "@/lib/types/product";
 import { Filter, ChevronRight, ChevronLeft, X } from "lucide-react";
 import SortDropdown from "@/components/catalog/sort-dropdown";
 import ProductGrid from "@/components/catalog/product-grid";
 import FilterSidebar from "@/components/catalog/filter-sidebar";
+import { useCurrency } from "@/context/CurrencyContext";
+import { extractSizesFromProduct, filterProducts } from "@/lib/helpers/product";
 
 type TSelectedFilter = {
   categories: string[];
   sizes: string[];
-  stocks: string;
   priceRange: [number, number];
+  stocks: string;
+  sortBy?: string;
 };
 
-const mockProducts = products;
-
 interface MainContentProps {
-  slugData: string;
-  type: "tag" | "category";
+  products: ProductData[];
+  filterCategory?: boolean;
 }
 
-export default function MainContent({ slugData, type }: MainContentProps) {
-  const [products, setProducts] = useState(
-    mockProducts.filter((product) =>
-      type === "tag"
-        ? product.tag.toLowerCase() === slugData.toLowerCase()
-        : product.category.toLowerCase() === slugData.toLowerCase()
-    )
-  );
-
-  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
+export default function MainContent({
+  products,
+  filterCategory = true,
+}: MainContentProps) {
+  const [filteredProducts, setFilteredProducts] = useState(products);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState<TSelectedFilter>({
     categories: [],
     sizes: [],
     priceRange: [0, 0],
     stocks: "",
+    sortBy: "",
   });
+
   const [sortBy, setSortBy] = useState("sorting by");
 
-  const [currency, setCurrency] = useState<TCurrency>("IDR");
+  const { currency } = useCurrency();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
 
   useEffect(() => {
-    let filtered = products;
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (product) =>
-          product.name.toLowerCase().includes(searchQuery.toLowerCase())
-        // product.tags.some((tag) =>
-        //   tag.toLowerCase().includes(searchQuery.toLowerCase())
-        // )
-      );
-    }
-
-    // Size filter
-    if (selectedFilters.sizes.length > 0) {
-      filtered = filtered.filter((product) =>
-        product.sizes.some((size: string) =>
-          selectedFilters.sizes.includes(size)
-        )
-      );
-    }
-
-    // Price range filter
-    if (
-      selectedFilters.priceRange[0] !== 0 ||
-      selectedFilters.priceRange[1] !== 0
-    ) {
-      filtered = filtered.filter((product) => {
-        const price = product.price[currency];
-
-        const [min, max] = selectedFilters.priceRange;
-
-        if (min > 0 && max > 0) {
-          return price >= min && price <= max;
-        }
-        if (min > 0) {
-          return price >= min;
-        }
-        if (max > 0) {
-          return price <= max;
-        }
-      });
-    }
-
-    // In stock filter
-    if (selectedFilters.stocks) {
-      filtered = filtered.filter(
-        (product: Product) => product.inStock === selectedFilters.stocks
-      );
-    }
-
-    // Sort products
-    switch (sortBy) {
-      case "price-low":
-        filtered.sort((a, b) => a.price[currency] - b.price[currency]);
-        break;
-      case "price-high":
-        filtered.sort((a, b) => b.price[currency] - a.price[currency]);
-        break;
-      case "newest":
-        filtered.sort((a, b) => (a.tag === "New Arrivals" ? -1 : 1));
-        break;
-      case "name":
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-    }
-
+    const filtered = filterProducts(
+      products,
+      searchQuery,
+      selectedFilters, // sizes, stocks, priceRange
+      sortBy,
+      currency
+    );
     setFilteredProducts(filtered);
     setCurrentPage(1);
   }, [products, searchQuery, selectedFilters, sortBy, currency]);
@@ -191,9 +128,10 @@ export default function MainContent({ slugData, type }: MainContentProps) {
               </div>
               <div className="p-4">
                 <FilterSidebar
+                  sizes={extractSizesFromProduct(products)}
                   selectedFilters={selectedFilters}
                   onFiltersChange={setSelectedFilters}
-                  catagoryTab={false}
+                  catagoryTab={filterCategory}
                 />
               </div>
             </div>

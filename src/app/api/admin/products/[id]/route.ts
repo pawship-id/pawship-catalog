@@ -1,8 +1,7 @@
 import Product from "@/lib/models/Product";
 import dbConnect from "@/lib/mongodb";
+import { isValidObjectId } from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
-const ProductVariant = require("@/lib/models/ProductVariant");
-const Category = require("@/lib/models/Category");
 interface Context {
   params: Promise<{ id: string }>;
 }
@@ -11,21 +10,37 @@ interface Context {
 export async function GET(req: NextRequest, { params }: Context) {
   await dbConnect();
   try {
-    const { id } = await params;
+    const identifier = (await params).id;
 
-    const product = await Product.findById(id)
-      .populate("productVariantsData")
-      .populate({
-        path: "categoryDetail",
-        select: "name",
-      })
-      .exec();
+    let product;
 
-    const categoryObject = product.categoryId;
+    if (isValidObjectId(identifier)) {
+      product = await Product.findById(identifier); // by ID
+    } else {
+      product = await Product.findOne({ slug: identifier }); // by Slug
+    }
 
-    delete product.categoryId;
+    if (product) {
+      product = await product.populate([
+        {
+          path: "productVariantsData",
+        },
+        {
+          path: "tags",
+          select: "_id tagName",
+        },
+        {
+          path: "categoryDetail",
+          select: "name",
+        },
+      ]);
+    }
 
-    product.category = categoryObject;
+    // const categoryObject = product.categoryId;
+
+    // delete product.categoryId;
+
+    // product.category = categoryObject;
 
     if (!product) {
       return NextResponse.json(

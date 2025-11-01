@@ -394,7 +394,7 @@ export function VariantEditor({
                         handleInputSubmit();
                       }
                     }}
-                    placeholder="Ketik tipe variasi..."
+                    placeholder="Enter variation type..."
                     className="h-8 text-sm"
                     autoFocus
                   />
@@ -505,7 +505,7 @@ export function VariantEditor({
                   <th className="w-10 px-4 text-left">
                     <input
                       type="checkbox"
-                      aria-label="Pilih semua"
+                      aria-label="select all"
                       onChange={(e) => {
                         const checked = e.target.checked;
                         onChange(
@@ -515,19 +515,19 @@ export function VariantEditor({
                     />
                   </th>
                   <th className="w-8 px-2"></th>
-                  <th className="w-24 px-2 text-left">Gambar</th>
-                  <th className="w-64 px-2 text-left">Kode SKU</th>
+                  <th className="w-24 px-2 text-left">Image</th>
+                  <th className="w-64 px-2 text-left">SKU Code</th>
                   {typeNames.map((n) => (
                     <th key={`head-${n}`} className="w-48 px-2 text-left">
                       {n}
                     </th>
                   ))}
-                  <th className="w-56 px-2 text-left">Nama Variasi</th>
+                  <th className="w-56 px-2 text-left">Variation Name</th>
                   <th className="w-40 px-2 text-left">Stock</th>
                   {value.length && currencyList.length
                     ? currencyList.map((el, idx) => (
                         <th key={idx} className="w-40 px-2 text-left">
-                          Harga ({el.currency})
+                          Price ({el.currency})
                         </th>
                       ))
                     : ""}

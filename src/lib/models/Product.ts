@@ -1,9 +1,8 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 import softDelete from "mongoose-delete";
-import { VariantRow, VariantType } from "@/lib/types/product";
+import { VariantType } from "@/lib/types/product";
 
 export interface IProduct extends Document {
-  sku: string;
   productName: string;
   categoryId: Types.ObjectId;
   moq: number;
@@ -16,7 +15,7 @@ export interface IProduct extends Document {
     imageUrl: string;
     imagePublicId: string;
   }[];
-  tags?: string[];
+  tags?: Types.ObjectId[];
   exclusive: {
     enabled: boolean;
     country: string[];
@@ -45,10 +44,6 @@ const VariantTypeSchema = new Schema<VariantType>(
 
 const ProductSchema = new Schema<IProduct>(
   {
-    sku: {
-      type: String,
-      required: [true, "Please input a SKU"],
-    },
     productName: {
       type: String,
       required: [true, "Please input a product name"],
@@ -95,9 +90,12 @@ const ProductSchema = new Schema<IProduct>(
         },
       },
     ],
-    tags: {
-      type: [String],
-    },
+    tags: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Tag",
+      },
+    ],
     exclusive: {
       _id: false,
       type: {

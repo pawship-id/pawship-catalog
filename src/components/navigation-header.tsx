@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,8 @@ import {
 } from "./ui/select";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
+import { CategoryData } from "@/lib/types/category";
+import { getAll } from "@/lib/apiService";
 
 export default function NavigationHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,6 +53,12 @@ export default function NavigationHeader() {
   const { currency, setCurrency, loading } = useCurrency();
   const { data: session, status } = useSession();
 
+  const [categories, setCategories] = useState<
+    { name: string; href: string }[] | null
+  >(null);
+  const [loadingFetchCategory, setLoadingFetchCategory] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const navigation = [
     { name: "Home", href: "/" },
     {
@@ -59,24 +67,7 @@ export default function NavigationHeader() {
       subItems: [
         {
           name: "Collections",
-          subItems: [
-            {
-              name: "Bibs/Collar",
-              href: `/catalog/${encodeURIComponent("bibs/collar")}`, // encode to "bibs%2Fcollar"
-            },
-            {
-              name: "Harness",
-              href: "/catalog/harness",
-            },
-            {
-              name: "Costume",
-              href: "/catalog/custome",
-            },
-            {
-              name: "Basic",
-              href: "/catalog/basic",
-            },
-          ],
+          subItems: categories,
         },
         {
           name: "New Arrivals",
@@ -141,6 +132,31 @@ export default function NavigationHeader() {
       await signOut({ callbackUrl: "/login" });
     }
   };
+
+  const fetchCategory = async () => {
+    try {
+      setLoadingFetchCategory(true);
+      setError(null);
+
+      const response = await getAll<CategoryData>("/api/admin/categories");
+
+      if (response.data) {
+        let mappingCategory = response.data.map((el: CategoryData) => ({
+          name: el.name,
+          href: `/catalog/${el.slug}`,
+        }));
+        setCategories(mappingCategory);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoadingFetchCategory(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategory();
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -209,7 +225,9 @@ export default function NavigationHeader() {
                             </DropdownMenu>
                           ) : (
                             <DropdownMenuItem asChild key={idx}>
-                              <Link href={subItem.href}>{subItem.name}</Link>
+                              <Link href={subItem.href ?? "/"}>
+                                {subItem.name}
+                              </Link>
                             </DropdownMenuItem>
                           )}
                         </Fragment>

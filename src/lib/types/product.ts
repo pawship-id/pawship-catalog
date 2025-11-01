@@ -1,3 +1,5 @@
+import { TagData, TagForm } from "./tag";
+
 export interface VariantType {
   id: string;
   name: string;
@@ -20,18 +22,19 @@ export interface VariantRowForm {
 }
 
 export interface VariantRow {
+  _id: string;
   codeRow: string;
   position: number;
   image?: {
     imageUrl: string;
     imagePublicId: string;
-    type?: string;
+    type: string;
   };
   sku: string;
   attrs: Record<string, string>;
   name: string;
   product: ProductData;
-  stock?: number;
+  stock: number;
   price?: any;
   deleted?: boolean;
   deletedAt?: Date;
@@ -41,14 +44,13 @@ export interface VariantRow {
 }
 
 export interface ProductForm {
-  sku: string;
   productName: string;
   categoryId: string;
   moq: number;
   productDescription: string;
   sizeProduct?: File | string | null;
   productMedia?: File[] | null;
-  tags?: string;
+  tags?: TagForm[];
   exclusive: { enabled: boolean; country: string[] | null };
   preOrder: { enabled: boolean; leadTime: string };
   variantTypes?: VariantType[];
@@ -72,10 +74,9 @@ export interface ProductData {
     type: string;
   }[];
   preOrder?: { enabled: boolean; leadTime: string };
-  sku?: string;
-  moq?: number;
+  moq: number;
   sizeProduct?: File | string | null;
-  tags?: string[];
+  tags?: TagData[];
   exclusive?: { enabled: boolean; country: string[] | null };
   variantTypes?: VariantType[];
   productVariantsData?: VariantRow[];
@@ -83,8 +84,16 @@ export interface ProductData {
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;
-  createdAt?: Date;
+  createdAt: Date;
   updatedAt?: Date;
+}
+
+export interface EnrichedProduct {
+  minPrice: number;
+  maxPrice: number;
+  totalStock: number;
+  attributes: Record<string, any>;
+  availableSizes: string[];
 }
 
 export type TCurrency = "IDR" | "SGD" | "USD";

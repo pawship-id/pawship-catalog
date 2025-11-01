@@ -1,37 +1,160 @@
 "use client";
-import { ProductGallery } from "@/components/product/product-galery";
+import React, { useEffect, useState } from "react";
+import ErrorPublicPage from "@/components/error-public-page";
+import LoadingPage from "@/components/loading";
 import PricingDisplay from "@/components/product/product-pricing";
 import ProductTabs from "@/components/product/product-tabs";
 import RelatedProduct from "@/components/product/related-product";
 import VariantSelector from "@/components/product/variant-selector";
+import { ProductGallery } from "@/components/product/product-galery";
 import { Separator } from "@/components/ui/separator";
+import { getById } from "@/lib/apiService";
+import { ProductData, VariantRow } from "@/lib/types/product";
 import { Download, ShoppingCart } from "lucide-react";
-import React, { useState } from "react";
+import { useParams } from "next/navigation";
+import { enrichProduct, hasTag } from "@/lib/helpers/product";
+import { useCurrency } from "@/context/CurrencyContext";
+import { useSession } from "next-auth/react";
+import { showSuccessAlert } from "@/lib/helpers/sweetalert2";
 
 export default function ProductDetailPage() {
-  const [selectedVariants, setSelectedVariants] = useState<
-    Record<string, string>
-  >({});
-  const [quantity, setQuantity] = useState(1);
+  const params = useParams();
+  const slug = params.slug as string;
 
-  const handleVariantChange = (variantId: string, value: string) => {
-    setSelectedVariants((prev) => ({
-      ...prev,
-      [variantId]: value,
-    }));
+  const { currency } = useCurrency();
+  const { data: session } = useSession();
+
+  const [selectedVariant, setSelectedVariant] = useState<{
+    selectedVariantTypes: Record<string, string>;
+    selectedVariantDetail: VariantRow;
+  }>();
+
+  const [product, setProduct] = useState<ProductData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [quantity, setQuantity] = useState(product?.moq || 1);
+  const [disabledAddToCart, setDisabledAddToCart] = useState(true);
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await getById<ProductData>("/api/public/products", slug);
+
+      if (response.data) {
+        setProduct(response.data);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleQuantityChange = (newQuantity: number) => {
-    setQuantity(newQuantity);
+  useEffect(() => {
+    fetchProduct();
+  }, []);
+
+  useEffect(() => {
+    let isDisabled = true;
+    if (selectedVariant?.selectedVariantTypes) {
+      const selectedTypeCount = Object.keys(
+        selectedVariant.selectedVariantTypes
+      ).length;
+      const selectedVariantCount = Object.keys(
+        selectedVariant.selectedVariantDetail.attrs
+      ).length;
+      isDisabled = selectedTypeCount !== selectedVariantCount;
+    }
+
+    setDisabledAddToCart(isDisabled);
+  }, [selectedVariant]);
+
+  if (loading) {
+    return <LoadingPage />;
+  }
+
+  if (error) {
+    return <ErrorPublicPage errorMessage={error} />;
+  }
+
+  if (!product) {
+    return <ErrorPublicPage errorMessage="Page Not Found" />;
+  }
+
+  const handleAddToCart = async () => {
+    let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+
+    if (selectedVariant) {
+      const { selectedVariantDetail } = selectedVariant;
+
+      const existingVariantIndex = cartItem.findIndex(
+        (el: any) => el.variantId === selectedVariantDetail._id
+      );
+
+      if (existingVariantIndex !== -1) {
+        cartItem[existingVariantIndex].quantity += quantity;
+      } else {
+        cartItem = [
+          {
+            variantId: selectedVariantDetail._id,
+            productId: product._id,
+            quantity,
+          },
+          ...cartItem,
+        ];
+      }
+
+      localStorage.setItem("cartItem", JSON.stringify(cartItem));
+      setQuantity(1);
+
+      showSuccessAlert(undefined, "Successfully added product to cart");
+    }
   };
 
   const renderCTAButtons = () => {
     return (
       <div className="space-y-3">
-        <button className="w-full bg-primary/90 hover:bg-primary text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
-          <ShoppingCart className="w-5 h-5" />
-          Add to Cart
-        </button>
+        {session?.user.role === "reseller" ? (
+          <button
+            className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+              disabledAddToCart
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-primary/90 hover:bg-primary text-white cursor-pointer"
+            }`}
+            onClick={handleAddToCart}
+            disabled={disabledAddToCart}
+          >
+            <ShoppingCart className="w-5 h-5" />
+            Add to Cart
+          </button>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            {/* Add to Cart */}
+            <button
+              className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                disabledAddToCart
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-primary/90 hover:bg-primary text-white cursor-pointer"
+              }`}
+              onClick={handleAddToCart}
+              disabled={disabledAddToCart}
+            >
+              <ShoppingCart className="w-5 h-5" />
+              Add to Cart
+            </button>
+
+            {/* Buy Now */}
+            <button
+              className="w-full border-1 border-primary cursor-pointer bg-white hover:bg-secondary text-primary py-3 px-6 rounded-lg font-semibold transition-colors"
+              onClick={() => console.log("Buy now")}
+            >
+              Buy Now
+            </button>
+          </div>
+        )}
 
         <Separator className="mb-5 mt-5" />
 
@@ -53,13 +176,41 @@ export default function ProductDetailPage() {
     );
   };
 
+  const isEssentialOrBasic = hasTag(product.tags, "Essentials").isFound
+    ? hasTag(product.tags, "Essentials")
+    : hasTag(product.tags, "Basic");
+
+  const enrichProductData = enrichProduct(product, currency);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div>
             {/* Product Gallery */}
-            <ProductGallery />
+            <ProductGallery
+              product={{
+                productName: product.productName,
+                slug: product.slug,
+                tags: product.tags || [],
+                createdAt: product.createdAt,
+              }}
+              productMedia={[
+                ...[
+                  ...(product.productMedia || []),
+                  ...(enrichProductData.variantImages || []),
+                ].filter(
+                  (
+                    img
+                  ): img is {
+                    imageUrl: string;
+                    imagePublicId: string;
+                    type: string;
+                  } => !!img.imageUrl && !!img.imagePublicId && !!img.type
+                ),
+              ]}
+              selectedVariant={selectedVariant}
+            />
 
             <div className="hidden lg:block">
               <ProductTabs />
@@ -72,26 +223,40 @@ export default function ProductDetailPage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <h1 className="text-3xl font-bold text-gray-900">
-                  Magician BIP Set
+                  {product?.productName}
                 </h1>
               </div>
               {/* optional */}
-              <p className="text-lg text-gray-600">Lorem Ipsum</p>
+              <p className="text-lg text-gray-600">
+                {product.categoryDetail.name}
+              </p>
+
               {/* if product essential or basic */}
-              <div className="flex gap-2">
-                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                  Essentials
-                </span>
-              </div>
+              {isEssentialOrBasic.isFound && (
+                <div className="flex gap-2">
+                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                    {isEssentialOrBasic.tagToCheck}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Pricing Display */}
-            <PricingDisplay />
+            {selectedVariant && (
+              <PricingDisplay
+                selectedVariant={selectedVariant}
+                moq={product.moq}
+              />
+            )}
 
             {/* Variant Selector */}
             <VariantSelector
-              onVariantChange={handleVariantChange}
-              onQuantityChange={handleQuantityChange}
+              productVariant={product.productVariantsData || []}
+              quantity={quantity || 1}
+              setQuantity={setQuantity}
+              moq={product.moq || 1}
+              attributes={enrichProductData.attributes}
+              setSelectedVariant={setSelectedVariant}
             />
 
             {/* CTA Buttons */}

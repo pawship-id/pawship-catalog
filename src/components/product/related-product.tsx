@@ -102,13 +102,13 @@ export default function RelatedProduct() {
                         ? visibleCards === 3
                           ? "240px"
                           : visibleCards === 4
-                          ? "260px"
-                          : "200px"
+                            ? "260px"
+                            : "200px"
                         : "280px",
                       maxWidth: "280px",
                     }}
                   >
-                    <ProductCard product={product} />
+                    {/* <ProductCard product={product} /> */}
                   </div>
                 ))}
               </div>

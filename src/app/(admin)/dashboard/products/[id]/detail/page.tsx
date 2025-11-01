@@ -4,7 +4,6 @@ import ErrorPage from "@/components/admin/error-page";
 import LoadingPage from "@/components/admin/loading-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -13,17 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getById } from "@/lib/apiService";
 import { ProductData, VariantRow } from "@/lib/types/product";
-import {
-  ArrowLeft,
-  ChevronDown,
-  ChevronUp,
-  CirclePlay,
-  Edit,
-  ExternalLink,
-} from "lucide-react";
+import { ArrowLeft, Edit, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -43,6 +34,12 @@ export default function DetailProduct() {
     null
   );
 
+  const totalStock =
+    product?.productVariantsData?.reduce(
+      (acc, el) => acc + (el.stock || 0),
+      0
+    ) ?? 0;
+
   const fetchProductById = async () => {
     try {
       setLoading(true);
@@ -60,15 +57,13 @@ export default function DetailProduct() {
     }
   };
 
-  console.log(product);
-
   useEffect(() => {
     fetchProductById();
   }, [id]);
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
         <Button
           variant="ghost"
           className="cursor-pointer"
@@ -185,11 +180,6 @@ export default function DetailProduct() {
                   <table className="text-sm md:text-base">
                     <tbody>
                       <tr>
-                        <td className="pr-2 font-medium">SKU</td>
-                        <td className="px-2">:</td>
-                        <td className="py-0.5">{product.sku}</td>
-                      </tr>
-                      <tr>
                         <td className="pr-2 font-medium">Category</td>
                         <td className="px-2">:</td>
                         <td className="py-0.5">
@@ -204,7 +194,7 @@ export default function DetailProduct() {
                       <tr>
                         <td className="pr-2 font-medium">Stock</td>
                         <td className="px-2">:</td>
-                        <td className="py-0.5">-</td>
+                        <td className="py-0.5">{totalStock | 0}</td>
                       </tr>
                       <tr>
                         <td className="pr-2 font-medium">Exclude Country</td>
@@ -236,7 +226,7 @@ export default function DetailProduct() {
                                     className="ml-1"
                                     key={index}
                                   >
-                                    {el}
+                                    {el.tagName}
                                   </Badge>
                                 );
                               })
