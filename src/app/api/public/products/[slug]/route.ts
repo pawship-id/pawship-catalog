@@ -19,21 +19,21 @@ export async function GET(req: NextRequest, { params }: Context) {
     // Determine if the param is a valid MongoDB ObjectId or a slug
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
 
-    let product = await Product.findOne(
-      isObjectId ? { _id: slug } : { slug }
-    ).populate([
-      {
-        path: "productVariantsData",
-      },
-      {
-        path: "tags",
-        select: "_id tagName",
-      },
-      {
-        path: "categoryDetail",
-        select: "_id name",
-      },
-    ]);
+    let product = await Product.findOne(isObjectId ? { _id: slug } : { slug })
+      .populate([
+        {
+          path: "productVariantsData",
+        },
+        {
+          path: "tags",
+          select: "_id tagName",
+        },
+        {
+          path: "categoryDetail",
+          select: "_id name",
+        },
+      ])
+      .lean();
 
     if (!product) {
       return NextResponse.json(
@@ -56,7 +56,9 @@ export async function GET(req: NextRequest, { params }: Context) {
         resellerInfo = user.resellerSchema;
 
         // Get product category ID
-        const productCategoryId = product.categoryDetail?._id?.toString();
+        const productCategoryId = (
+          product as any
+        ).categoryDetail?._id?.toString();
 
         if (productCategoryId && resellerInfo.tierDiscount) {
           // Filter tier discounts that include this product's category
@@ -87,11 +89,32 @@ export async function GET(req: NextRequest, { params }: Context) {
       }
     }
 
+    // Convert Map to plain object for attrs in productVariantsData
+    const productData = product as any;
+    if (
+      productData.productVariantsData &&
+      Array.isArray(productData.productVariantsData)
+    ) {
+      productData.productVariantsData = productData.productVariantsData.map(
+        (variant: any) => {
+          if (variant.attrs && typeof variant.attrs === "object") {
+            // If attrs is a Map, convert to plain object
+            const attrsObj =
+              variant.attrs instanceof Map
+                ? Object.fromEntries(variant.attrs)
+                : { ...variant.attrs };
+            return { ...variant, attrs: attrsObj };
+          }
+          return variant;
+        }
+      );
+    }
+
     return NextResponse.json(
       {
         success: true,
         data: {
-          ...product.toObject(),
+          ...productData,
           // Add reseller pricing info if available
           resellerPricing:
             applicableTierDiscounts.length > 0

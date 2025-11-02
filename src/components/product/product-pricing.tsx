@@ -112,9 +112,6 @@ export default function PricingDisplay({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Tier
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
                       Min Qty
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
@@ -131,9 +128,6 @@ export default function PricingDisplay({
                       key={index}
                       className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                     >
-                      <td className="px-4 py-3 text-sm font-medium text-gray-700">
-                        {tier.name}
-                      </td>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         {tier.quantity}+
                       </td>

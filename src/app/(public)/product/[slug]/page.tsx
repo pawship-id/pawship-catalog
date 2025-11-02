@@ -100,8 +100,6 @@ export default function ProductDetailPage() {
     return <ErrorPublicPage errorMessage="Page Not Found" />;
   }
 
-  console.log(product);
-
   const handleAddToCart = async () => {
     if (!session) {
       router.push(`/login?callbackUrl=/product/${slug}`);
