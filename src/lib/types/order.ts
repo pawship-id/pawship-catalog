@@ -11,6 +11,18 @@ export interface IOrderDetail {
     imageUrl: string;
   };
   subTotal: number;
+  originalPrice?: any; // For reseller: original price before discount
+  discountedPrice?: any; // For reseller: price after discount
+  discountPercentage?: number; // For reseller: discount percentage applied
+  resellerPricing?: {
+    currency: string;
+    tiers: Array<{
+      name: string;
+      minimumQuantity: number;
+      discount: number;
+      categoryProduct: string | string[];
+    }>;
+  };
 }
 
 export interface IShippingAddress {

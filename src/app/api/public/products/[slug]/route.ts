@@ -16,7 +16,12 @@ export async function GET(req: NextRequest, { params }: Context) {
     const { slug } = await params;
     const session = await getServerSession(authOptions);
 
-    let product = await Product.findOne({ slug }).populate([
+    // Determine if the param is a valid MongoDB ObjectId or a slug
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
+
+    let product = await Product.findOne(
+      isObjectId ? { _id: slug } : { slug }
+    ).populate([
       {
         path: "productVariantsData",
       },

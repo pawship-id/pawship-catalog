@@ -29,7 +29,7 @@ import { useRouter } from "next/navigation";
 export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const { currency, format } = useCurrency();
 
@@ -86,22 +86,56 @@ export default function CartPage() {
     }
 
     // update state setCartItemData
-    const updatedCartItemData = formData.orderDetails.map((item) =>
-      item.variantId === id
-        ? {
-            ...item,
-            quantity: newQuantity,
-            subTotal: newQuantity * item.price[currency],
+    const updatedCartItemData = formData.orderDetails.map((item) => {
+      if (item.variantId === id) {
+        // Recalculate discount for new quantity
+        let finalPrice = item.price[currency];
+        let discountInfo: {
+          discountPercentage: number;
+          tierName: string | null;
+        } = {
+          discountPercentage: 0,
+          tierName: null,
+        };
+
+        if (session?.user.role === "reseller" && item.resellerPricing) {
+          discountInfo = calculateResellerDiscount(
+            newQuantity,
+            item.resellerPricing
+          );
+
+          if (discountInfo.discountPercentage > 0) {
+            const discountAmount =
+              (item.price[currency] * discountInfo.discountPercentage) / 100;
+            finalPrice = Math.round(item.price[currency] - discountAmount);
           }
-        : item
-    );
+        }
+
+        return {
+          ...item,
+          quantity: newQuantity,
+          discountPercentage: discountInfo.discountPercentage,
+          originalPrice:
+            session?.user.role === "reseller" &&
+            discountInfo.discountPercentage > 0
+              ? item.price
+              : null,
+          discountedPrice:
+            session?.user.role === "reseller" &&
+            discountInfo.discountPercentage > 0
+              ? { [currency]: finalPrice }
+              : null,
+          subTotal: newQuantity * finalPrice,
+        };
+      }
+      return item;
+    });
 
     setFormData((prev) => ({
       ...prev,
       orderDetails: updatedCartItemData,
       totalAmount: updatedCartItemData.reduce(
-        (sum: number, element: any) =>
-          sum + element.price[currency] * element.quantity,
+        (sum: number, element: any) => sum + element.subTotal,
         0
       ),
     }));
@@ -176,6 +210,46 @@ export default function CartPage() {
   const shipping = totalAmount > 50 ? 0 : 9.99;
   const total = totalAmount + shipping;
 
+  // Helper function to calculate reseller discount
+  const calculateResellerDiscount = (
+    quantity: number,
+    resellerPricing?: {
+      currency: string;
+      tiers: Array<{
+        name: string;
+        minimumQuantity: number;
+        discount: number;
+        categoryProduct: string | string[];
+      }>;
+    }
+  ) => {
+    if (!resellerPricing || !resellerPricing.tiers) {
+      return { discountPercentage: 0, tierName: null };
+    }
+
+    // Find the highest applicable tier based on quantity
+    let applicableTier = null;
+    for (const tier of resellerPricing.tiers) {
+      if (quantity >= tier.minimumQuantity) {
+        if (
+          !applicableTier ||
+          tier.minimumQuantity > applicableTier.minimumQuantity
+        ) {
+          applicableTier = tier;
+        }
+      }
+    }
+
+    if (applicableTier) {
+      return {
+        discountPercentage: applicableTier.discount,
+        tierName: applicableTier.name,
+      };
+    }
+
+    return { discountPercentage: 0, tierName: null };
+  };
+
   const fetchCartItem = async () => {
     setIsLoading(true);
     try {
@@ -184,13 +258,38 @@ export default function CartPage() {
       const detailCartItem = await Promise.all(
         cartItem.map(async (el: any) => {
           const { data: product } = await getById<ProductData>(
-            "/api/admin/products",
+            "/api/public/products",
             el.productId
           );
 
           let variant = product?.productVariantsData?.find(
             (item) => item._id === el.variantId
           );
+
+          const basePrice = variant?.price[currency] || 0;
+
+          // Calculate reseller discount if user is reseller and has pricing
+          let discountInfo: {
+            discountPercentage: number;
+            tierName: string | null;
+          } = {
+            discountPercentage: 0,
+            tierName: null,
+          };
+          let finalPrice = basePrice;
+
+          if (session?.user.role === "reseller" && product?.resellerPricing) {
+            discountInfo = calculateResellerDiscount(
+              el.quantity,
+              product.resellerPricing
+            );
+
+            if (discountInfo.discountPercentage > 0) {
+              const discountAmount =
+                (basePrice * discountInfo.discountPercentage) / 100;
+              finalPrice = Math.round(basePrice - discountAmount);
+            }
+          }
 
           return {
             productId: product?._id,
@@ -203,9 +302,21 @@ export default function CartPage() {
               variant?.image ||
               product?.productMedia.find((el) => el.type === "image"),
             stock: variant?.stock,
-            subTotal: el.quantity * variant?.price[currency],
+            originalPrice:
+              session?.user.role === "reseller" &&
+              discountInfo.discountPercentage > 0
+                ? variant?.price
+                : null,
+            discountedPrice:
+              session?.user.role === "reseller" &&
+              discountInfo.discountPercentage > 0
+                ? { [currency]: finalPrice }
+                : null,
+            discountPercentage: discountInfo.discountPercentage,
+            subTotal: el.quantity * finalPrice,
             preOrder: product?.preOrder,
             moq: product?.moq,
+            resellerPricing: product?.resellerPricing,
           };
         })
       );
@@ -214,8 +325,7 @@ export default function CartPage() {
         ...prev,
         orderDetails: detailCartItem,
         totalAmount: detailCartItem.reduce(
-          (sum: number, element: any) =>
-            sum + element.price[currency] * element.quantity,
+          (sum: number, element: any) => sum + element.subTotal,
           0
         ),
         currency,
@@ -228,13 +338,15 @@ export default function CartPage() {
   };
 
   useEffect(() => {
-    fetchCartItem();
-  }, [currency]);
+    // Only fetch cart items when session status is not "loading"
+    if (status !== "loading") {
+      fetchCartItem();
+    }
+  }, [currency, status]);
+
   if (isLoading) {
     return <LoadingPage />;
   }
-
-  console.log(formData.orderDetails);
 
   if (!isLoading && formData.orderDetails.length === 0) {
     return (
@@ -304,15 +416,26 @@ export default function CartPage() {
                             )}
 
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-lg font-bold text-gray-800">
-                                {format(item.price[currency])}
-                              </span>
-                              {/* {item.originalPrice && (
-                                <span className="text-sm text-gray-500 line-through">
-                                  ${item.originalPrice}
+                            <div className="flex flex-col space-y-1">
+                              {item.discountedPrice ? (
+                                <>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-lg font-bold text-orange-600">
+                                      {format(item.discountedPrice[currency])}
+                                    </span>
+                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
+                                      -{item.discountPercentage}%
+                                    </span>
+                                  </div>
+                                  <span className="text-sm text-gray-500 line-through">
+                                    {format(item.originalPrice[currency])}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-lg font-bold text-gray-800">
+                                  {format(item.price[currency])}
                                 </span>
-                              )} */}
+                              )}
                             </div>
 
                             <div className="flex items-center space-x-3">
@@ -368,8 +491,8 @@ export default function CartPage() {
                         </div>
                       </div>
 
-                      {/* Compact Desktop Cart Item - For >= 416px && < 750px */}
-                      <div className="hidden min-[416px]:max-[750px]:flex items-start space-x-3">
+                      {/* Compact Desktop Cart Item - For >= 490px && < 750px */}
+                      <div className="hidden min-[490px]:max-[750px]:flex items-start space-x-3">
                         <img
                           src={item.image?.imageUrl}
                           alt={item.name}
@@ -392,15 +515,26 @@ export default function CartPage() {
                             )}
 
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-base font-bold text-gray-800">
-                                {format(item.price[currency])}
-                              </span>
-                              {/* {item.originalPrice && (
-                                <span className="text-xs text-gray-500 line-through">
-                                  ${item.originalPrice}
+                            <div className="flex flex-col space-y-0.5">
+                              {item.discountedPrice ? (
+                                <>
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="text-base font-bold text-orange-600">
+                                      {format(item.discountedPrice[currency])}
+                                    </span>
+                                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                      -{item.discountPercentage}%
+                                    </span>
+                                  </div>
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {format(item.originalPrice[currency])}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-base font-bold text-gray-800">
+                                  {format(item.price[currency])}
                                 </span>
-                              )} */}
+                              )}
                             </div>
 
                             <div className="flex items-center space-x-2">
@@ -457,8 +591,8 @@ export default function CartPage() {
                         </div>
                       </div>
 
-                      {/* Mobile Cart Item - Only show on screens <= 415px */}
-                      <div className="block min-[416px]:hidden">
+                      {/* Mobile Cart Item - Only show on screens <= 489px */}
+                      <div className="block min-[490px]:hidden">
                         <div className="flex gap-3">
                           {/* Product Image */}
                           <div className="w-25 h-25 flex-shrink-0">
@@ -490,15 +624,26 @@ export default function CartPage() {
                               )}
 
                             {/* Price */}
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm font-bold text-gray-800">
-                                {format(item.price[currency])}
-                              </span>
-                              {/* {item.originalPrice && (
-                                <span className="text-xs text-gray-500 line-through">
-                                  ${item.originalPrice}
+                            <div className="flex flex-col space-y-0.5">
+                              {item.discountedPrice ? (
+                                <>
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="text-sm font-bold text-orange-600">
+                                      {format(item.discountedPrice[currency])}
+                                    </span>
+                                    <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                      -{item.discountPercentage}%
+                                    </span>
+                                  </div>
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {format(item.originalPrice[currency])}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-sm font-bold text-gray-800">
+                                  {format(item.price[currency])}
                                 </span>
-                              )} */}
+                              )}
                             </div>
 
                             <div className="flex items-center space-x-2">
