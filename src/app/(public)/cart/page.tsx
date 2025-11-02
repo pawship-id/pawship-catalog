@@ -35,7 +35,7 @@ export default function CartPage() {
 
   const [formData, setFormData] = useState<OrderForm>({
     orderDate: new Date(),
-    invoiceNumber: "INV-00002",
+    invoiceNumber: "INV-00003",
     totalAmount: 0,
     status: "pending confirmation" as
       | "pending confirmation"
@@ -177,8 +177,6 @@ export default function CartPage() {
     (sum, item) => sum + item.subTotal,
     0
   );
-
-  console.log(formData, "FORM DATA");
 
   const handleCheckout = async () => {
     const result = await showConfirmAlert(
