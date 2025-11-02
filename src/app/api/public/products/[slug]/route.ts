@@ -16,17 +16,6 @@ export async function GET(req: NextRequest, { params }: Context) {
     const { slug } = await params;
     const session = await getServerSession(authOptions);
 
-    console.log(session?.user.id);
-    if (!session) {
-      return NextResponse.json(
-        {
-          success: true,
-          message: "Unauthorized",
-        },
-        { status: 401 }
-      );
-    }
-
     let product = await Product.findOne({ slug }).populate([
       {
         path: "productVariantsData",
@@ -41,11 +30,12 @@ export async function GET(req: NextRequest, { params }: Context) {
       },
     ]);
 
-    const user = await User.findById({ _id: session.user.id }).populate({
-      path: "resellerSchema",
-    });
-
-    console.log(user.resellerSchema, "<<<<");
+    if (session) {
+      const user = await User.findById({ _id: session.user.id }).populate({
+        path: "resellerSchema",
+      });
+      console.log(user.resellerSchema, "<<<<");
+    }
 
     if (!product) {
       return NextResponse.json(

@@ -13,16 +13,21 @@ interface VariantSelectorProps {
   moq: number;
   quantity: number;
   setQuantity: (qty: number) => void;
+  preOrder: {
+    enabled: boolean;
+    leadTime: string;
+  };
 }
 
-const VariantSelector: React.FC<VariantSelectorProps> = ({
+export default function VariantSelector({
   productVariant,
   attributes,
   setSelectedVariant,
   moq,
   quantity,
   setQuantity,
-}) => {
+  preOrder,
+}: VariantSelectorProps) {
   const [selectedVariantTypes, setSelectedVariantTypes] = useState<
     Record<string, string>
   >({});
@@ -51,21 +56,9 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
     });
   }, [productVariant, selectedVariantTypes]);
 
-  // determine the maximum stock from the available variant combinations
-  const maxStock =
-    filteredVariants.length > 0
-      ? Math.min(...filteredVariants?.map((v) => v.stock))
-      : 0;
-
   // commit quantity according to stock
   const commitQuantity = (val: number) => {
     let clamped = val;
-
-    if (val > maxStock) {
-      clamped = moq;
-    } else if (val < moq) {
-      clamped = val;
-    }
 
     setQuantity(clamped);
     setInputValue(clamped.toString());
@@ -109,10 +102,8 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
         selectedVariantDetail,
       });
 
-      if (quantity >= 1 && quantity > selectedVariantDetail.stock) {
-        setQuantity(selectedVariantDetail.stock);
-        setInputValue(selectedVariantDetail.stock.toString());
-      }
+      setQuantity(1);
+      setInputValue("1");
     }
   }, [selectedVariantTypes]);
 
@@ -161,11 +152,19 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
         <div className="flex items-center gap-2">
           <div
             className={`w-2 h-2 rounded-full ${
-              maxStock > 0 ? "bg-green-500" : "bg-red-500"
+              selectedVariantDetail && quantity <= selectedVariantDetail.stock
+                ? "bg-green-500"
+                : preOrder.enabled
+                  ? "bg-amber-500"
+                  : "bg-red-500"
             }`}
           />
           <span className="text-sm text-gray-600">
-            {maxStock > 0 ? `${maxStock} units available` : "Out of Stock"}
+            {selectedVariantDetail && quantity <= selectedVariantDetail.stock
+              ? `${selectedVariantDetail.stock} units available`
+              : preOrder.enabled
+                ? `Pre Order ${preOrder.leadTime} weeks`
+                : `Out of Stock`}
           </span>
         </div>
 
@@ -187,7 +186,7 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
               onChange={handleInputChange}
               onBlur={handleBlur}
               min={moq}
-              max={maxStock}
+              max={selectedVariantDetail?.stock}
               className="w-20 px-3 text-center focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
             />
             <Button
@@ -195,7 +194,6 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
               size="sm"
               className="h-8 w-8 p-0"
               onClick={() => commitQuantity(quantity + 1)}
-              disabled={quantity >= maxStock}
             >
               <Plus className="h-3 w-3" />
             </Button>
@@ -213,6 +211,4 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
       </pre> */}
     </div>
   );
-};
-
-export default VariantSelector;
+}

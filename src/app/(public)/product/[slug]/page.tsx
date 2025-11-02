@@ -59,18 +59,28 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     let isDisabled = true;
-    if (selectedVariant?.selectedVariantTypes) {
+
+    if (selectedVariant) {
       const selectedTypeCount = Object.keys(
         selectedVariant.selectedVariantTypes
       ).length;
       const selectedVariantCount = Object.keys(
         selectedVariant.selectedVariantDetail.attrs
       ).length;
+
       isDisabled = selectedTypeCount !== selectedVariantCount;
+
+      if (
+        !product?.preOrder.enabled &&
+        quantity > selectedVariant.selectedVariantDetail.stock
+      ) {
+        // if product no PO and quantity > stock
+        isDisabled = true;
+      }
     }
 
     setDisabledAddToCart(isDisabled);
-  }, [selectedVariant]);
+  }, [selectedVariant, quantity]);
 
   if (loading) {
     return <LoadingPage />;
@@ -257,6 +267,7 @@ export default function ProductDetailPage() {
               moq={product.moq || 1}
               attributes={enrichProductData.attributes}
               setSelectedVariant={setSelectedVariant}
+              preOrder={product.preOrder}
             />
 
             {/* CTA Buttons */}

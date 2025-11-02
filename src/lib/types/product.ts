@@ -73,7 +73,7 @@ export interface ProductData {
     imagePublicId: string;
     type: string;
   }[];
-  preOrder?: { enabled: boolean; leadTime: string };
+  preOrder: { enabled: boolean; leadTime: string };
   moq: number;
   sizeProduct?: File | string | null;
   tags?: TagData[];
