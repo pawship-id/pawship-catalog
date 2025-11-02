@@ -100,6 +100,8 @@ export default function ProductDetailPage() {
     return <ErrorPublicPage errorMessage="Page Not Found" />;
   }
 
+  console.log(product);
+
   const handleAddToCart = async () => {
     if (!session) {
       router.push(`/login?callbackUrl=/product/${slug}`);
@@ -198,10 +200,6 @@ export default function ProductDetailPage() {
     );
   };
 
-  const isEssentialOrBasic = hasTag(product.tags, "Essentials").isFound
-    ? hasTag(product.tags, "Essentials")
-    : hasTag(product.tags, "Basic");
-
   const enrichProductData = enrichProduct(product, currency);
 
   return (
@@ -269,6 +267,7 @@ export default function ProductDetailPage() {
               <PricingDisplay
                 selectedVariant={selectedVariant}
                 moq={product.moq}
+                resellerPricing={product.resellerPricing}
               />
             )}
 

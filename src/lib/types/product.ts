@@ -81,6 +81,15 @@ export interface ProductData {
   variantTypes?: VariantType[];
   productVariantsData?: VariantRow[];
   marketingLinks?: string[];
+  resellerPricing?: {
+    currency: string;
+    tiers: Array<{
+      name: string;
+      minimumQuantity: number;
+      discount: number;
+      categoryProduct: string | string[];
+    }>;
+  };
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;

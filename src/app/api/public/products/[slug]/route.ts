@@ -26,16 +26,9 @@ export async function GET(req: NextRequest, { params }: Context) {
       },
       {
         path: "categoryDetail",
-        select: "name",
+        select: "_id name",
       },
     ]);
-
-    if (session) {
-      const user = await User.findById({ _id: session.user.id }).populate({
-        path: "resellerSchema",
-      });
-      console.log(user.resellerSchema, "<<<<");
-    }
 
     if (!product) {
       return NextResponse.json(
@@ -44,10 +37,65 @@ export async function GET(req: NextRequest, { params }: Context) {
       );
     }
 
+    // Initialize variables for reseller discount
+    let applicableTierDiscounts: any[] = [];
+    let resellerInfo = null;
+
+    // Check if user is logged in and has reseller schema
+    if (session) {
+      const user = await User.findById(session.user.id).populate({
+        path: "resellerSchema",
+      });
+
+      if (user && user.resellerSchema) {
+        resellerInfo = user.resellerSchema;
+
+        // Get product category ID
+        const productCategoryId = product.categoryDetail?._id?.toString();
+
+        if (productCategoryId && resellerInfo.tierDiscount) {
+          // Filter tier discounts that include this product's category
+          applicableTierDiscounts = resellerInfo.tierDiscount.filter(
+            (tier: any) => {
+              // Check if categoryProduct is an array or string
+              if (Array.isArray(tier.categoryProduct)) {
+                // Check if the array includes the product's category
+                return tier.categoryProduct.some(
+                  (catId: string) => catId.toString() === productCategoryId
+                );
+              } else if (tier.categoryProduct) {
+                // If it's a string, do direct comparison
+                return tier.categoryProduct.toString() === productCategoryId;
+              }
+              return false;
+            }
+          );
+
+          // Sort by minimum quantity (ascending) for easier tier selection
+          applicableTierDiscounts.sort(
+            (a, b) => (a.minimumQuantity || 0) - (b.minimumQuantity || 0)
+          );
+
+          console.log("Product Category:", productCategoryId);
+          console.log("Applicable Tier Discounts:", applicableTierDiscounts);
+        }
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,
-        data: product,
+        data: {
+          ...product.toObject(),
+          // Add reseller pricing info if available
+          resellerPricing:
+            applicableTierDiscounts.length > 0
+              ? {
+                  currency: resellerInfo?.currency,
+                  tiers: applicableTierDiscounts,
+                }
+              : null,
+        },
         message: "Data product has been fetch",
       },
       { status: 200 }
