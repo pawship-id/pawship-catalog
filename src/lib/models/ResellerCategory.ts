@@ -5,7 +5,7 @@ export interface ITierDiscount {
   name: string;
   minimumQuantity: number;
   discount: number;
-  categoryProduct: string;
+  categoryProduct: string | string[]; // Support both single and multiple categories
 }
 
 export interface IResellerCategory extends Document {
@@ -41,7 +41,7 @@ const TierDiscountSchema = new Schema<ITierDiscount>(
       default: 0,
     },
     categoryProduct: {
-      type: String,
+      type: Schema.Types.Mixed, // Allows both String and Array
     },
   },
   { _id: false }
