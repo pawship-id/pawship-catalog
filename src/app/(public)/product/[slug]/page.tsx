@@ -248,18 +248,19 @@ export default function ProductDetailPage() {
                   {product?.productName}
                 </h1>
               </div>
-              {/* optional */}
-              <p className="text-lg text-gray-600">
-                {product.categoryDetail.name}
-              </p>
 
-              {/* if product essential or basic */}
-              {isEssentialOrBasic.isFound && (
-                <div className="flex gap-2">
-                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                    {isEssentialOrBasic.tagToCheck}
-                  </span>
-                </div>
+              {/* category */}
+              {product.categoryDetail.name.toLowerCase() === "essential" ||
+              product.categoryDetail.name.toLowerCase() === "basic" ? (
+                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                  {product.categoryDetail.name}
+                </span>
+              ) : (
+                <span
+                  className={`bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium`}
+                >
+                  {product.categoryDetail.name}
+                </span>
               )}
             </div>
 
