@@ -167,8 +167,8 @@ export default function CartPage() {
     } catch (error) {
       console.error(error);
       showConfirmAlert(
-        "Terjadi kesalahan saat checkout. Coba lagi nanti.",
-        "OK"
+        "An error occurred during checkout. Please try again later.",
+        "Ok"
       );
     }
   };
@@ -204,6 +204,8 @@ export default function CartPage() {
               product?.productMedia.find((el) => el.type === "image"),
             stock: variant?.stock,
             subTotal: el.quantity * variant?.price[currency],
+            preOrder: product?.preOrder,
+            moq: product?.moq,
           };
         })
       );
@@ -231,6 +233,8 @@ export default function CartPage() {
   if (isLoading) {
     return <LoadingPage />;
   }
+
+  console.log(formData.orderDetails);
 
   if (!isLoading && formData.orderDetails.length === 0) {
     return (
@@ -292,15 +296,12 @@ export default function CartPage() {
                             Variant: {item.variantName}
                           </div>
 
-                          {/* {!item.inStock ? (
-                            <div className="text-red-600 text-sm font-medium mb-2">
-                              Out of Stock
-                            </div>
-                          ) : (
-                            <div className="text-orange-600 text-sm font-medium mb-2">
-                              Pre-Order
-                            </div>
-                          )} */}
+                          {item.quantity > item.stock &&
+                            item.preOrder.enabled && (
+                              <div className="text-amber-500 text-sm font-medium">
+                                Pre-Order
+                              </div>
+                            )}
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
@@ -323,8 +324,8 @@ export default function CartPage() {
                                       item.quantity - 1
                                     )
                                   }
-                                  className="p-2 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity === 0}
+                                  className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={item.quantity === item.moq}
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
@@ -338,8 +339,11 @@ export default function CartPage() {
                                       item.quantity + 1
                                     )
                                   }
-                                  className="p-2 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity >= item.stock}
+                                  className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={
+                                    item.quantity >= item.stock &&
+                                    !item.preOrder.enabled
+                                  }
                                 >
                                   <Plus className="h-4 w-4" />
                                 </button>
@@ -352,6 +356,14 @@ export default function CartPage() {
                                 <Trash2 className="h-5 w-5" />
                               </button>
                             </div>
+                          </div>
+                          <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100">
+                            <span className="text-sm font-semibold text-gray-700">
+                              Subtotal
+                            </span>
+                            <span className="text-lg font-bold text-primary">
+                              {format(item.subTotal)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -372,15 +384,12 @@ export default function CartPage() {
                             Variant: {item.variantName}
                           </div>
 
-                          {/* {!item.inStock ? (
-                            <div className="text-red-600 text-xs font-medium mb-2">
-                              Out of Stock
-                            </div>
-                          ) : (
-                            <div className="text-orange-600 text-xs font-medium mb-2">
-                              Pre-order
-                            </div>
-                          )} */}
+                          {item.quantity > item.stock &&
+                            item.preOrder.enabled && (
+                              <div className="text-amber-500 text-xs font-medium">
+                                Pre-order
+                              </div>
+                            )}
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
@@ -403,8 +412,8 @@ export default function CartPage() {
                                       item.quantity - 1
                                     )
                                   }
-                                  className="p-1 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity === 0}
+                                  className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={item.quantity === item.moq}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -418,8 +427,11 @@ export default function CartPage() {
                                       item.quantity + 1
                                     )
                                   }
-                                  className="p-1 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity >= item.stock}
+                                  className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={
+                                    item.quantity >= item.stock &&
+                                    !item.preOrder.enabled
+                                  }
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>
@@ -432,6 +444,15 @@ export default function CartPage() {
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
+                          </div>
+
+                          <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100">
+                            <span className="text-sm font-semibold text-gray-700">
+                              Subtotal
+                            </span>
+                            <span className="text-base font-bold text-primary">
+                              {format(item.subTotal)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -460,6 +481,14 @@ export default function CartPage() {
                               Variant: {item.variantName}
                             </div>
 
+                            {/* Stock Status */}
+                            {item.quantity > item.stock &&
+                              item.preOrder.enabled && (
+                                <span className="text-xs text-amber-500 font-medium">
+                                  Pre-order
+                                </span>
+                              )}
+
                             {/* Price */}
                             <div className="flex items-center space-x-2">
                               <span className="text-sm font-bold text-gray-800">
@@ -472,17 +501,13 @@ export default function CartPage() {
                               )} */}
                             </div>
 
-                            {/* Stock Status */}
-                            <div>
-                              {/* {!item.inStock ? (
-                                <span className="text-xs text-red-600 font-medium">
-                                  Out of Stock
-                                </span>
-                              ) : (
-                                <span className="text-xs text-orange-600 font-medium">
-                                  Pre-order
-                                </span>
-                              )} */}
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs font-semibold text-gray-700">
+                                Subtotal:
+                              </span>
+                              <span className="text-sm font-bold text-primary">
+                                {format(item.subTotal)}
+                              </span>
                             </div>
 
                             {/* Bottom Row: Quantity Controls and Delete Button */}
@@ -495,8 +520,8 @@ export default function CartPage() {
                                       item.quantity - 1
                                     )
                                   }
-                                  className="p-1.5 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity === 0}
+                                  className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={item.quantity === item.moq}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -510,8 +535,11 @@ export default function CartPage() {
                                       item.quantity + 1
                                     )
                                   }
-                                  className="p-1.5 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity >= item.stock}
+                                  className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={
+                                    item.quantity >= item.stock &&
+                                    !item.preOrder.enabled
+                                  }
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>
@@ -718,9 +746,9 @@ export default function CartPage() {
                   </button>
                   {isAddressValid() && (
                     <small>
-                      <span className="text-red-500">*disclaimer note:</span>{" "}
-                      you will be directed to Whatsapp for secure and faster
-                      order confirmation
+                      <span className="text-red-500">* note:</span> you will be
+                      directed to Whatsapp for secure and faster order
+                      confirmation
                     </small>
                   )}
                 </div>
