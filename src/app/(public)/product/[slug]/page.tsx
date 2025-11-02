@@ -11,15 +11,17 @@ import { Separator } from "@/components/ui/separator";
 import { getById } from "@/lib/apiService";
 import { ProductData, VariantRow } from "@/lib/types/product";
 import { Download, ShoppingCart } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { enrichProduct, hasTag } from "@/lib/helpers/product";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useSession } from "next-auth/react";
-import { showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
+
+  const router = useRouter();
 
   const { currency } = useCurrency();
   const { data: session } = useSession();
@@ -60,7 +62,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     let isDisabled = true;
 
-    if (selectedVariant) {
+    if (selectedVariant && product) {
       const selectedTypeCount = Object.keys(
         selectedVariant.selectedVariantTypes
       ).length;
@@ -71,10 +73,14 @@ export default function ProductDetailPage() {
       isDisabled = selectedTypeCount !== selectedVariantCount;
 
       if (
-        !product?.preOrder.enabled &&
+        !product.preOrder.enabled &&
         quantity > selectedVariant.selectedVariantDetail.stock
       ) {
         // if product no PO and quantity > stock
+        isDisabled = true;
+      }
+
+      if (quantity < product.moq) {
         isDisabled = true;
       }
     }
@@ -95,6 +101,12 @@ export default function ProductDetailPage() {
   }
 
   const handleAddToCart = async () => {
+    if (!session) {
+      router.push(`/login?callbackUrl=/product/${slug}`);
+      showErrorAlert(undefined, "Please login first");
+      return;
+    }
+
     let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
 
     if (selectedVariant) {

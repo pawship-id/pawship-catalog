@@ -176,7 +176,7 @@ export default function VariantSelector({
               size="sm"
               className="h-8 w-8 p-0 rounded-l-none"
               onClick={() => commitQuantity(quantity - 1)}
-              disabled={quantity <= moq}
+              disabled={quantity === 1}
             >
               <Minus className="h-3 w-3" />
             </Button>
