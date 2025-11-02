@@ -35,7 +35,7 @@ export default function CartPage() {
 
   const [formData, setFormData] = useState<OrderForm>({
     orderDate: new Date(),
-    invoiceNumber: "INV-00001",
+    invoiceNumber: "INV-00002",
     totalAmount: 0,
     status: "pending confirmation" as
       | "pending confirmation"
@@ -89,7 +89,8 @@ export default function CartPage() {
     const updatedCartItemData = formData.orderDetails.map((item) => {
       if (item.variantId === id) {
         // Recalculate discount for new quantity
-        let finalPrice = item.price[currency];
+        const basePrice = item.originalPrice[currency];
+        let finalPrice = basePrice;
         let discountInfo: {
           discountPercentage: number;
           tierName: string | null;
@@ -98,6 +99,7 @@ export default function CartPage() {
           tierName: null,
         };
 
+        // Calculate reseller discount if applicable
         if (session?.user.role === "reseller" && item.resellerPricing) {
           discountInfo = calculateResellerDiscount(
             newQuantity,
@@ -106,22 +108,18 @@ export default function CartPage() {
 
           if (discountInfo.discountPercentage > 0) {
             const discountAmount =
-              (item.price[currency] * discountInfo.discountPercentage) / 100;
-            finalPrice = Math.round(item.price[currency] - discountAmount);
+              (basePrice * discountInfo.discountPercentage) / 100;
+            finalPrice = Math.round(basePrice - discountAmount);
           }
         }
+
+        // TODO: Add B2C discount calculation here in the future
 
         return {
           ...item,
           quantity: newQuantity,
           discountPercentage: discountInfo.discountPercentage,
-          originalPrice:
-            session?.user.role === "reseller" &&
-            discountInfo.discountPercentage > 0
-              ? item.price
-              : null,
           discountedPrice:
-            session?.user.role === "reseller" &&
             discountInfo.discountPercentage > 0
               ? { [currency]: finalPrice }
               : null,
@@ -162,8 +160,7 @@ export default function CartPage() {
       ...prev,
       orderDetails: filter,
       totalAmount: filter.reduce(
-        (sum: number, element: any) =>
-          sum + element.price[currency] * element.quantity,
+        (sum: number, element: any) => sum + element.subTotal,
         0
       ),
     }));
@@ -177,9 +174,11 @@ export default function CartPage() {
   };
 
   const totalAmount = formData.orderDetails.reduce(
-    (sum, item) => sum + item.price[currency] * item.quantity,
+    (sum, item) => sum + item.subTotal,
     0
   );
+
+  console.log(formData, "FORM DATA");
 
   const handleCheckout = async () => {
     const result = await showConfirmAlert(
@@ -268,7 +267,7 @@ export default function CartPage() {
 
           const basePrice = variant?.price[currency] || 0;
 
-          // Calculate reseller discount if user is reseller and has pricing
+          // Calculate discount (for both B2B reseller and B2C customer)
           let discountInfo: {
             discountPercentage: number;
             tierName: string | null;
@@ -278,6 +277,7 @@ export default function CartPage() {
           };
           let finalPrice = basePrice;
 
+          // Calculate reseller discount if applicable
           if (session?.user.role === "reseller" && product?.resellerPricing) {
             discountInfo = calculateResellerDiscount(
               el.quantity,
@@ -291,27 +291,24 @@ export default function CartPage() {
             }
           }
 
+          // TODO: Add B2C discount calculation here in the future
+          // Example: promotional discount, coupon code, etc.
+
           return {
             productId: product?._id,
             productName: product?.productName,
             variantId: el.variantId,
             variantName: variant?.name,
-            price: variant?.price,
+            originalPrice: variant?.price, // Always set original price
+            discountedPrice:
+              discountInfo.discountPercentage > 0
+                ? { [currency]: finalPrice }
+                : null, // Only set if discount applied
             quantity: el.quantity,
             image:
               variant?.image ||
               product?.productMedia.find((el) => el.type === "image"),
             stock: variant?.stock,
-            originalPrice:
-              session?.user.role === "reseller" &&
-              discountInfo.discountPercentage > 0
-                ? variant?.price
-                : null,
-            discountedPrice:
-              session?.user.role === "reseller" &&
-              discountInfo.discountPercentage > 0
-                ? { [currency]: finalPrice }
-                : null,
             discountPercentage: discountInfo.discountPercentage,
             subTotal: el.quantity * finalPrice,
             preOrder: product?.preOrder,
@@ -433,7 +430,7 @@ export default function CartPage() {
                                 </>
                               ) : (
                                 <span className="text-lg font-bold text-gray-800">
-                                  {format(item.price[currency])}
+                                  {format(item.originalPrice[currency])}
                                 </span>
                               )}
                             </div>
@@ -532,7 +529,7 @@ export default function CartPage() {
                                 </>
                               ) : (
                                 <span className="text-base font-bold text-gray-800">
-                                  {format(item.price[currency])}
+                                  {format(item.originalPrice[currency])}
                                 </span>
                               )}
                             </div>
@@ -641,7 +638,7 @@ export default function CartPage() {
                                 </>
                               ) : (
                                 <span className="text-sm font-bold text-gray-800">
-                                  {format(item.price[currency])}
+                                  {format(item.originalPrice[currency])}
                                 </span>
                               )}
                             </div>

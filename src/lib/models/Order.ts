@@ -17,19 +17,27 @@ export interface IOrder extends Document {
 
 const OrderDetailSchema = new Schema<IOrderDetail>(
   {
+    productId: { type: String, required: true },
     productName: { type: String, required: true },
     quantity: { type: Number, required: true },
+    stock: { type: Number },
     variantId: { type: String, required: true },
     variantName: { type: String, required: true },
-    price: {
+    originalPrice: {
       type: Object,
       required: true,
+    },
+    discountedPrice: {
+      type: Object,
     },
     image: {
       imagePublicId: { type: String, required: true },
       imageUrl: { type: String, required: true },
     },
     subTotal: { type: Number, required: true },
+    discountPercentage: {
+      type: Number,
+    },
   },
   { _id: false }
 );
