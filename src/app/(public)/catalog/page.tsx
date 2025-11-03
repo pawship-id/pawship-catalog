@@ -1,10 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { ProductData } from "@/lib/types/product";
+import { useSearchParams } from "next/navigation";
 import MainContent from "@/components/catalog/main-content";
 import Loading from "@/components/loading";
-import { useSearchParams } from "next/navigation";
+import ErrorPublicPage from "@/components/error-public-page";
 
 interface CatalogData {
   products: ProductData[];
@@ -21,8 +21,7 @@ export default function CatalogProductPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
-
-  console.log(catalogData);
+  const [filterCategoryTab, setFilterCategoryTab] = useState(true);
 
   const fetchProducts = async () => {
     try {
@@ -34,6 +33,9 @@ export default function CatalogProductPage() {
       const filter = searchParams.get("filter");
       const category = searchParams.get("category");
       const collection = searchParams.get("collection");
+
+      // Set filterCategoryTab: false if filtering by category, true otherwise
+      setFilterCategoryTab(!category);
 
       if (filter) queryParams.append("filter", filter);
       if (category) queryParams.append("category", category);
@@ -105,13 +107,7 @@ export default function CatalogProductPage() {
       {loading ? (
         <Loading />
       ) : error ? (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">
-            Error loading products
-          </h3>
-          <p className="text-muted-foreground">{error}</p>
-        </div>
+        <ErrorPublicPage errorMessage={error || "Page Not Found"} />
       ) : !catalogData || !catalogData.products.length ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🐾</div>
@@ -123,7 +119,10 @@ export default function CatalogProductPage() {
           </p>
         </div>
       ) : (
-        <MainContent products={catalogData.products} />
+        <MainContent
+          filterCategory={filterCategoryTab}
+          products={catalogData.products}
+        />
       )}
     </div>
   );

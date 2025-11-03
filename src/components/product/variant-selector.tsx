@@ -85,7 +85,8 @@ export default function VariantSelector({
         Object.entries(selectedVariantTypes).every(([attr, val]) => {
           if (attr === attribute || !val) return true;
           return variant.attrs[attr] === val;
-        }) && variant.stock > 0
+        }) &&
+        (variant.stock > 0 || preOrder.enabled)
       );
     });
   };

@@ -24,7 +24,10 @@ export async function GET(req: NextRequest) {
       // Fetch new arrivals (products created <= 30 days ago)
       const allProducts = await Product.find()
         .populate("productVariantsData")
-        .populate("categoryId")
+        .populate({
+          path: "categoryDetail",
+          select: "_id name",
+        })
         .populate("tags")
         .sort({ createdAt: -1 })
         .lean();
@@ -84,7 +87,10 @@ export async function GET(req: NextRequest) {
           categoryId: { $in: collection.ruleIds },
         })
           .populate("productVariantsData")
-          .populate("categoryId")
+          .populate({
+            path: "categoryDetail",
+            select: "_id name",
+          })
           .populate("tags")
           .sort({ createdAt: -1 })
           .lean();
@@ -93,7 +99,10 @@ export async function GET(req: NextRequest) {
           tags: { $in: collection.ruleIds },
         })
           .populate("productVariantsData")
-          .populate("categoryId")
+          .populate({
+            path: "categoryDetail",
+            select: "_id name",
+          })
           .populate("tags")
           .sort({ createdAt: -1 })
           .lean();
@@ -102,7 +111,10 @@ export async function GET(req: NextRequest) {
           _id: { $in: collection.ruleIds },
         })
           .populate("productVariantsData")
-          .populate("categoryId")
+          .populate({
+            path: "categoryDetail",
+            select: "_id name",
+          })
           .populate("tags")
           .lean();
       }
@@ -131,7 +143,10 @@ export async function GET(req: NextRequest) {
       // Default: Fetch all products
       products = await Product.find()
         .populate("productVariantsData")
-        .populate("categoryId")
+        .populate({
+          path: "categoryDetail",
+          select: "_id name",
+        })
         .populate("tags")
         .sort({ createdAt: -1 })
         .lean();
