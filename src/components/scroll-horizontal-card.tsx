@@ -88,7 +88,7 @@ export default function ScrollHorizontalCard({
               <div className="flex gap-4 px-2">
                 {products.map((product) => (
                   <div
-                    key={product.id}
+                    key={product._id || product.id}
                     className="flex-shrink-0"
                     style={{
                       width: mounted
@@ -100,8 +100,8 @@ export default function ScrollHorizontalCard({
                         ? visibleCards === 3
                           ? "240px"
                           : visibleCards === 4
-                          ? "260px"
-                          : "200px"
+                            ? "260px"
+                            : "200px"
                         : "280px",
                       maxWidth: "280px",
                     }}
