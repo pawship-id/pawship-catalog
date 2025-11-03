@@ -15,6 +15,7 @@ import {
   Globe,
   Store,
   ReceiptText,
+  SquareLibrary,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -34,6 +35,11 @@ const navigation = [
     name: "Orders",
     href: "/dashboard/orders",
     icon: ReceiptText,
+  },
+  {
+    name: "Collections",
+    href: "/dashboard/collections",
+    icon: SquareLibrary,
   },
   { name: "Website", href: "/", icon: Globe },
 ];
