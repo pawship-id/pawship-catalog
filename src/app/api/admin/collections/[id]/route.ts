@@ -3,6 +3,14 @@ import dbConnect from "@/lib/mongodb";
 import Collection from "@/lib/models/Collection";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import {
+  uploadFileToCloudinary,
+  deleteFileFromCloudinary,
+} from "@/lib/helpers/cloudinary";
+import { generateSlug } from "@/lib/helpers";
+import { writeFile } from "fs/promises";
+import path from "path";
+import os from "os";
 
 // GET - Fetch single collection by ID
 export async function GET(
@@ -57,8 +65,16 @@ export async function PUT(
 
     await dbConnect();
 
-    const body = await req.json();
-    const { name, displayOnHomepage, rules, ruleIds } = body;
+    const formData = await req.formData();
+    const name = formData.get("name") as string;
+    const displayOnHomepage = formData.get("displayOnHomepage") === "true";
+    const rules = formData.get("rules") as string;
+    const ruleIds = JSON.parse(formData.get("ruleIds") as string);
+    const desktopImage = formData.get("desktopImage") as File | null;
+    const mobileImage = formData.get("mobileImage") as File | null;
+    const isNewDesktopImage = formData.get("isNewDesktopImage") === "true";
+    const isNewMobileImage = formData.get("isNewMobileImage") === "true";
+    const removeMobileImage = formData.get("removeMobileImage") === "true";
 
     // Validation
     if (!name || !rules || !ruleIds || ruleIds.length === 0) {
@@ -68,23 +84,120 @@ export async function PUT(
       );
     }
 
-    const updatedCollection = await Collection.findByIdAndUpdate(
-      params.id,
-      {
-        name,
-        displayOnHomepage,
-        rules,
-        ruleIds,
-      },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedCollection) {
+    // Find existing collection
+    const existingCollection = await Collection.findById(params.id);
+    if (!existingCollection) {
       return NextResponse.json(
         { message: "Collection not found" },
         { status: 404 }
       );
     }
+
+    // Validate image file types if new images are uploaded
+    const validImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
+    if (
+      isNewDesktopImage &&
+      desktopImage &&
+      !validImageTypes.includes(desktopImage.type)
+    ) {
+      return NextResponse.json(
+        {
+          message:
+            "Desktop image must be a valid image file (JPEG, JPG, PNG, WEBP)",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      isNewMobileImage &&
+      mobileImage &&
+      !validImageTypes.includes(mobileImage.type)
+    ) {
+      return NextResponse.json(
+        {
+          message:
+            "Mobile image must be a valid image file (JPEG, JPG, PNG, WEBP)",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Generate slug if name changed
+    const slug =
+      name !== existingCollection.name
+        ? generateSlug(name)
+        : existingCollection.slug;
+
+    const updateData: any = {
+      name,
+      slug,
+      displayOnHomepage,
+      rules,
+      ruleIds,
+    };
+
+    // Handle desktop image upload
+    if (isNewDesktopImage && desktopImage) {
+      // Delete old desktop image from Cloudinary
+      if (existingCollection.desktopImagePublicId) {
+        await deleteFileFromCloudinary(existingCollection.desktopImagePublicId);
+      }
+
+      // Upload new desktop image
+      const desktopBytes = await desktopImage.arrayBuffer();
+      const desktopBuffer = Buffer.from(desktopBytes);
+      const desktopTempPath = path.join(os.tmpdir(), desktopImage.name);
+      await writeFile(desktopTempPath, desktopBuffer);
+
+      const desktopUploadResult = await uploadFileToCloudinary(
+        desktopTempPath,
+        "hero-banner"
+      );
+
+      updateData.desktopImageUrl = desktopUploadResult.secureUrl;
+      updateData.desktopImagePublicId = desktopUploadResult.publicId;
+    }
+
+    // Handle mobile image upload or removal
+    if (removeMobileImage) {
+      // Delete mobile image from Cloudinary
+      if (existingCollection.mobileImagePublicId) {
+        await deleteFileFromCloudinary(existingCollection.mobileImagePublicId);
+      }
+      updateData.mobileImageUrl = null;
+      updateData.mobileImagePublicId = null;
+    } else if (isNewMobileImage && mobileImage) {
+      // Delete old mobile image from Cloudinary if exists
+      if (existingCollection.mobileImagePublicId) {
+        await deleteFileFromCloudinary(existingCollection.mobileImagePublicId);
+      }
+
+      // Upload new mobile image
+      const mobileBytes = await mobileImage.arrayBuffer();
+      const mobileBuffer = Buffer.from(mobileBytes);
+      const mobileTempPath = path.join(os.tmpdir(), mobileImage.name);
+      await writeFile(mobileTempPath, mobileBuffer);
+
+      const mobileUploadResult = await uploadFileToCloudinary(
+        mobileTempPath,
+        "hero-banner"
+      );
+
+      updateData.mobileImageUrl = mobileUploadResult.secureUrl;
+      updateData.mobileImagePublicId = mobileUploadResult.publicId;
+    }
+
+    const updatedCollection = await Collection.findByIdAndUpdate(
+      params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
 
     return NextResponse.json(
       {

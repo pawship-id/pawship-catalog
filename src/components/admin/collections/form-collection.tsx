@@ -13,8 +13,7 @@ import {
 import Link from "next/link";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 import { useRouter } from "next/navigation";
-import { createData, getAll, updateData } from "@/lib/apiService";
-import { ApiResponse } from "@/lib/types/api";
+import { getAll } from "@/lib/apiService";
 import MultiSelectDropdown from "@/components/admin/collections/multi-select-dropdown";
 
 interface CollectionFormProps {
@@ -27,6 +26,8 @@ interface CollectionForm {
   displayOnHomepage: boolean;
   rules: "tag" | "category" | "custom" | "";
   ruleIds: string[];
+  desktopImage: File | string | null;
+  mobileImage: File | string | null;
 }
 
 const initialFormState: CollectionForm = {
@@ -34,6 +35,8 @@ const initialFormState: CollectionForm = {
   displayOnHomepage: false,
   rules: "",
   ruleIds: [],
+  desktopImage: null,
+  mobileImage: null,
 };
 
 export default function FormCollection({
@@ -126,32 +129,62 @@ export default function FormCollection({
       return;
     }
 
+    if (!isEditMode && !formData.desktopImage) {
+      showErrorAlert("Validation Error", "Desktop image is required");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      let response: ApiResponse<any>;
+      const formDataToSend = new FormData();
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append(
+        "displayOnHomepage",
+        formData.displayOnHomepage.toString()
+      );
+      formDataToSend.append("rules", formData.rules);
+      formDataToSend.append("ruleIds", JSON.stringify(formData.ruleIds));
 
-      const dataToSend = {
-        name: formData.name,
-        displayOnHomepage: formData.displayOnHomepage,
-        rules: formData.rules,
-        ruleIds: formData.ruleIds,
-      };
-
-      if (!isEditMode) {
-        response = await createData<any, typeof dataToSend>(
-          "/api/admin/collections",
-          dataToSend
-        );
-      } else {
-        response = await updateData<any, typeof dataToSend>(
-          "/api/admin/collections",
-          collectionId,
-          dataToSend
-        );
+      // Handle desktop image
+      if (formData.desktopImage instanceof File) {
+        formDataToSend.append("desktopImage", formData.desktopImage);
+        formDataToSend.append("isNewDesktopImage", "true");
+      } else if (isEditMode && typeof formData.desktopImage === "string") {
+        formDataToSend.append("isNewDesktopImage", "false");
       }
 
-      showSuccessAlert(undefined, response.message);
+      // Handle mobile image
+      if (formData.mobileImage instanceof File) {
+        formDataToSend.append("mobileImage", formData.mobileImage);
+        formDataToSend.append("isNewMobileImage", "true");
+      } else if (isEditMode && typeof formData.mobileImage === "string") {
+        formDataToSend.append("isNewMobileImage", "false");
+      } else if (isEditMode && !formData.mobileImage) {
+        formDataToSend.append("removeMobileImage", "true");
+      }
+
+      let response: Response;
+
+      if (!isEditMode) {
+        response = await fetch("/api/admin/collections", {
+          method: "POST",
+          body: formDataToSend,
+        });
+      } else {
+        response = await fetch(`/api/admin/collections/${collectionId}`, {
+          method: "PUT",
+          body: formDataToSend,
+        });
+      }
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to save collection");
+      }
+
+      showSuccessAlert(undefined, result.message);
       router.push("/dashboard/collections");
     } catch (err: any) {
       showErrorAlert(undefined, err.message);
@@ -159,8 +192,6 @@ export default function FormCollection({
       setLoading(false);
     }
   };
-
-  console.log(formData);
 
   const handleRuleIdsDropdownChange = (selected: string[]) => {
     setFormData((prev) => ({
@@ -182,6 +213,42 @@ export default function FormCollection({
     }
   };
 
+  // State for image previews
+  const [desktopPreview, setDesktopPreview] = useState<string | null>(null);
+  const [mobilePreview, setMobilePreview] = useState<string | null>(null);
+
+  // Handle desktop image change
+  const handleDesktopImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData({ ...formData, desktopImage: file });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setDesktopPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle mobile image change
+  const handleMobileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData({ ...formData, mobileImage: file });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMobilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove mobile image
+  const handleRemoveMobileImage = () => {
+    setFormData({ ...formData, mobileImage: null });
+    setMobilePreview(null);
+  };
+
   // Initialize form with initial data
   useEffect(() => {
     if (initialData) {
@@ -190,7 +257,17 @@ export default function FormCollection({
         displayOnHomepage: initialData.displayOnHomepage || false,
         rules: initialData.rules || "",
         ruleIds: initialData.ruleIds || [],
+        desktopImage: initialData.desktopImageUrl || null,
+        mobileImage: initialData.mobileImageUrl || null,
       });
+
+      // Set image previews for edit mode
+      if (initialData.desktopImageUrl) {
+        setDesktopPreview(initialData.desktopImageUrl);
+      }
+      if (initialData.mobileImageUrl) {
+        setMobilePreview(initialData.mobileImageUrl);
+      }
     }
   }, [initialData]);
 
@@ -204,7 +281,7 @@ export default function FormCollection({
         {/* Collection Name */}
         <div className="space-y-2">
           <Label htmlFor="name" className="text-base font-medium text-gray-700">
-            Collection Name *
+            Collection Name <span className="text-red-500">*</span>
           </Label>
           <Input
             id="name"
@@ -224,7 +301,7 @@ export default function FormCollection({
             htmlFor="rule-type"
             className="text-base font-medium text-gray-700"
           >
-            Rule Type
+            Rule Type <span className="text-red-500">*</span>
           </Label>
           <Select
             value={formData.rules}
@@ -278,6 +355,77 @@ export default function FormCollection({
             />
           </div>
         )}
+      </div>
+
+      {/* Hero Banner Desktop Image */}
+      <div className="space-y-2">
+        <Label
+          htmlFor="desktopImage"
+          className="text-base font-medium text-gray-700"
+        >
+          Hero Baner Desktop Image <span className="text-red-500">*</span>
+        </Label>
+        <Input
+          id="desktopImage"
+          name="desktopImage"
+          type="file"
+          accept="image/*"
+          className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
+          onChange={handleDesktopImageChange}
+        />
+        {desktopPreview && (
+          <div className="mt-2">
+            <img
+              src={desktopPreview}
+              alt="Desktop Preview"
+              className="w-full max-w-md h-48 object-cover rounded-lg border"
+            />
+          </div>
+        )}
+        <p className="text-sm text-gray-500">
+          Upload desktop version of hero banner (Required)
+        </p>
+      </div>
+
+      {/* Hero Banner Mobile Image */}
+      <div className="space-y-2">
+        <Label
+          htmlFor="mobileImage"
+          className="text-base font-medium text-gray-700"
+        >
+          Hero Banner Mobile Image{" "}
+          <span className="text-gray-500">(Optional)</span>
+        </Label>
+        <Input
+          id="mobileImage"
+          name="mobileImage"
+          type="file"
+          accept="image/*"
+          className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
+          onChange={handleMobileImageChange}
+        />
+        {mobilePreview && (
+          <div className="mt-2 relative">
+            <img
+              src={mobilePreview}
+              alt="Mobile Preview"
+              className="w-full max-w-sm h-48 object-cover rounded-lg border"
+            />
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="absolute top-2 right-2"
+              onClick={handleRemoveMobileImage}
+            >
+              Remove
+            </Button>
+          </div>
+        )}
+        <p className="text-sm text-gray-500">
+          Upload mobile version of hero banner (Optional). If not provided,
+          desktop image will be used.
+        </p>
       </div>
 
       <div className="space-y-2">

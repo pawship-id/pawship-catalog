@@ -3,9 +3,14 @@ import softDelete from "mongoose-delete";
 
 export interface ICollection extends Document {
   name: string;
+  slug: string;
   displayOnHomepage: boolean;
   rules: "tag" | "category" | "custom";
   ruleIds: string[]; // Array of IDs based on rule type
+  desktopImageUrl: string;
+  desktopImagePublicId: string;
+  mobileImageUrl?: string;
+  mobileImagePublicId?: string;
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: Types.ObjectId;
@@ -19,6 +24,11 @@ const CollectionSchema = new Schema<ICollection>(
       type: String,
       required: [true, "Collection name is required"],
       trim: true,
+    },
+    slug: {
+      type: String,
+      required: [true, "Slug is required"],
+      unique: true,
     },
     displayOnHomepage: {
       type: Boolean,
@@ -38,6 +48,20 @@ const CollectionSchema = new Schema<ICollection>(
         },
         message: "At least one item must be selected",
       },
+    },
+    desktopImageUrl: {
+      type: String,
+      required: [true, "Desktop image is required"],
+    },
+    desktopImagePublicId: {
+      type: String,
+      required: [true, "Desktop image public ID is required"],
+    },
+    mobileImageUrl: {
+      type: String,
+    },
+    mobileImagePublicId: {
+      type: String,
     },
   },
   {

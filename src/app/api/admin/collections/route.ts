@@ -3,6 +3,11 @@ import dbConnect from "@/lib/mongodb";
 import Collection from "@/lib/models/Collection";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { uploadFileToCloudinary } from "@/lib/helpers/cloudinary";
+import { generateSlug } from "@/lib/helpers";
+import { writeFile } from "fs/promises";
+import path from "path";
+import os from "os";
 
 // GET - Fetch all collections
 export async function GET(req: NextRequest) {
@@ -44,8 +49,13 @@ export async function POST(req: NextRequest) {
 
     await dbConnect();
 
-    const body = await req.json();
-    const { name, displayOnHomepage, rules, ruleIds } = body;
+    const formData = await req.formData();
+    const name = formData.get("name") as string;
+    const displayOnHomepage = formData.get("displayOnHomepage") === "true";
+    const rules = formData.get("rules") as string;
+    const ruleIds = JSON.parse(formData.get("ruleIds") as string);
+    const desktopImage = formData.get("desktopImage") as File | null;
+    const mobileImage = formData.get("mobileImage") as File | null;
 
     // Validation
     if (!name || !rules || !ruleIds || ruleIds.length === 0) {
@@ -55,13 +65,85 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!desktopImage) {
+      return NextResponse.json(
+        { message: "Desktop image is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate image file types
+    const validImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
+    if (!validImageTypes.includes(desktopImage.type)) {
+      return NextResponse.json(
+        {
+          message:
+            "Desktop image must be a valid image file (JPEG, JPG, PNG, WEBP)",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (mobileImage && !validImageTypes.includes(mobileImage.type)) {
+      return NextResponse.json(
+        {
+          message:
+            "Mobile image must be a valid image file (JPEG, JPG, PNG, WEBP)",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Generate slug
+    const slug = generateSlug(name);
+
+    // Upload desktop image to Cloudinary
+    const desktopBytes = await desktopImage.arrayBuffer();
+    const desktopBuffer = Buffer.from(desktopBytes);
+    const desktopTempPath = path.join(os.tmpdir(), desktopImage.name);
+    await writeFile(desktopTempPath, desktopBuffer);
+
+    const desktopUploadResult = await uploadFileToCloudinary(
+      desktopTempPath,
+      "hero-banner"
+    );
+
+    let mobileUploadResult = null;
+    if (mobileImage) {
+      // Upload mobile image to Cloudinary
+      const mobileBytes = await mobileImage.arrayBuffer();
+      const mobileBuffer = Buffer.from(mobileBytes);
+      const mobileTempPath = path.join(os.tmpdir(), mobileImage.name);
+      await writeFile(mobileTempPath, mobileBuffer);
+
+      mobileUploadResult = await uploadFileToCloudinary(
+        mobileTempPath,
+        "hero-banner"
+      );
+    }
+
     // Create new collection
-    const newCollection = await Collection.create({
+    const collectionData: any = {
       name,
-      displayOnHomepage: displayOnHomepage || false,
+      slug,
+      displayOnHomepage,
       rules,
       ruleIds,
-    });
+      desktopImageUrl: desktopUploadResult.secureUrl,
+      desktopImagePublicId: desktopUploadResult.publicId,
+    };
+
+    if (mobileUploadResult) {
+      collectionData.mobileImageUrl = mobileUploadResult.secureUrl;
+      collectionData.mobileImagePublicId = mobileUploadResult.publicId;
+    }
+
+    const newCollection = await Collection.create(collectionData);
 
     return NextResponse.json(
       {
