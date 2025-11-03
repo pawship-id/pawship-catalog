@@ -80,6 +80,7 @@ export async function GET(req: NextRequest) {
           name: collection.name,
           rules: collection.rules,
           products: products.slice(0, 20), // Limit to 20 products
+          slug: collection.slug || "",
         };
       })
     );

@@ -13,6 +13,7 @@ interface Collection {
   name: string;
   rules: string;
   products: ProductData[];
+  slug: string;
 }
 
 interface HomepageData {
@@ -37,7 +38,6 @@ export default function SliderFeaturedProduct() {
         setLoading(true);
         const response = await fetch("/api/public/homepage/products");
         const result = await response.json();
-        console.log(result, "<<<<");
 
         if (result.success) {
           setHomepageData(result.data);
@@ -66,12 +66,12 @@ export default function SliderFeaturedProduct() {
     } else if (tab === "New Arrivals") {
       return "/catalog?filter=new-arrivals";
     } else {
-      // For collection tabs, link to catalog filtered by collection
+      // For collection tabs, link to catalog filtered by collection ID
       const collection = homepageData.collections.find(
         (col) => col.name === tab
       );
       if (collection) {
-        return `/catalog?collection=${collection._id}`;
+        return `/catalog?collection=${collection.slug}`;
       }
       return "/catalog";
     }
