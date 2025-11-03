@@ -577,16 +577,42 @@ export default function FormBanner({
             </div>
           </div>
 
+          {/* Info banner size */}
+          <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
+            {formData.page === "home" ? (
+              <p>
+                <strong>Home Page Banner:</strong> Desktop{" "}
+                {isMobile ? "" : "(current)"}: 600px height | Mobile{" "}
+                {isMobile ? "(current)" : ""}: 400px height
+              </p>
+            ) : (
+              <p>
+                <strong>Other Pages Banner:</strong> Desktop{" "}
+                {isMobile ? "" : "(current)"}: 400px height | Mobile{" "}
+                {isMobile ? "(current)" : ""}: 300px height
+              </p>
+            )}
+          </div>
+
           <div
-            className={`relative overflow-hidden rounded-lg ${
+            className={`relative overflow-hidden rounded-lg border-2 border-dashed border-gray-300 ${
               isMobile ? "max-w-sm mx-auto" : "w-full"
             }`}
-            style={{ minHeight: "300px" }}
+            style={{
+              height:
+                formData.page === "home"
+                  ? isMobile
+                    ? "400px"
+                    : "600px"
+                  : isMobile
+                    ? "300px"
+                    : "400px",
+            }}
           >
             <img
               src={isMobile && mobilePreview ? mobilePreview : desktopPreview}
               alt="Banner Preview"
-              className="w-full h-auto object-cover"
+              className="w-full h-full object-cover"
             />
             {formData.overlayColor && (
               <div
