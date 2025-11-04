@@ -72,19 +72,36 @@ export async function PUT(req: NextRequest, { params }: Context) {
 
     const formData = await req.formData();
 
-    // Extract form fields
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const page = formData.get("page") as string;
-    const buttonText = formData.get("buttonText") as string;
-    const buttonUrl = formData.get("buttonUrl") as string;
-    const buttonColor = formData.get("buttonColor") as string;
-    const buttonPosition = formData.get("buttonPosition") as string;
-    const textColor = formData.get("textColor") as string;
-    const overlayColor = formData.get("overlayColor") as string;
-    const textPosition = formData.get("textPosition") as string;
-    const isActive = formData.get("isActive") === "true";
-    const order = parseInt(formData.get("order") as string) || banner.order;
+    // Extract simple fields
+    const title = (formData.get("title") as string) || banner.title || "";
+    const description =
+      (formData.get("description") as string) || banner.description || "";
+    const page = (formData.get("page") as string) || banner.page || "home";
+    const isActive =
+      formData.get("isActive") === "true" ? true : !!banner.isActive;
+    const order =
+      parseInt((formData.get("order") as string) || "") || banner.order;
+
+    // Parse nested JSON for button and style
+    let buttonObj: any = null;
+    const buttonRaw = formData.get("button") as string | null;
+    if (buttonRaw) {
+      try {
+        buttonObj = JSON.parse(buttonRaw);
+      } catch (err) {
+        console.warn("Failed to parse button JSON", err);
+      }
+    }
+
+    let styleObj: any = null;
+    const styleRaw = formData.get("style") as string | null;
+    if (styleRaw) {
+      try {
+        styleObj = JSON.parse(styleRaw);
+      } catch (err) {
+        console.warn("Failed to parse style JSON", err);
+      }
+    }
 
     // Check if new images uploaded
     const desktopImage = formData.get("desktopImage") as File | null;
@@ -100,22 +117,20 @@ export async function PUT(req: NextRequest, { params }: Context) {
       page,
       isActive,
       order,
-      style: {
-        textColor: textColor || "#FFFFFF",
-        overlayColor: overlayColor || "",
-        textPosition: textPosition || "center",
-      },
     };
 
-    // Handle button update
-    if (buttonText && buttonUrl) {
-      updateData.button = {
-        text: buttonText,
-        url: buttonUrl,
-        color: buttonColor || "#FF6B35",
-        position: buttonPosition || "center",
-      };
+    // Set style if provided, else leave as-is
+    if (styleObj && typeof styleObj === "object") {
+      updateData.style = styleObj;
+    }
+
+    // Handle button update: if provided use it, if explicitly null/undefined then unset
+    if (buttonObj === null) {
+      // do nothing (no change)
+    } else if (buttonObj) {
+      updateData.button = buttonObj;
     } else {
+      // if parsed as falsy but present, remove
       updateData.button = undefined;
     }
 

@@ -65,18 +65,32 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
 
     // Extract form fields
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const page = formData.get("page") as string;
-    const buttonText = formData.get("buttonText") as string;
-    const buttonUrl = formData.get("buttonUrl") as string;
-    const buttonColor = formData.get("buttonColor") as string;
-    const buttonPosition = formData.get("buttonPosition") as string;
-    const textColor = formData.get("textColor") as string;
-    const overlayColor = formData.get("overlayColor") as string;
-    const textPosition = formData.get("textPosition") as string;
+    const title = (formData.get("title") as string) || "";
+    const description = (formData.get("description") as string) || "";
+    const page = (formData.get("page") as string) || "home";
     const isActive = formData.get("isActive") === "true";
-    const order = parseInt(formData.get("order") as string) || 0;
+    const order = parseInt((formData.get("order") as string) || "0") || 0;
+
+    // Parse nested JSON for button and style (sent by the form)
+    let buttonObj: any = null;
+    const buttonRaw = formData.get("button") as string | null;
+    if (buttonRaw) {
+      try {
+        buttonObj = JSON.parse(buttonRaw);
+      } catch (err) {
+        console.warn("Failed to parse button JSON", err);
+      }
+    }
+
+    let styleObj: any = null;
+    const styleRaw = formData.get("style") as string | null;
+    if (styleRaw) {
+      try {
+        styleObj = JSON.parse(styleRaw);
+      } catch (err) {
+        console.warn("Failed to parse style JSON", err);
+      }
+    }
 
     // Get images
     const desktopImage = formData.get("desktopImage") as File;
@@ -135,34 +149,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create banner data
+    // Create banner data following new schema (nested desktop/mobile objects)
     const bannerData: any = {
       title,
       description,
       page,
       desktopImageUrl: desktopUploadResult.secureUrl,
       desktopImagePublicId: desktopUploadResult.publicId,
-      style: {
-        textColor: textColor || "#FFFFFF",
-        overlayColor: overlayColor || "",
-        textPosition: textPosition || "center",
-      },
       order,
       isActive,
     };
 
+    // Style: expect { desktop: { textColor, overlayColor, textPosition }, mobile?: { ... } }
+    if (styleObj && typeof styleObj === "object") {
+      bannerData.style = styleObj;
+    } else {
+      // fallback to desktop-only defaults
+      bannerData.style = {
+        desktop: {
+          textColor: "#FFFFFF",
+          overlayColor: "",
+          textPosition: { x: 50, y: 50 },
+        },
+      };
+    }
+
+    // Button: expect { desktop: {...}, mobile?: {...} }
+    if (buttonObj && typeof buttonObj === "object") {
+      bannerData.button = buttonObj;
+    }
+
     if (mobileUploadResult) {
       bannerData.mobileImageUrl = mobileUploadResult.secureUrl;
       bannerData.mobileImagePublicId = mobileUploadResult.publicId;
-    }
-
-    if (buttonText && buttonUrl) {
-      bannerData.button = {
-        text: buttonText,
-        url: buttonUrl,
-        color: buttonColor || "#FF6B35",
-        position: buttonPosition || "center",
-      };
     }
 
     const banner = await Banner.create(bannerData);

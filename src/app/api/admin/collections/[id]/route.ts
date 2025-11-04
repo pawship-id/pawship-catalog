@@ -12,13 +12,15 @@ import { writeFile } from "fs/promises";
 import path from "path";
 import os from "os";
 
+interface Context {
+  params: Promise<{ id: string }>;
+}
+
 // GET - Fetch single collection by ID
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, { params }: Context) {
   try {
     const session = await getServerSession(authOptions);
+    const { id } = await params;
 
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -26,7 +28,7 @@ export async function GET(
 
     await dbConnect();
 
-    const collection = await Collection.findById(params.id);
+    const collection = await Collection.findById(id);
 
     if (!collection) {
       return NextResponse.json(
@@ -52,12 +54,10 @@ export async function GET(
 }
 
 // PUT - Update collection
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: NextRequest, { params }: Context) {
   try {
     const session = await getServerSession(authOptions);
+    const { id } = await params;
 
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -85,7 +85,7 @@ export async function PUT(
     }
 
     // Find existing collection
-    const existingCollection = await Collection.findById(params.id);
+    const existingCollection = await Collection.findById(id);
     if (!existingCollection) {
       return NextResponse.json(
         { message: "Collection not found" },
@@ -194,7 +194,7 @@ export async function PUT(
     }
 
     const updatedCollection = await Collection.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
     );
@@ -216,12 +216,10 @@ export async function PUT(
 }
 
 // DELETE - Delete collection
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest, { params }: Context) {
   try {
     const session = await getServerSession(authOptions);
+    const { id } = await params;
 
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -230,7 +228,7 @@ export async function DELETE(
     await dbConnect();
 
     const deletedCollection = await Collection.findByIdAndUpdate(
-      params.id,
+      id,
       {
         deleted: true,
         deletedAt: new Date(),

@@ -40,14 +40,14 @@ interface BannerFormData {
   description: string;
   page: string;
   desktopImage: File | string | null;
-  mobileImage: File | string | null;
-  button: {
+  mobileImage?: File | string | null;
+  button?: {
     desktop: DeviceButtonSettings;
-    mobile: DeviceButtonSettings | null;
+    mobile?: DeviceButtonSettings;
   };
-  style: {
+  style?: {
     desktop: DeviceStyleSettings;
-    mobile: DeviceStyleSettings | null;
+    mobile?: DeviceStyleSettings;
   };
   order: number;
   isActive: boolean;
@@ -77,31 +77,35 @@ export default function FormBanner({
 
   const previewRef = useRef<HTMLDivElement>(null);
 
+  const defaultButtonDesktop: DeviceButtonSettings = {
+    text: "",
+    url: "",
+    color: "#FF6B35",
+    position: { x: 50, y: 70 },
+  };
+
+  const defaultStyleDesktop: DeviceStyleSettings = {
+    textColor: "#FFFFFF",
+    overlayColor: "",
+    textPosition: { x: 50, y: 50 },
+  };
+
   const [formData, setFormData] = useState<BannerFormData>({
     title: "",
     description: "",
     page: "home",
     desktopImage: null,
-    mobileImage: null,
+    mobileImage: undefined,
     button: {
-      desktop: {
-        text: "",
-        url: "",
-        color: "#FF6B35",
-        position: { x: 50, y: 70 },
-      },
-      mobile: null,
+      desktop: defaultButtonDesktop,
+      mobile: undefined,
     },
     style: {
-      desktop: {
-        textColor: "#FFFFFF",
-        overlayColor: "",
-        textPosition: { x: 50, y: 50 },
-      },
-      mobile: null,
+      desktop: defaultStyleDesktop,
+      mobile: undefined,
     },
     order: 0,
-    isActive: true,
+    isActive: false,
   });
 
   const [desktopPreview, setDesktopPreview] = useState<string>("");
@@ -182,42 +186,42 @@ export default function FormBanner({
   // Copy desktop settings to mobile
   const copyDesktopToMobile = (type: "button" | "style") => {
     if (type === "button") {
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         button: {
-          ...formData.button,
-          mobile: { ...formData.button.desktop },
+          desktop: prev.button?.desktop || defaultButtonDesktop,
+          mobile: { ...(prev.button?.desktop || defaultButtonDesktop) },
         },
-      });
+      }));
     } else {
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         style: {
-          ...formData.style,
-          mobile: { ...formData.style.desktop },
+          desktop: prev.style?.desktop || defaultStyleDesktop,
+          mobile: { ...(prev.style?.desktop || defaultStyleDesktop) },
         },
-      });
+      }));
     }
   };
 
   // Clear mobile settings (use desktop as fallback)
   const clearMobileSettings = (type: "button" | "style") => {
     if (type === "button") {
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         button: {
-          ...formData.button,
-          mobile: null,
+          ...(prev.button || { desktop: defaultButtonDesktop }),
+          mobile: undefined,
         },
-      });
+      }));
     } else {
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         style: {
-          ...formData.style,
-          mobile: null,
+          ...(prev.style || { desktop: defaultStyleDesktop }),
+          mobile: undefined,
         },
-      });
+      }));
     }
   };
 
@@ -235,61 +239,60 @@ export default function FormBanner({
     const clampedX = Math.max(0, Math.min(100, x));
     const clampedY = Math.max(0, Math.min(100, y));
 
+    // Use functional updates to avoid stale state and handle missing nested objects
     if (activeTab === "desktop") {
       if (type === "text") {
-        setFormData({
-          ...formData,
+        setFormData((prev) => ({
+          ...prev,
           style: {
-            ...formData.style,
+            ...(prev.style || { desktop: defaultStyleDesktop }),
             desktop: {
-              ...formData.style.desktop,
+              ...(prev.style?.desktop || defaultStyleDesktop),
               textPosition: { x: clampedX, y: clampedY },
             },
           },
-        });
+        }));
       } else {
-        setFormData({
-          ...formData,
+        setFormData((prev) => ({
+          ...prev,
           button: {
-            ...formData.button,
+            ...(prev.button || { desktop: defaultButtonDesktop }),
             desktop: {
-              ...formData.button.desktop,
+              ...(prev.button?.desktop || defaultButtonDesktop),
               position: { x: clampedX, y: clampedY },
             },
           },
-        });
+        }));
       }
     } else {
-      // Mobile
-      if (!formData.button.mobile && type === "button") {
-        copyDesktopToMobile("button");
-      }
-      if (!formData.style.mobile && type === "text") {
-        copyDesktopToMobile("style");
-      }
-
-      if (type === "text" && formData.style.mobile) {
-        setFormData({
-          ...formData,
-          style: {
-            ...formData.style,
-            mobile: {
-              ...formData.style.mobile,
-              textPosition: { x: clampedX, y: clampedY },
-            },
-          },
-        });
-      } else if (type === "button" && formData.button.mobile) {
-        setFormData({
-          ...formData,
+      // Mobile: ensure mobile objects exist (copy from desktop when missing) and update
+      if (type === "button") {
+        setFormData((prev) => ({
+          ...prev,
           button: {
-            ...formData.button,
+            ...(prev.button || { desktop: defaultButtonDesktop }),
             mobile: {
-              ...formData.button.mobile,
+              // if mobile exists use it, otherwise copy desktop snapshot
+              ...(prev.button?.mobile ||
+                prev.button?.desktop ||
+                defaultButtonDesktop),
               position: { x: clampedX, y: clampedY },
             },
           },
-        });
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          style: {
+            ...(prev.style || { desktop: defaultStyleDesktop }),
+            mobile: {
+              ...(prev.style?.mobile ||
+                prev.style?.desktop ||
+                defaultStyleDesktop),
+              textPosition: { x: clampedX, y: clampedY },
+            },
+          },
+        }));
       }
     }
   };
@@ -300,10 +303,7 @@ export default function FormBanner({
 
     try {
       // Validation
-      if (!formData.title) {
-        throw new Error("Title is required");
-      }
-
+      // Title is optional now; no validation required for title
       if (mode === "create" && !formData.desktopImage) {
         throw new Error("Desktop image is required");
       }
@@ -384,15 +384,15 @@ export default function FormBanner({
 
   // Get current settings based on active tab (with fallback)
   const getCurrentButton = () => {
-    return activeTab === "mobile" && formData.button.mobile
+    return activeTab === "mobile" && formData.button?.mobile
       ? formData.button.mobile
-      : formData.button.desktop;
+      : formData.button?.desktop || defaultButtonDesktop;
   };
 
   const getCurrentStyle = () => {
-    return activeTab === "mobile" && formData.style.mobile
+    return activeTab === "mobile" && formData.style?.mobile
       ? formData.style.mobile
-      : formData.style.desktop;
+      : formData.style?.desktop || defaultStyleDesktop;
   };
 
   return (
@@ -403,16 +403,13 @@ export default function FormBanner({
           <h3 className="text-lg font-semibold">Basic Information</h3>
 
           <div className="space-y-2">
-            <Label htmlFor="title">
-              Title <span className="text-red-500">*</span>
-            </Label>
+            <Label htmlFor="title">Title</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
               }
-              required
             />
           </div>
 
@@ -568,73 +565,86 @@ export default function FormBanner({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Input
                     placeholder="Button Text"
-                    value={formData.button.desktop.text}
+                    value={formData.button?.desktop?.text ?? ""}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
+                      setFormData((prev) => ({
+                        ...prev,
                         button: {
-                          ...formData.button,
+                          ...(prev.button || { desktop: defaultButtonDesktop }),
                           desktop: {
-                            ...formData.button.desktop,
+                            ...(prev.button?.desktop || defaultButtonDesktop),
                             text: e.target.value,
                           },
                         },
-                      })
+                      }))
                     }
                   />
                   <Input
                     placeholder="Button URL"
-                    value={formData.button.desktop.url}
+                    value={formData.button?.desktop?.url ?? ""}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
+                      setFormData((prev) => ({
+                        ...prev,
                         button: {
-                          ...formData.button,
+                          ...(prev.button || { desktop: defaultButtonDesktop }),
                           desktop: {
-                            ...formData.button.desktop,
+                            ...(prev.button?.desktop || defaultButtonDesktop),
                             url: e.target.value,
                           },
                         },
-                      })
+                      }))
                     }
                   />
                   <div className="flex gap-2">
                     <Input
                       type="color"
-                      value={formData.button.desktop.color}
+                      value={formData.button?.desktop?.color ?? "#FF6B35"}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           button: {
-                            ...formData.button,
+                            ...(prev.button || {
+                              desktop: defaultButtonDesktop,
+                            }),
                             desktop: {
-                              ...formData.button.desktop,
+                              ...(prev.button?.desktop || defaultButtonDesktop),
                               color: e.target.value,
                             },
                           },
-                        })
+                        }))
                       }
                       className="w-20"
                     />
                     <Input
-                      value={formData.button.desktop.color}
+                      value={formData.button?.desktop?.color ?? "#FF6B35"}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           button: {
-                            ...formData.button,
+                            ...(prev.button || {
+                              desktop: defaultButtonDesktop,
+                            }),
                             desktop: {
-                              ...formData.button.desktop,
+                              ...(prev.button?.desktop || defaultButtonDesktop),
                               color: e.target.value,
                             },
                           },
-                        })
+                        }))
                       }
                     />
                   </div>
                   <div className="text-sm text-gray-600">
-                    Position: X: {formData.button.desktop.position.x.toFixed(1)}
-                    %, Y: {formData.button.desktop.position.y.toFixed(1)}%
+                    Position: X:{" "}
+                    {(
+                      formData.button?.desktop?.position.x ??
+                      defaultButtonDesktop.position.x
+                    ).toFixed(1)}
+                    %, Y:{" "}
+                    {(
+                      formData.button?.desktop?.position.y ??
+                      defaultButtonDesktop.position.y
+                    ).toFixed(1)}
+                    %
                   </div>
                 </div>
               </div>
@@ -646,58 +656,66 @@ export default function FormBanner({
                   <div className="flex gap-2">
                     <Input
                       type="color"
-                      value={formData.style.desktop.textColor}
+                      value={formData.style?.desktop?.textColor ?? "#FFFFFF"}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           style: {
-                            ...formData.style,
+                            ...(prev.style || { desktop: defaultStyleDesktop }),
                             desktop: {
-                              ...formData.style.desktop,
+                              ...(prev.style?.desktop || defaultStyleDesktop),
                               textColor: e.target.value,
                             },
                           },
-                        })
+                        }))
                       }
                       className="w-20"
                     />
                     <Input
-                      value={formData.style.desktop.textColor}
+                      value={formData.style?.desktop?.textColor ?? "#FFFFFF"}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           style: {
-                            ...formData.style,
+                            ...(prev.style || { desktop: defaultStyleDesktop }),
                             desktop: {
-                              ...formData.style.desktop,
+                              ...(prev.style?.desktop || defaultStyleDesktop),
                               textColor: e.target.value,
                             },
                           },
-                        })
+                        }))
                       }
                       placeholder="Text Color"
                     />
                   </div>
                   <Input
                     placeholder="Overlay Color (optional)"
-                    value={formData.style.desktop.overlayColor}
+                    value={formData.style?.desktop?.overlayColor ?? ""}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
+                      setFormData((prev) => ({
+                        ...prev,
                         style: {
-                          ...formData.style,
+                          ...(prev.style || { desktop: defaultStyleDesktop }),
                           desktop: {
-                            ...formData.style.desktop,
+                            ...(prev.style?.desktop || defaultStyleDesktop),
                             overlayColor: e.target.value,
                           },
                         },
-                      })
+                      }))
                     }
                   />
                   <div className="text-sm text-gray-600">
                     Position: X:{" "}
-                    {formData.style.desktop.textPosition.x.toFixed(1)}%, Y:{" "}
-                    {formData.style.desktop.textPosition.y.toFixed(1)}%
+                    {(
+                      formData.style?.desktop?.textPosition.x ??
+                      defaultStyleDesktop.textPosition.x
+                    ).toFixed(1)}
+                    %, Y:{" "}
+                    {(
+                      formData.style?.desktop?.textPosition.y ??
+                      defaultStyleDesktop.textPosition.y
+                    ).toFixed(1)}
+                    %
                   </div>
                 </div>
               </div>
@@ -708,7 +726,7 @@ export default function FormBanner({
                 <strong>Mobile settings are optional.</strong> If not set,
                 desktop settings will be used.
                 <div className="flex gap-2">
-                  {!formData.button.mobile && (
+                  {!formData.button?.mobile && (
                     <Button
                       type="button"
                       size="sm"
@@ -718,7 +736,7 @@ export default function FormBanner({
                       Copy Desktop Button
                     </Button>
                   )}
-                  {!formData.style.mobile && (
+                  {!formData.style?.mobile && (
                     <Button
                       type="button"
                       size="sm"
@@ -728,7 +746,7 @@ export default function FormBanner({
                       Copy Desktop Style
                     </Button>
                   )}
-                  {(formData.button.mobile || formData.style.mobile) && (
+                  {(formData.button?.mobile || formData.style?.mobile) && (
                     <Button
                       type="button"
                       size="sm"
@@ -745,7 +763,7 @@ export default function FormBanner({
               </div>
 
               {/* Mobile Button Settings */}
-              {formData.button.mobile && (
+              {formData.button?.mobile && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <h4 className="font-medium">Button Settings</h4>
@@ -761,89 +779,99 @@ export default function FormBanner({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Input
                       placeholder="Button Text"
-                      value={formData.button.mobile.text}
+                      value={formData.button?.mobile?.text ?? ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           button: {
-                            ...formData.button,
-                            mobile: formData.button.mobile
-                              ? {
-                                  ...formData.button.mobile,
-                                  text: e.target.value,
-                                }
-                              : null,
+                            ...(prev.button || {
+                              desktop: defaultButtonDesktop,
+                            }),
+                            mobile: {
+                              ...(prev.button?.mobile || defaultButtonDesktop),
+                              text: e.target.value,
+                            },
                           },
-                        })
+                        }))
                       }
                     />
                     <Input
                       placeholder="Button URL"
-                      value={formData.button.mobile.url}
+                      value={formData.button?.mobile?.url ?? ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           button: {
-                            ...formData.button,
-                            mobile: formData.button.mobile
-                              ? {
-                                  ...formData.button.mobile,
-                                  url: e.target.value,
-                                }
-                              : null,
+                            ...(prev.button || {
+                              desktop: defaultButtonDesktop,
+                            }),
+                            mobile: {
+                              ...(prev.button?.mobile || defaultButtonDesktop),
+                              url: e.target.value,
+                            },
                           },
-                        })
+                        }))
                       }
                     />
                     <div className="flex gap-2">
                       <Input
                         type="color"
-                        value={formData.button.mobile.color}
+                        value={formData.button?.mobile?.color ?? "#FF6B35"}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
+                          setFormData((prev) => ({
+                            ...prev,
                             button: {
-                              ...formData.button,
-                              mobile: formData.button.mobile
-                                ? {
-                                    ...formData.button.mobile,
-                                    color: e.target.value,
-                                  }
-                                : null,
+                              ...(prev.button || {
+                                desktop: defaultButtonDesktop,
+                              }),
+                              mobile: {
+                                ...(prev.button?.mobile ||
+                                  defaultButtonDesktop),
+                                color: e.target.value,
+                              },
                             },
-                          })
+                          }))
                         }
                         className="w-20"
                       />
                       <Input
-                        value={formData.button.mobile.color}
+                        value={formData.button?.mobile?.color ?? "#FF6B35"}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
+                          setFormData((prev) => ({
+                            ...prev,
                             button: {
-                              ...formData.button,
-                              mobile: formData.button.mobile
-                                ? {
-                                    ...formData.button.mobile,
-                                    color: e.target.value,
-                                  }
-                                : null,
+                              ...(prev.button || {
+                                desktop: defaultButtonDesktop,
+                              }),
+                              mobile: {
+                                ...(prev.button?.mobile ||
+                                  defaultButtonDesktop),
+                                color: e.target.value,
+                              },
                             },
-                          })
+                          }))
                         }
                       />
                     </div>
                     <div className="text-sm text-gray-600">
                       Position: X:{" "}
-                      {formData.button.mobile.position.x.toFixed(1)}%, Y:{" "}
-                      {formData.button.mobile.position.y.toFixed(1)}%
+                      {(
+                        formData.button?.mobile?.position.x ??
+                        defaultButtonDesktop.position.x
+                      ).toFixed(1)}
+                      %, Y:{" "}
+                      {(
+                        formData.button?.mobile?.position.y ??
+                        defaultButtonDesktop.position.y
+                      ).toFixed(1)}
+                      %
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Mobile Text Style */}
-              {formData.style.mobile && (
+              {formData.style?.mobile && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <h4 className="font-medium">Text Style</h4>
@@ -860,64 +888,70 @@ export default function FormBanner({
                     <div className="flex gap-2">
                       <Input
                         type="color"
-                        value={formData.style.mobile.textColor}
+                        value={formData.style?.mobile?.textColor ?? "#FFFFFF"}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
+                          setFormData((prev) => ({
+                            ...prev,
                             style: {
-                              ...formData.style,
-                              mobile: formData.style.mobile
-                                ? {
-                                    ...formData.style.mobile,
-                                    textColor: e.target.value,
-                                  }
-                                : null,
+                              ...(prev.style || {
+                                desktop: defaultStyleDesktop,
+                              }),
+                              mobile: {
+                                ...(prev.style?.mobile || defaultStyleDesktop),
+                                textColor: e.target.value,
+                              },
                             },
-                          })
+                          }))
                         }
                         className="w-20"
                       />
                       <Input
-                        value={formData.style.mobile.textColor}
+                        value={formData.style?.mobile?.textColor ?? "#FFFFFF"}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
+                          setFormData((prev) => ({
+                            ...prev,
                             style: {
-                              ...formData.style,
-                              mobile: formData.style.mobile
-                                ? {
-                                    ...formData.style.mobile,
-                                    textColor: e.target.value,
-                                  }
-                                : null,
+                              ...(prev.style || {
+                                desktop: defaultStyleDesktop,
+                              }),
+                              mobile: {
+                                ...(prev.style?.mobile || defaultStyleDesktop),
+                                textColor: e.target.value,
+                              },
                             },
-                          })
+                          }))
                         }
                         placeholder="Text Color"
                       />
                     </div>
                     <Input
                       placeholder="Overlay Color (optional)"
-                      value={formData.style.mobile.overlayColor}
+                      value={formData.style?.mobile?.overlayColor ?? ""}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           style: {
-                            ...formData.style,
-                            mobile: formData.style.mobile
-                              ? {
-                                  ...formData.style.mobile,
-                                  overlayColor: e.target.value,
-                                }
-                              : null,
+                            ...(prev.style || { desktop: defaultStyleDesktop }),
+                            mobile: {
+                              ...(prev.style?.mobile || defaultStyleDesktop),
+                              overlayColor: e.target.value,
+                            },
                           },
-                        })
+                        }))
                       }
                     />
                     <div className="text-sm text-gray-600">
                       Position: X:{" "}
-                      {formData.style.mobile.textPosition.x.toFixed(1)}%, Y:{" "}
-                      {formData.style.mobile.textPosition.y.toFixed(1)}%
+                      {(
+                        formData.style?.mobile?.textPosition.x ??
+                        defaultStyleDesktop.textPosition.x
+                      ).toFixed(1)}
+                      %, Y:{" "}
+                      {(
+                        formData.style?.mobile?.textPosition.y ??
+                        defaultStyleDesktop.textPosition.y
+                      ).toFixed(1)}
+                      %
                     </div>
                   </div>
                 </div>
@@ -1067,7 +1101,7 @@ export default function FormBanner({
                 className="text-2xl md:text-4xl font-bold mb-2"
                 style={{ color: getCurrentStyle().textColor }}
               >
-                {formData.title || "Banner Title"}
+                {formData.title}
               </h2>
               {formData.description && (
                 <p

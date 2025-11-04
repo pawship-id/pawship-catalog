@@ -2,7 +2,7 @@ import mongoose, { Document, Schema, Types } from "mongoose";
 import softDelete from "mongoose-delete";
 
 export interface IBanner extends Document {
-  title: string;
+  title?: string;
   description?: string;
   page:
     | "home"
@@ -37,19 +37,19 @@ export interface IBanner extends Document {
       };
     };
   };
-  style: {
-    desktop: {
-      textColor: string;
+  style?: {
+    desktop?: {
+      textColor?: string;
       overlayColor?: string;
-      textPosition: {
+      textPosition?: {
         x: number; // percentage 0-100
         y: number; // percentage 0-100
       };
     };
     mobile?: {
-      textColor: string;
+      textColor?: string;
       overlayColor?: string;
-      textPosition: {
+      textPosition?: {
         x: number; // percentage 0-100
         y: number; // percentage 0-100
       };
@@ -68,7 +68,6 @@ const BannerSchema = new Schema<IBanner>(
   {
     title: {
       type: String,
-      required: [true, "Title is required"],
       trim: true,
     },
     description: {
@@ -162,6 +161,7 @@ const BannerSchema = new Schema<IBanner>(
         },
       },
     },
+    // Style is optional. If omitted, frontend should fall back to sensible defaults.
     style: {
       _id: false,
       type: {
@@ -180,16 +180,15 @@ const BannerSchema = new Schema<IBanner>(
               type: {
                 x: {
                   type: Number,
-                  default: 50, // center horizontally
+                  default: 50,
                 },
                 y: {
                   type: Number,
-                  default: 50, // center vertically
+                  default: 50,
                 },
               },
             },
           },
-          required: true,
         },
         mobile: {
           _id: false,
@@ -214,7 +213,6 @@ const BannerSchema = new Schema<IBanner>(
           },
         },
       },
-      required: true,
     },
     order: {
       type: Number,
@@ -222,7 +220,7 @@ const BannerSchema = new Schema<IBanner>(
     },
     isActive: {
       type: Boolean,
-      default: true,
+      default: false,
     },
   },
   { timestamps: true }

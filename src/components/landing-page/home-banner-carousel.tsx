@@ -11,15 +11,30 @@ interface Banner {
   desktopImageUrl: string;
   mobileImageUrl?: string;
   button?: {
-    text?: string;
-    url?: string;
-    color?: string;
-    position?: "left" | "center" | "right";
+    desktop?: {
+      text?: string;
+      url?: string;
+      color?: string;
+      position?: { x: number; y: number } | "left" | "center" | "right";
+    };
+    mobile?: {
+      text?: string;
+      url?: string;
+      color?: string;
+      position?: { x: number; y: number } | "left" | "center" | "right";
+    };
   };
   style?: {
-    textColor?: string;
-    overlayColor?: string;
-    textPosition?: "left" | "center" | "right";
+    desktop?: {
+      textColor?: string;
+      overlayColor?: string;
+      textPosition?: { x: number; y: number } | "left" | "center" | "right";
+    };
+    mobile?: {
+      textColor?: string;
+      overlayColor?: string;
+      textPosition?: { x: number; y: number } | "left" | "center" | "right";
+    };
   };
 }
 
@@ -99,16 +114,50 @@ export default function HomeBannerCarousel({
       ? currentBanner.mobileImageUrl
       : currentBanner.desktopImageUrl;
 
-  const getPositionClass = (position?: "left" | "center" | "right") => {
-    switch (position) {
+  const mapKeywordToPercent = (pos?: "left" | "center" | "right") => {
+    switch (pos) {
       case "left":
-        return "justify-start text-left";
+        return { x: 10, y: 50 };
       case "right":
-        return "justify-end text-right";
+        return { x: 90, y: 50 };
       default:
-        return "justify-center text-center";
+        return { x: 50, y: 50 };
     }
   };
+
+  const getDeviceStyle = (banner: Banner) => {
+    // choose mobile if available and isMobile true will be handled below
+    return banner.style || {};
+  };
+
+  const normalizePosition = (
+    pos: any,
+    fallback: { x: number; y: number }
+  ): { x: number; y: number } => {
+    if (!pos) return fallback;
+    if (typeof pos === "object" && typeof pos.x === "number") return pos;
+    if (typeof pos === "string") return mapKeywordToPercent(pos as any);
+    return fallback;
+  };
+
+  const getCurrentSettings = (banner: Banner) => {
+    const styleDesktop = banner.style?.desktop;
+    const styleMobile = banner.style?.mobile;
+    const buttonDesktop = banner.button?.desktop;
+    const buttonMobile = banner.button?.mobile;
+
+    const style = isMobile
+      ? styleMobile || styleDesktop
+      : styleDesktop || styleMobile;
+    const button = isMobile
+      ? buttonMobile || buttonDesktop
+      : buttonDesktop || buttonMobile;
+
+    return { style, button };
+  };
+
+  const deviceSettings = getCurrentSettings(currentBanner as Banner);
+  const overlayColor = deviceSettings.style?.overlayColor;
 
   return (
     // <div className="relative w-full h-[400px] md:h-[700px] overflow-hidden">
@@ -119,11 +168,11 @@ export default function HomeBannerCarousel({
         style={{ backgroundImage: `url(${imageUrl})` }}
       >
         {/* Overlay */}
-        {currentBanner.style?.overlayColor && (
+        {overlayColor && (
           <div
             className="absolute inset-0"
             style={{
-              backgroundColor: currentBanner.style.overlayColor,
+              backgroundColor: overlayColor,
               opacity: 0.5,
             }}
           ></div>
@@ -131,54 +180,74 @@ export default function HomeBannerCarousel({
 
         {/* Content */}
         <div className="relative h-full container mx-auto px-4">
-          <div
-            className={`h-full flex flex-col ${getPositionClass(
-              currentBanner.style?.textPosition
-            )} py-12 md:py-20`}
-          >
-            {/* Title */}
-            {currentBanner.title && (
-              <h1
-                className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 max-w-3xl"
-                style={{
-                  color: currentBanner.style?.textColor || "#FFFFFF",
-                }}
-              >
-                {currentBanner.title}
-              </h1>
-            )}
-
-            {/* Description */}
-            {currentBanner.description && (
-              <p
-                className="text-lg md:text-xl mb-8 max-w-2xl"
-                style={{
-                  color: currentBanner.style?.textColor || "#FFFFFF",
-                }}
-              >
-                {currentBanner.description}
-              </p>
-            )}
-
-            {/* Button */}
-            {currentBanner.button?.text && currentBanner.button?.url && (
-              <div
-                className={`flex ${getPositionClass(currentBanner.button.position)}`}
-              >
-                <a href={currentBanner.button.url}>
-                  <Button
-                    size="lg"
-                    className="text-white font-semibold px-8 py-6"
+          {/* Positioning: use absolute positioning with percentages coming from the banner settings */}
+          {/* Text */}
+          {(() => {
+            const { style, button } = getCurrentSettings(
+              currentBanner as Banner
+            );
+            const textPos = normalizePosition(style?.textPosition, {
+              x: 50,
+              y: 50,
+            });
+            const textColor = style?.textColor || "#FFFFFF";
+            return (
+              <>
+                {currentBanner.title && (
+                  <div
                     style={{
-                      backgroundColor: currentBanner.button.color || "#FF6B35",
+                      left: `${textPos.x}%`,
+                      top: `${textPos.y}%`,
                     }}
+                    className="absolute max-w-3xl transform -translate-x-1/2 -translate-y-1/2 px-4"
                   >
-                    {currentBanner.button.text}
-                  </Button>
-                </a>
-              </div>
-            )}
-          </div>
+                    <h1
+                      className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4"
+                      style={{ color: textColor }}
+                    >
+                      {currentBanner.title}
+                    </h1>
+                    {currentBanner.description && (
+                      <p
+                        className="text-lg md:text-xl"
+                        style={{ color: textColor }}
+                      >
+                        {currentBanner.description}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Button */}
+                {button?.text &&
+                  button?.url &&
+                  (() => {
+                    const btnPos = normalizePosition(button.position, {
+                      x: 50,
+                      y: 70,
+                    });
+                    return (
+                      <div
+                        style={{ left: `${btnPos.x}%`, top: `${btnPos.y}%` }}
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 px-4"
+                      >
+                        <a href={button.url}>
+                          <Button
+                            size="lg"
+                            className="text-white font-semibold px-8 py-6"
+                            style={{
+                              backgroundColor: button.color || "#FF6B35",
+                            }}
+                          >
+                            {button.text}
+                          </Button>
+                        </a>
+                      </div>
+                    );
+                  })()}
+              </>
+            );
+          })()}
         </div>
       </div>
 
