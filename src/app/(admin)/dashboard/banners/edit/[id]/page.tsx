@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
-import FormBanner from "@/components/admin/banners/form-banner";
+import FormBanner from "@/components/admin/banners/form-banner-v1";
 
 interface Banner {
   _id: string;

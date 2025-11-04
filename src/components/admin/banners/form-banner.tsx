@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
-import { Eye } from "lucide-react";
+import { Eye, Move } from "lucide-react";
+
+interface PositionCoordinates {
+  x: number; // percentage 0-100
+  y: number; // percentage 0-100
+}
+
+interface DeviceButtonSettings {
+  text: string;
+  url: string;
+  color: string;
+  position: PositionCoordinates;
+}
+
+interface DeviceStyleSettings {
+  textColor: string;
+  overlayColor: string;
+  textPosition: PositionCoordinates;
+}
 
 interface BannerFormData {
   title: string;
@@ -22,13 +41,14 @@ interface BannerFormData {
   page: string;
   desktopImage: File | string | null;
   mobileImage: File | string | null;
-  buttonText: string;
-  buttonUrl: string;
-  buttonColor: string;
-  buttonPosition: string;
-  textColor: string;
-  overlayColor: string;
-  textPosition: string;
+  button: {
+    desktop: DeviceButtonSettings;
+    mobile: DeviceButtonSettings | null;
+  };
+  style: {
+    desktop: DeviceStyleSettings;
+    mobile: DeviceStyleSettings | null;
+  };
   order: number;
   isActive: boolean;
 }
@@ -47,7 +67,15 @@ export default function FormBanner({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">(
+    "desktop"
+  );
+  const [activeTab, setActiveTab] = useState<"desktop" | "mobile">("desktop");
+  const [draggingElement, setDraggingElement] = useState<
+    "text" | "button" | null
+  >(null);
+
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState<BannerFormData>({
     title: "",
@@ -55,13 +83,23 @@ export default function FormBanner({
     page: "home",
     desktopImage: null,
     mobileImage: null,
-    buttonText: "",
-    buttonUrl: "",
-    buttonColor: "#FF6B35",
-    buttonPosition: "center",
-    textColor: "#FFFFFF",
-    overlayColor: "",
-    textPosition: "center",
+    button: {
+      desktop: {
+        text: "",
+        url: "",
+        color: "#FF6B35",
+        position: { x: 50, y: 70 },
+      },
+      mobile: null,
+    },
+    style: {
+      desktop: {
+        textColor: "#FFFFFF",
+        overlayColor: "",
+        textPosition: { x: 50, y: 50 },
+      },
+      mobile: null,
+    },
     order: 0,
     isActive: true,
   });
@@ -69,6 +107,7 @@ export default function FormBanner({
   const [desktopPreview, setDesktopPreview] = useState<string>("");
   const [mobilePreview, setMobilePreview] = useState<string>("");
 
+  // Initialize form data from initialData (edit mode)
   useEffect(() => {
     if (mode === "edit" && initialData) {
       setFormData({
@@ -77,13 +116,26 @@ export default function FormBanner({
         page: initialData.page || "home",
         desktopImage: initialData.desktopImageUrl || null,
         mobileImage: initialData.mobileImageUrl || null,
-        buttonText: initialData.button?.text || "",
-        buttonUrl: initialData.button?.url || "",
-        buttonColor: initialData.button?.color || "#FF6B35",
-        buttonPosition: initialData.button?.position || "center",
-        textColor: initialData.style?.textColor || "#FFFFFF",
-        overlayColor: initialData.style?.overlayColor || "",
-        textPosition: initialData.style?.textPosition || "center",
+        button: {
+          desktop: {
+            text: initialData.button?.desktop?.text || "",
+            url: initialData.button?.desktop?.url || "",
+            color: initialData.button?.desktop?.color || "#FF6B35",
+            position: initialData.button?.desktop?.position || { x: 50, y: 70 },
+          },
+          mobile: initialData.button?.mobile || null,
+        },
+        style: {
+          desktop: {
+            textColor: initialData.style?.desktop?.textColor || "#FFFFFF",
+            overlayColor: initialData.style?.desktop?.overlayColor || "",
+            textPosition: initialData.style?.desktop?.textPosition || {
+              x: 50,
+              y: 50,
+            },
+          },
+          mobile: initialData.style?.mobile || null,
+        },
         order: initialData.order || 0,
         isActive:
           initialData.isActive !== undefined ? initialData.isActive : true,
@@ -127,6 +179,121 @@ export default function FormBanner({
     setMobilePreview("");
   };
 
+  // Copy desktop settings to mobile
+  const copyDesktopToMobile = (type: "button" | "style") => {
+    if (type === "button") {
+      setFormData({
+        ...formData,
+        button: {
+          ...formData.button,
+          mobile: { ...formData.button.desktop },
+        },
+      });
+    } else {
+      setFormData({
+        ...formData,
+        style: {
+          ...formData.style,
+          mobile: { ...formData.style.desktop },
+        },
+      });
+    }
+  };
+
+  // Clear mobile settings (use desktop as fallback)
+  const clearMobileSettings = (type: "button" | "style") => {
+    if (type === "button") {
+      setFormData({
+        ...formData,
+        button: {
+          ...formData.button,
+          mobile: null,
+        },
+      });
+    } else {
+      setFormData({
+        ...formData,
+        style: {
+          ...formData.style,
+          mobile: null,
+        },
+      });
+    }
+  };
+
+  // Handle drag positioning
+  const handleDragPosition = (
+    e: React.MouseEvent<HTMLDivElement>,
+    type: "text" | "button"
+  ) => {
+    if (!previewRef.current) return;
+
+    const rect = previewRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    const clampedX = Math.max(0, Math.min(100, x));
+    const clampedY = Math.max(0, Math.min(100, y));
+
+    if (activeTab === "desktop") {
+      if (type === "text") {
+        setFormData({
+          ...formData,
+          style: {
+            ...formData.style,
+            desktop: {
+              ...formData.style.desktop,
+              textPosition: { x: clampedX, y: clampedY },
+            },
+          },
+        });
+      } else {
+        setFormData({
+          ...formData,
+          button: {
+            ...formData.button,
+            desktop: {
+              ...formData.button.desktop,
+              position: { x: clampedX, y: clampedY },
+            },
+          },
+        });
+      }
+    } else {
+      // Mobile
+      if (!formData.button.mobile && type === "button") {
+        copyDesktopToMobile("button");
+      }
+      if (!formData.style.mobile && type === "text") {
+        copyDesktopToMobile("style");
+      }
+
+      if (type === "text" && formData.style.mobile) {
+        setFormData({
+          ...formData,
+          style: {
+            ...formData.style,
+            mobile: {
+              ...formData.style.mobile,
+              textPosition: { x: clampedX, y: clampedY },
+            },
+          },
+        });
+      } else if (type === "button" && formData.button.mobile) {
+        setFormData({
+          ...formData,
+          button: {
+            ...formData.button,
+            mobile: {
+              ...formData.button.mobile,
+              position: { x: clampedX, y: clampedY },
+            },
+          },
+        });
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -146,15 +313,14 @@ export default function FormBanner({
       submitData.append("title", formData.title);
       submitData.append("description", formData.description);
       submitData.append("page", formData.page);
-      submitData.append("buttonText", formData.buttonText);
-      submitData.append("buttonUrl", formData.buttonUrl);
-      submitData.append("buttonColor", formData.buttonColor);
-      submitData.append("buttonPosition", formData.buttonPosition);
-      submitData.append("textColor", formData.textColor);
-      submitData.append("overlayColor", formData.overlayColor);
-      submitData.append("textPosition", formData.textPosition);
       submitData.append("order", formData.order.toString());
       submitData.append("isActive", formData.isActive.toString());
+
+      // Button settings
+      submitData.append("button", JSON.stringify(formData.button));
+
+      // Style settings
+      submitData.append("style", JSON.stringify(formData.style));
 
       // Handle images
       if (mode === "create") {
@@ -216,26 +382,17 @@ export default function FormBanner({
     }
   };
 
-  const getTextAlignment = (position: string) => {
-    switch (position) {
-      case "left":
-        return "text-left items-start";
-      case "right":
-        return "text-right items-end";
-      default:
-        return "text-center items-center";
-    }
+  // Get current settings based on active tab (with fallback)
+  const getCurrentButton = () => {
+    return activeTab === "mobile" && formData.button.mobile
+      ? formData.button.mobile
+      : formData.button.desktop;
   };
 
-  const getButtonAlignment = (position: string) => {
-    switch (position) {
-      case "left":
-        return "justify-start";
-      case "right":
-        return "justify-end";
-      default:
-        return "justify-center";
-    }
+  const getCurrentStyle = () => {
+    return activeTab === "mobile" && formData.style.mobile
+      ? formData.style.mobile
+      : formData.style.desktop;
   };
 
   return (
@@ -350,7 +507,7 @@ export default function FormBanner({
               />
             )}
             <p className="text-sm text-gray-500">
-              Recommended: 1920 x 600 pixels
+              Home: 1920 x 600px | Others: 1920 x 400px
             </p>
           </div>
 
@@ -381,150 +538,392 @@ export default function FormBanner({
               </div>
             )}
             <p className="text-sm text-gray-500">
-              Recommended: 768 x 600 pixels. If not provided, desktop image will
-              be used.
+              Home: 768 x 400px | Others: 768 x 300px
             </p>
           </div>
         </div>
 
-        {/* Button Settings */}
+        {/* Button & Style Settings with Tabs */}
         <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
-          <h3 className="text-lg font-semibold">Button Settings (Optional)</h3>
+          <h3 className="text-lg font-semibold">Button & Text Settings</h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="buttonText">Button Text</Label>
-              <Input
-                id="buttonText"
-                value={formData.buttonText}
-                onChange={(e) =>
-                  setFormData({ ...formData, buttonText: e.target.value })
-                }
-              />
-            </div>
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as "desktop" | "mobile")}
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="desktop">Desktop Settings</TabsTrigger>
+              <TabsTrigger value="mobile">Mobile Settings</TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2">
-              <Label htmlFor="buttonUrl">Button URL</Label>
-              <Input
-                id="buttonUrl"
-                value={formData.buttonUrl}
-                onChange={(e) =>
-                  setFormData({ ...formData, buttonUrl: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="buttonColor">Button Color</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="buttonColor"
-                  type="color"
-                  value={formData.buttonColor}
-                  onChange={(e) =>
-                    setFormData({ ...formData, buttonColor: e.target.value })
-                  }
-                  className="w-20"
-                />
-                <Input
-                  value={formData.buttonColor}
-                  onChange={(e) =>
-                    setFormData({ ...formData, buttonColor: e.target.value })
-                  }
-                />
+            <TabsContent value="desktop" className="space-y-4 mt-4">
+              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+                <strong>Desktop settings are required.</strong> Configure button
+                and text position by dragging in the preview below.
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="buttonPosition">Button Position</Label>
-              <Select
-                value={formData.buttonPosition}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, buttonPosition: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        {/* Style Settings */}
-        <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
-          <h3 className="text-lg font-semibold">Style Settings</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="textColor">Text Color</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="textColor"
-                  type="color"
-                  value={formData.textColor}
-                  onChange={(e) =>
-                    setFormData({ ...formData, textColor: e.target.value })
-                  }
-                  className="w-20"
-                />
-                <Input
-                  value={formData.textColor}
-                  onChange={(e) =>
-                    setFormData({ ...formData, textColor: e.target.value })
-                  }
-                />
+              {/* Desktop Button Settings */}
+              <div className="space-y-3">
+                <h4 className="font-medium">Button Settings</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Input
+                    placeholder="Button Text"
+                    value={formData.button.desktop.text}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        button: {
+                          ...formData.button,
+                          desktop: {
+                            ...formData.button.desktop,
+                            text: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                  />
+                  <Input
+                    placeholder="Button URL"
+                    value={formData.button.desktop.url}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        button: {
+                          ...formData.button,
+                          desktop: {
+                            ...formData.button.desktop,
+                            url: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={formData.button.desktop.color}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          button: {
+                            ...formData.button,
+                            desktop: {
+                              ...formData.button.desktop,
+                              color: e.target.value,
+                            },
+                          },
+                        })
+                      }
+                      className="w-20"
+                    />
+                    <Input
+                      value={formData.button.desktop.color}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          button: {
+                            ...formData.button,
+                            desktop: {
+                              ...formData.button.desktop,
+                              color: e.target.value,
+                            },
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Position: X: {formData.button.desktop.position.x.toFixed(1)}
+                    %, Y: {formData.button.desktop.position.y.toFixed(1)}%
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="overlayColor">
-                Background Overlay (Optional)
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="overlayColor"
-                  type="color"
-                  value={formData.overlayColor || "#000000"}
-                  onChange={(e) =>
-                    setFormData({ ...formData, overlayColor: e.target.value })
-                  }
-                  className="w-20"
-                />
-                <Input
-                  value={formData.overlayColor}
-                  onChange={(e) =>
-                    setFormData({ ...formData, overlayColor: e.target.value })
-                  }
-                  placeholder="#000000"
-                />
+              {/* Desktop Text Style */}
+              <div className="space-y-3">
+                <h4 className="font-medium">Text Style</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={formData.style.desktop.textColor}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          style: {
+                            ...formData.style,
+                            desktop: {
+                              ...formData.style.desktop,
+                              textColor: e.target.value,
+                            },
+                          },
+                        })
+                      }
+                      className="w-20"
+                    />
+                    <Input
+                      value={formData.style.desktop.textColor}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          style: {
+                            ...formData.style,
+                            desktop: {
+                              ...formData.style.desktop,
+                              textColor: e.target.value,
+                            },
+                          },
+                        })
+                      }
+                      placeholder="Text Color"
+                    />
+                  </div>
+                  <Input
+                    placeholder="Overlay Color (optional)"
+                    value={formData.style.desktop.overlayColor}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        style: {
+                          ...formData.style,
+                          desktop: {
+                            ...formData.style.desktop,
+                            overlayColor: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                  />
+                  <div className="text-sm text-gray-600">
+                    Position: X:{" "}
+                    {formData.style.desktop.textPosition.x.toFixed(1)}%, Y:{" "}
+                    {formData.style.desktop.textPosition.y.toFixed(1)}%
+                  </div>
+                </div>
               </div>
-            </div>
+            </TabsContent>
 
-            <div className="space-y-2">
-              <Label htmlFor="textPosition">Text Position</Label>
-              <Select
-                value={formData.textPosition}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, textPosition: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            <TabsContent value="mobile" className="space-y-4 mt-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-yellow-900 space-y-2">
+                <strong>Mobile settings are optional.</strong> If not set,
+                desktop settings will be used.
+                <div className="flex gap-2">
+                  {!formData.button.mobile && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyDesktopToMobile("button")}
+                    >
+                      Copy Desktop Button
+                    </Button>
+                  )}
+                  {!formData.style.mobile && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyDesktopToMobile("style")}
+                    >
+                      Copy Desktop Style
+                    </Button>
+                  )}
+                  {(formData.button.mobile || formData.style.mobile) && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        clearMobileSettings("button");
+                        clearMobileSettings("style");
+                      }}
+                    >
+                      Clear All Mobile Settings
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Mobile Button Settings */}
+              {formData.button.mobile && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Button Settings</h4>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => clearMobileSettings("button")}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      placeholder="Button Text"
+                      value={formData.button.mobile.text}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          button: {
+                            ...formData.button,
+                            mobile: formData.button.mobile
+                              ? {
+                                  ...formData.button.mobile,
+                                  text: e.target.value,
+                                }
+                              : null,
+                          },
+                        })
+                      }
+                    />
+                    <Input
+                      placeholder="Button URL"
+                      value={formData.button.mobile.url}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          button: {
+                            ...formData.button,
+                            mobile: formData.button.mobile
+                              ? {
+                                  ...formData.button.mobile,
+                                  url: e.target.value,
+                                }
+                              : null,
+                          },
+                        })
+                      }
+                    />
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={formData.button.mobile.color}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            button: {
+                              ...formData.button,
+                              mobile: formData.button.mobile
+                                ? {
+                                    ...formData.button.mobile,
+                                    color: e.target.value,
+                                  }
+                                : null,
+                            },
+                          })
+                        }
+                        className="w-20"
+                      />
+                      <Input
+                        value={formData.button.mobile.color}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            button: {
+                              ...formData.button,
+                              mobile: formData.button.mobile
+                                ? {
+                                    ...formData.button.mobile,
+                                    color: e.target.value,
+                                  }
+                                : null,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Position: X:{" "}
+                      {formData.button.mobile.position.x.toFixed(1)}%, Y:{" "}
+                      {formData.button.mobile.position.y.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Mobile Text Style */}
+              {formData.style.mobile && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Text Style</h4>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => clearMobileSettings("style")}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={formData.style.mobile.textColor}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            style: {
+                              ...formData.style,
+                              mobile: formData.style.mobile
+                                ? {
+                                    ...formData.style.mobile,
+                                    textColor: e.target.value,
+                                  }
+                                : null,
+                            },
+                          })
+                        }
+                        className="w-20"
+                      />
+                      <Input
+                        value={formData.style.mobile.textColor}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            style: {
+                              ...formData.style,
+                              mobile: formData.style.mobile
+                                ? {
+                                    ...formData.style.mobile,
+                                    textColor: e.target.value,
+                                  }
+                                : null,
+                            },
+                          })
+                        }
+                        placeholder="Text Color"
+                      />
+                    </div>
+                    <Input
+                      placeholder="Overlay Color (optional)"
+                      value={formData.style.mobile.overlayColor}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          style: {
+                            ...formData.style,
+                            mobile: formData.style.mobile
+                              ? {
+                                  ...formData.style.mobile,
+                                  overlayColor: e.target.value,
+                                }
+                              : null,
+                          },
+                        })
+                      }
+                    />
+                    <div className="text-sm text-gray-600">
+                      Position: X:{" "}
+                      {formData.style.mobile.textPosition.x.toFixed(1)}%, Y:{" "}
+                      {formData.style.mobile.textPosition.y.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Action Buttons */}
@@ -554,104 +953,164 @@ export default function FormBanner({
         </div>
       </form>
 
-      {/* Preview */}
+      {/* Draggable Preview */}
       {showPreview && (desktopPreview || mobilePreview) && (
         <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Preview</h3>
+            <h3 className="text-lg font-semibold">
+              Interactive Preview - Drag to Position
+            </h3>
             <div className="flex gap-2">
               <Button
                 size="sm"
-                variant={!isMobile ? "default" : "outline"}
-                onClick={() => setIsMobile(false)}
+                variant={previewDevice === "desktop" ? "default" : "outline"}
+                onClick={() => {
+                  setPreviewDevice("desktop");
+                  setActiveTab("desktop");
+                }}
               >
                 Desktop
               </Button>
               <Button
                 size="sm"
-                variant={isMobile ? "default" : "outline"}
-                onClick={() => setIsMobile(true)}
+                variant={previewDevice === "mobile" ? "default" : "outline"}
+                onClick={() => {
+                  setPreviewDevice("mobile");
+                  setActiveTab("mobile");
+                }}
               >
                 Mobile
               </Button>
             </div>
           </div>
 
-          {/* Info banner size */}
           <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
             {formData.page === "home" ? (
               <p>
-                <strong>Home Page Banner:</strong> Desktop{" "}
-                {isMobile ? "" : "(current)"}: 600px height | Mobile{" "}
-                {isMobile ? "(current)" : ""}: 400px height
+                <strong>Home Page Banner:</strong> Desktop: 600px height |
+                Mobile: 400px height
               </p>
             ) : (
               <p>
-                <strong>Other Pages Banner:</strong> Desktop{" "}
-                {isMobile ? "" : "(current)"}: 400px height | Mobile{" "}
-                {isMobile ? "(current)" : ""}: 300px height
+                <strong>Other Pages Banner:</strong> Desktop: 400px height |
+                Mobile: 300px height
               </p>
             )}
+            <p className="mt-1 flex items-center gap-1">
+              <Move className="w-4 h-4" />
+              Click and drag text or button to reposition them
+            </p>
           </div>
 
           <div
-            className={`relative overflow-hidden rounded-lg border-2 border-dashed border-gray-300 ${
-              isMobile ? "max-w-sm mx-auto" : "w-full"
+            ref={previewRef}
+            className={`relative overflow-hidden rounded-lg border-2 border-dashed border-gray-300 cursor-crosshair ${
+              previewDevice === "mobile" ? "max-w-sm mx-auto" : "w-full"
             }`}
             style={{
               height:
                 formData.page === "home"
-                  ? isMobile
+                  ? previewDevice === "mobile"
                     ? "400px"
                     : "600px"
-                  : isMobile
+                  : previewDevice === "mobile"
                     ? "300px"
                     : "400px",
             }}
+            onClick={(e) => {
+              if (draggingElement) {
+                handleDragPosition(e, draggingElement);
+                setDraggingElement(null);
+              }
+            }}
           >
+            {/* Banner Image */}
             <img
-              src={isMobile && mobilePreview ? mobilePreview : desktopPreview}
+              src={
+                previewDevice === "mobile" && mobilePreview
+                  ? mobilePreview
+                  : desktopPreview
+              }
               alt="Banner Preview"
               className="w-full h-full object-cover"
             />
-            {formData.overlayColor && (
+
+            {/* Overlay */}
+            {getCurrentStyle().overlayColor && (
               <div
-                className="absolute inset-0"
+                className="absolute inset-0 pointer-events-none"
                 style={{
-                  backgroundColor: formData.overlayColor,
+                  backgroundColor: getCurrentStyle().overlayColor,
                   opacity: 0.5,
                 }}
               />
             )}
+
+            {/* Text Content - Draggable */}
             <div
-              className={`absolute inset-0 flex flex-col ${getTextAlignment(
-                formData.textPosition
-              )} justify-center p-8 space-y-4`}
+              className="absolute cursor-move hover:bg-white/10 p-4 rounded transition-colors"
+              style={{
+                left: `${getCurrentStyle().textPosition.x}%`,
+                top: `${getCurrentStyle().textPosition.y}%`,
+                transform: "translate(-50%, -50%)",
+                border:
+                  draggingElement === "text"
+                    ? "2px dashed yellow"
+                    : "2px dashed transparent",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDraggingElement("text");
+              }}
             >
               <h2
-                className="text-4xl font-bold"
-                style={{ color: formData.textColor }}
+                className="text-2xl md:text-4xl font-bold mb-2"
+                style={{ color: getCurrentStyle().textColor }}
               >
                 {formData.title || "Banner Title"}
               </h2>
               {formData.description && (
-                <p className="text-lg" style={{ color: formData.textColor }}>
+                <p
+                  className="text-base md:text-lg"
+                  style={{ color: getCurrentStyle().textColor }}
+                >
                   {formData.description}
                 </p>
               )}
-              {formData.buttonText && formData.buttonUrl && (
-                <div
-                  className={`flex ${getButtonAlignment(formData.buttonPosition)}`}
-                >
-                  <button
-                    className="px-6 py-3 rounded-lg font-semibold text-white"
-                    style={{ backgroundColor: formData.buttonColor }}
-                  >
-                    {formData.buttonText}
-                  </button>
-                </div>
-              )}
             </div>
+
+            {/* Button - Draggable */}
+            {getCurrentButton().text && getCurrentButton().url && (
+              <div
+                className="absolute cursor-move hover:bg-white/10 p-2 rounded transition-colors"
+                style={{
+                  left: `${getCurrentButton().position.x}%`,
+                  top: `${getCurrentButton().position.y}%`,
+                  transform: "translate(-50%, -50%)",
+                  border:
+                    draggingElement === "button"
+                      ? "2px dashed yellow"
+                      : "2px dashed transparent",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDraggingElement("button");
+                }}
+              >
+                <button
+                  className="px-6 py-3 rounded-lg font-semibold text-white shadow-lg"
+                  style={{ backgroundColor: getCurrentButton().color }}
+                >
+                  {getCurrentButton().text}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="text-xs text-gray-500 text-center">
+            {draggingElement
+              ? `Click anywhere in the preview to place the ${draggingElement}`
+              : "Click on text or button, then click where you want to position it"}
           </div>
         </div>
       )}

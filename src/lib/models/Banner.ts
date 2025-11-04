@@ -18,15 +18,42 @@ export interface IBanner extends Document {
   mobileImageUrl?: string;
   mobileImagePublicId?: string;
   button?: {
-    text: string;
-    url: string;
-    color: string;
-    position: "left" | "center" | "right";
+    desktop: {
+      text: string;
+      url: string;
+      color: string;
+      position: {
+        x: number; // percentage 0-100
+        y: number; // percentage 0-100
+      };
+    };
+    mobile?: {
+      text: string;
+      url: string;
+      color: string;
+      position: {
+        x: number; // percentage 0-100
+        y: number; // percentage 0-100
+      };
+    };
   };
   style: {
-    textColor: string;
-    overlayColor?: string;
-    textPosition: "left" | "center" | "right";
+    desktop: {
+      textColor: string;
+      overlayColor?: string;
+      textPosition: {
+        x: number; // percentage 0-100
+        y: number; // percentage 0-100
+      };
+    };
+    mobile?: {
+      textColor: string;
+      overlayColor?: string;
+      textPosition: {
+        x: number; // percentage 0-100
+        y: number; // percentage 0-100
+      };
+    };
   };
   order: number;
   isActive: boolean;
@@ -80,37 +107,111 @@ const BannerSchema = new Schema<IBanner>(
     button: {
       _id: false,
       type: {
-        text: {
-          type: String,
+        desktop: {
+          _id: false,
+          type: {
+            text: {
+              type: String,
+            },
+            url: {
+              type: String,
+            },
+            color: {
+              type: String,
+              default: "#FF6B35",
+            },
+            position: {
+              _id: false,
+              type: {
+                x: {
+                  type: Number,
+                  default: 50, // center horizontally
+                },
+                y: {
+                  type: Number,
+                  default: 70, // near bottom
+                },
+              },
+            },
+          },
         },
-        url: {
-          type: String,
-        },
-        color: {
-          type: String,
-          default: "#FF6B35",
-        },
-        position: {
-          type: String,
-          enum: ["left", "center", "right"],
-          default: "center",
+        mobile: {
+          _id: false,
+          type: {
+            text: {
+              type: String,
+            },
+            url: {
+              type: String,
+            },
+            color: {
+              type: String,
+            },
+            position: {
+              _id: false,
+              type: {
+                x: {
+                  type: Number,
+                },
+                y: {
+                  type: Number,
+                },
+              },
+            },
+          },
         },
       },
     },
     style: {
       _id: false,
       type: {
-        textColor: {
-          type: String,
-          default: "#FFFFFF",
+        desktop: {
+          _id: false,
+          type: {
+            textColor: {
+              type: String,
+              default: "#FFFFFF",
+            },
+            overlayColor: {
+              type: String,
+            },
+            textPosition: {
+              _id: false,
+              type: {
+                x: {
+                  type: Number,
+                  default: 50, // center horizontally
+                },
+                y: {
+                  type: Number,
+                  default: 50, // center vertically
+                },
+              },
+            },
+          },
+          required: true,
         },
-        overlayColor: {
-          type: String,
-        },
-        textPosition: {
-          type: String,
-          enum: ["left", "center", "right"],
-          default: "center",
+        mobile: {
+          _id: false,
+          type: {
+            textColor: {
+              type: String,
+            },
+            overlayColor: {
+              type: String,
+            },
+            textPosition: {
+              _id: false,
+              type: {
+                x: {
+                  type: Number,
+                },
+                y: {
+                  type: Number,
+                },
+              },
+            },
+          },
         },
       },
       required: true,
