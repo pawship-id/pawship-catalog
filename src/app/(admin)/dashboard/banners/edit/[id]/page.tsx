@@ -13,13 +13,13 @@ interface Banner {
   page: string;
   desktopImageUrl: string;
   mobileImageUrl?: string;
-  button: {
+  button?: {
     text?: string;
     url?: string;
     color?: string;
     position?: string;
   };
-  style: {
+  style?: {
     textColor?: string;
     overlayColor?: string;
     textPosition?: string;

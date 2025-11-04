@@ -110,28 +110,39 @@ export async function PUT(req: NextRequest, { params }: Context) {
     const isNewMobileImage = formData.get("isNewMobileImage") === "true";
     const removeMobileImage = formData.get("removeMobileImage") === "true";
 
+    // Check if text or button should be removed
+    const removeText = formData.get("removeText") === "true";
+    const removeButton = formData.get("removeButton") === "true";
+
     // Update data
     const updateData: any = {
-      title,
-      description,
       page,
       isActive,
       order,
     };
 
-    // Set style if provided, else leave as-is
-    if (styleObj && typeof styleObj === "object") {
-      updateData.style = styleObj;
+    // Handle text-related fields
+    if (removeText) {
+      // Remove text-related fields
+      updateData.title = "";
+      updateData.description = "";
+      updateData.style = undefined;
+    } else {
+      // Include text fields if provided
+      updateData.title = title;
+      updateData.description = description;
+      if (styleObj && typeof styleObj === "object") {
+        updateData.style = styleObj;
+      }
     }
 
-    // Handle button update: if provided use it, if explicitly null/undefined then unset
-    if (buttonObj === null) {
-      // do nothing (no change)
-    } else if (buttonObj) {
-      updateData.button = buttonObj;
-    } else {
-      // if parsed as falsy but present, remove
+    // Handle button update
+    if (removeButton) {
+      // Remove button
       updateData.button = undefined;
+    } else if (buttonObj && typeof buttonObj === "object") {
+      // Include button if provided
+      updateData.button = buttonObj;
     }
 
     // Validate and upload new desktop image if provided
@@ -162,7 +173,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
 
       const desktopUploadResult = await uploadFileToCloudinary(
         desktopPath,
-        "pawship-catalog/banners"
+        "hero-banner"
       );
 
       updateData.desktopImageUrl = desktopUploadResult.secureUrl;
@@ -204,7 +215,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
 
       const mobileUploadResult = await uploadFileToCloudinary(
         mobilePath,
-        "pawship-catalog/banners"
+        "hero-banner"
       );
 
       updateData.mobileImageUrl = mobileUploadResult.secureUrl;

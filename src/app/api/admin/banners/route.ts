@@ -3,10 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import Banner from "@/lib/models/Banner";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import {
-  uploadFileToCloudinary,
-  deleteFileFromCloudinary,
-} from "@/lib/helpers/cloudinary";
+import { uploadFileToCloudinary } from "@/lib/helpers/cloudinary";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 
@@ -132,7 +129,7 @@ export async function POST(req: NextRequest) {
 
     const desktopUploadResult = await uploadFileToCloudinary(
       desktopPath,
-      "pawship-catalog/banners"
+      "hero-banner"
     );
 
     // Upload mobile image if exists
@@ -145,14 +142,12 @@ export async function POST(req: NextRequest) {
 
       mobileUploadResult = await uploadFileToCloudinary(
         mobilePath,
-        "pawship-catalog/banners"
+        "hero-banner"
       );
     }
 
     // Create banner data following new schema (nested desktop/mobile objects)
     const bannerData: any = {
-      title,
-      description,
       page,
       desktopImageUrl: desktopUploadResult.secureUrl,
       desktopImagePublicId: desktopUploadResult.publicId,
@@ -160,21 +155,18 @@ export async function POST(req: NextRequest) {
       isActive,
     };
 
-    // Style: expect { desktop: { textColor, overlayColor, textPosition }, mobile?: { ... } }
-    if (styleObj && typeof styleObj === "object") {
-      bannerData.style = styleObj;
-    } else {
-      // fallback to desktop-only defaults
-      bannerData.style = {
-        desktop: {
-          textColor: "#FFFFFF",
-          overlayColor: "",
-          textPosition: { x: 50, y: 50 },
-        },
-      };
+    // Only include text-related fields if provided (when useText is true)
+    if (title || description || styleObj) {
+      bannerData.title = title;
+      bannerData.description = description;
+
+      // Style: expect { desktop: { textColor, overlayColor, textPosition }, mobile?: { ... } }
+      if (styleObj && typeof styleObj === "object") {
+        bannerData.style = styleObj;
+      }
     }
 
-    // Button: expect { desktop: {...}, mobile?: {...} }
+    // Button: expect { desktop: {...}, mobile?: {...} } - only include if provided (when useButton is true)
     if (buttonObj && typeof buttonObj === "object") {
       bannerData.button = buttonObj;
     }
