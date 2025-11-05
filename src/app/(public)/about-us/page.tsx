@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import SingleBanner from "@/components/common/single-banner";
 
 export default function AboutUsPage() {
   const whyPawshipContent = [
@@ -37,13 +38,7 @@ export default function AboutUsPage() {
   return (
     <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* Hero Section */}
-      <section
-        className="relative h-[60vh] overflow-hidden bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('https://i.pinimg.com/1200x/ec/f5/05/ecf50550fafb06444490098000a1af65.jpg')",
-        }}
-      >
+      <SingleBanner page="about-us">
         <div className="absolute inset-0 bg-black opacity-50"></div>
         {/* Overlay hitam */}
         <div className="relative z-10 flex items-center justify-center h-full text-white">
@@ -60,7 +55,7 @@ export default function AboutUsPage() {
             </p>
           </div>
         </div>
-      </section>
+      </SingleBanner>
 
       {/* Our Story */}
       <section className="py-20">

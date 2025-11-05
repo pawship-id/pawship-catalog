@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Trash2, Info } from "lucide-react";
+import { Edit, Trash2, Info, MoreVertical } from "lucide-react";
 import {
   showConfirmAlert,
   showErrorAlert,
@@ -27,6 +27,14 @@ import {
 } from "@/lib/helpers/sweetalert2";
 import Image from "next/image";
 import LoadingTable from "../loading-table";
+import DeleteButton from "../delete-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 // Tooltip removed - add manually if needed
 
 interface Banner {
@@ -90,7 +98,7 @@ export default function TableBanner() {
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const response = await fetch(`/api/admin/banners/${id}`, {
+      const response = await fetch(`/api/admin/banners/update-status/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !currentStatus }),
@@ -115,31 +123,31 @@ export default function TableBanner() {
     }
   };
 
-  const handleDelete = async (id: string, page: string) => {
-    const confirm = await showConfirmAlert(
-      "Delete Banner",
-      `Are you sure you want to delete this banner from ${page}?`
-    );
+  // const handleDelete = async (id: string, page: string) => {
+  //   const confirm = await showConfirmAlert(
+  //     "Delete Banner",
+  //     `Are you sure you want to delete this banner from ${page}?`
+  //   );
 
-    if (confirm) {
-      try {
-        const response = await fetch(`/api/admin/banners/${id}`, {
-          method: "DELETE",
-        });
+  //   if (confirm) {
+  //     try {
+  //       const response = await fetch(`/api/admin/banners/${id}`, {
+  //         method: "DELETE",
+  //       });
 
-        const result = await response.json();
+  //       const result = await response.json();
 
-        if (result.success) {
-          showSuccessAlert("Success", "Banner deleted successfully");
-          fetchBanners();
-        } else {
-          throw new Error(result.message);
-        }
-      } catch (error: any) {
-        showErrorAlert("Error", error.message || "Failed to delete banner");
-      }
-    }
-  };
+  //       if (result.success) {
+  //         showSuccessAlert("Success", "Banner deleted successfully");
+  //         fetchBanners();
+  //       } else {
+  //         throw new Error(result.message);
+  //       }
+  //     } catch (error: any) {
+  //       showErrorAlert("Error", error.message || "Failed to delete banner");
+  //     }
+  //   }
+  // };
 
   const getPageLabel = (page: string) => {
     const pageMap: { [key: string]: string } = {
@@ -153,44 +161,6 @@ export default function TableBanner() {
       payment: "Payment",
     };
     return pageMap[page] || page;
-  };
-
-  const handleReorder = async (draggedId: string, targetId: string) => {
-    const draggedIndex = banners.findIndex((b) => b._id === draggedId);
-    const targetIndex = banners.findIndex((b) => b._id === targetId);
-
-    if (draggedIndex === -1 || targetIndex === -1) return;
-
-    const newBanners = [...banners];
-    const [draggedBanner] = newBanners.splice(draggedIndex, 1);
-    newBanners.splice(targetIndex, 0, draggedBanner);
-
-    // Update order values
-    const updatedBanners = newBanners.map((banner, index) => ({
-      ...banner,
-      order: index,
-    }));
-
-    setBanners(updatedBanners);
-
-    try {
-      const response = await fetch("/api/admin/banners", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          banners: updatedBanners.map((b) => ({ id: b._id, order: b.order })),
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-    } catch (error: any) {
-      showErrorAlert("Error", error.message || "Failed to reorder banners");
-      fetchBanners(); // Revert on error
-    }
   };
 
   if (loading) {
@@ -230,7 +200,6 @@ export default function TableBanner() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50px]">Drag</TableHead>
               <TableHead className="w-[120px]">Preview</TableHead>
               <TableHead>Page</TableHead>
               <TableHead className="text-center">Order</TableHead>
@@ -242,7 +211,7 @@ export default function TableBanner() {
             {banners.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={5}
                   className="text-center py-8 text-gray-500"
                 >
                   No banners found. Create your first banner!
@@ -250,39 +219,7 @@ export default function TableBanner() {
               </TableRow>
             ) : (
               banners.map((banner) => (
-                <TableRow
-                  key={banner._id}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.effectAllowed = "move";
-                    e.dataTransfer.setData("text/plain", banner._id);
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const draggedId = e.dataTransfer.getData("text/plain");
-                    if (draggedId !== banner._id) {
-                      handleReorder(draggedId, banner._id);
-                    }
-                  }}
-                  className="cursor-move hover:bg-gray-50"
-                >
-                  {/* Drag Handle */}
-                  <TableCell>
-                    <div className="flex items-center justify-center text-gray-400">
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
-                      </svg>
-                    </div>
-                  </TableCell>
-
+                <TableRow key={banner._id} className="hover:bg-gray-50">
                   {/* Preview */}
                   <TableCell>
                     <div className="relative w-24 h-16 rounded overflow-hidden border">
@@ -315,6 +252,7 @@ export default function TableBanner() {
                         onCheckedChange={() =>
                           handleToggleStatus(banner._id, banner.isActive)
                         }
+                        className="data-[state=unchecked]:bg-gray-200"
                       />
                       <span className="text-sm text-gray-600">
                         {banner.isActive ? "Active" : "Inactive"}
@@ -324,24 +262,31 @@ export default function TableBanner() {
 
                   {/* Actions */}
                   <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          router.push(`/dashboard/banners/edit/${banner._id}`)
-                        }
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(banner._id, banner.page)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link href={`/dashboard/banners/edit/${banner._id}`}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="p-0">
+                          <DeleteButton
+                            id={banner._id}
+                            onFetch={fetchBanners}
+                            resource="banners"
+                          />
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

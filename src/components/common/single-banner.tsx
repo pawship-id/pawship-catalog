@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 interface Banner {
@@ -28,18 +28,16 @@ interface Banner {
 
 interface SingleBannerProps {
   page: string;
+  children?: ReactNode;
 }
 
-export default function SingleBanner({ page }: SingleBannerProps) {
+export default function SingleBanner({ page, children }: SingleBannerProps) {
   const [banner, setBanner] = useState<Banner | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Check if mobile
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -51,8 +49,7 @@ export default function SingleBanner({ page }: SingleBannerProps) {
         const response = await fetch(`/api/public/banners?page=${page}`);
         if (response.ok) {
           const result = await response.json();
-          if (result.data && result.data.length > 0) {
-            // Get first active banner
+          if (result.data?.length > 0) {
             setBanner(result.data[0]);
           }
         }
@@ -68,20 +65,17 @@ export default function SingleBanner({ page }: SingleBannerProps) {
 
   if (loading) {
     return (
-      <div className="relative h-[60vh] overflow-hidden bg-gray-200 animate-pulse"></div>
+      <div className="relative h-[60vh] overflow-hidden bg-gray-200 animate-pulse" />
     );
   }
 
-  if (!banner) {
-    return null;
-  }
+  if (!banner) return null;
 
   const imageUrl =
     isMobile && banner.mobileImageUrl
       ? banner.mobileImageUrl
       : banner.desktopImageUrl;
 
-  // Get button position classes based on alignment
   const getButtonPositionClasses = () => {
     if (!banner.button) return "";
 
@@ -111,26 +105,32 @@ export default function SingleBanner({ page }: SingleBannerProps) {
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${imageUrl})` }}
-      >
-        {/* Button */}
-        {banner.button && (
-          <div
-            className={`absolute inset-0 flex p-8 md:p-12 lg:p-16 ${getButtonPositionClasses()}`}
-          >
-            <a href={banner.button.url}>
-              <Button
-                size="lg"
-                className="text-white font-semibold px-8 py-6 text-lg"
-                style={{
-                  backgroundColor: banner.button.color || "#FF6B35",
-                }}
-              >
-                {banner.button.text}
-              </Button>
-            </a>
-          </div>
-        )}
-      </div>
+      />
+
+      {/* Button */}
+      {banner.button && (
+        <div
+          className={`absolute inset-0 flex p-8 md:p-12 lg:p-16 ${getButtonPositionClasses()}`}
+        >
+          <a href={banner.button.url}>
+            <Button
+              size="lg"
+              className="text-white font-semibold px-8 py-6 text-lg"
+              style={{
+                backgroundColor: banner.button.color || "#FF6B35",
+              }}
+            >
+              {banner.button.text}
+            </Button>
+          </a>
+        </div>
+      )}
+
+      {children && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          {children}
+        </div>
+      )}
     </section>
   );
 }

@@ -101,7 +101,6 @@ export default function NavigationHeader() {
       subItems: [
         { name: "About Us", href: "/about-us" },
         { name: "Contact Us", href: "/contact-us" },
-        { name: "FAQ", href: "/faq" },
         { name: "Stores", href: "/stores" },
         { name: "Payments", href: "/payments" },
       ],

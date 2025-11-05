@@ -1,10 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
 import FormBanner from "@/components/admin/banners/form-banner";
+import LoadingPage from "@/components/admin/loading-page";
 
 interface Banner {
   _id: string;
@@ -61,18 +59,6 @@ export default function EditBannerPage() {
     }
   }, [params.id, router]);
 
-  if (loading) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="text-center">Loading banner...</div>
-      </div>
-    );
-  }
-
-  if (!banner) {
-    return null;
-  }
-
   return (
     <div>
       {/* Header */}
@@ -85,12 +71,15 @@ export default function EditBannerPage() {
         </p>
       </div>
 
-      {/* Form */}
-      <FormBanner
-        mode="edit"
-        initialData={banner}
-        bannerId={params.id as string}
-      />
+      {loading ? (
+        <LoadingPage />
+      ) : (
+        <FormBanner
+          mode="edit"
+          initialData={banner}
+          bannerId={params.id as string}
+        />
+      )}
     </div>
   );
 }

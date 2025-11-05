@@ -240,8 +240,8 @@ export async function PUT(req: NextRequest, { params }: Context) {
   }
 }
 
-// DELETE - Soft delete banner
-export async function DELETE(req: NextRequest, { params }: Context) {
+// PATCH - Soft delete banner
+export async function PATCH(req: NextRequest, { params }: Context) {
   const session = await getServerSession(authOptions);
 
   if (!session || session.user.role !== "admin") {
@@ -252,21 +252,22 @@ export async function DELETE(req: NextRequest, { params }: Context) {
     await dbConnect();
 
     const { id } = await params;
-    const banner = await Banner.findById(id);
 
-    if (!banner) {
-      return NextResponse.json(
-        { success: false, message: "Banner not found" },
-        { status: 404 }
-      );
-    }
+    console.log(id, "<<<");
 
-    // Soft delete
-    await (banner as any).delete();
+    const deletedBanner = await Banner.findByIdAndUpdate(
+      id,
+      {
+        deleted: true,
+        deletedAt: new Date(),
+      },
+      { new: true }
+    );
 
     return NextResponse.json(
       {
         success: true,
+        data: deletedBanner,
         message: "Banner deleted successfully",
       },
       { status: 200 }

@@ -1,4 +1,5 @@
 "use client";
+import SingleBanner from "@/components/common/single-banner";
 import CTAForm from "@/components/reseller/cta-form";
 import StepCard from "@/components/reseller/step-card";
 import FinalCTA from "@/components/reseller/white-labeling/final-cta";
@@ -106,13 +107,7 @@ export default function WhiteLabellingPage() {
   return (
     <>
       {/* Hero Section */}
-      <section
-        className="relative h-[60vh] overflow-hidden bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('https://i.pinimg.com/736x/23/d2/c5/23d2c59a97fd28df1cf398f4e791e742.jpg')",
-        }}
-      >
+      <SingleBanner page="reseller-whitelabeling">
         <div className="absolute inset-0 bg-black opacity-50"></div>
         {/* Overlay hitam */}
         <div className="relative z-10 flex items-center justify-center h-full text-white">
@@ -144,7 +139,7 @@ export default function WhiteLabellingPage() {
             </Button>
           </div>
         </div>
-      </section>
+      </SingleBanner>
 
       {/* Why White-Label with us? */}
       <section className="py-16">
