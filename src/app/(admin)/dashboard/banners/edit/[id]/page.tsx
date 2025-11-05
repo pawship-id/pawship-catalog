@@ -74,18 +74,15 @@ export default function EditBannerPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/banners">
-          <Button variant="outline" size="icon">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold">Edit Banner</h1>
-          <p className="text-gray-600 mt-1">Update banner information</p>
-        </div>
+      <div className="mb-6 space-y-2">
+        <h1 className="text-3xl font-playfair font-bold text-foreground">
+          Form Edit Banner
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Update banner information
+        </p>
       </div>
 
       {/* Form */}

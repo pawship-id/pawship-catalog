@@ -4,22 +4,26 @@ import { Button } from "@/components/ui/button";
 
 interface Banner {
   _id: string;
-  title: string;
-  description?: string;
   page: string;
   desktopImageUrl: string;
   mobileImageUrl?: string;
   button?: {
-    text?: string;
-    url?: string;
-    color?: string;
-    position?: "left" | "center" | "right";
+    text: string;
+    url: string;
+    color: string;
+    position: {
+      desktop: {
+        horizontal: "left" | "center" | "right";
+        vertical: "top" | "center" | "bottom";
+      };
+      mobile?: {
+        horizontal: "left" | "center" | "right";
+        vertical: "top" | "center" | "bottom";
+      };
+    };
   };
-  style?: {
-    textColor?: string;
-    overlayColor?: string;
-    textPosition?: "left" | "center" | "right";
-  };
+  order: number;
+  isActive: boolean;
 }
 
 interface SingleBannerProps {
@@ -64,7 +68,7 @@ export default function SingleBanner({ page }: SingleBannerProps) {
 
   if (loading) {
     return (
-      <div className="w-full h-[300px] md:h-[400px] bg-gray-200 animate-pulse"></div>
+      <div className="relative h-[60vh] overflow-hidden bg-gray-200 animate-pulse"></div>
     );
   }
 
@@ -77,87 +81,56 @@ export default function SingleBanner({ page }: SingleBannerProps) {
       ? banner.mobileImageUrl
       : banner.desktopImageUrl;
 
-  const getPositionClass = (position?: "left" | "center" | "right") => {
-    switch (position) {
-      case "left":
-        return "justify-start text-left";
-      case "right":
-        return "justify-end text-right";
-      default:
-        return "justify-center text-center";
-    }
+  // Get button position classes based on alignment
+  const getButtonPositionClasses = () => {
+    if (!banner.button) return "";
+
+    const position =
+      isMobile && banner.button.position.mobile
+        ? banner.button.position.mobile
+        : banner.button.position.desktop;
+
+    const horizontalMap = {
+      left: "justify-start",
+      center: "justify-center",
+      right: "justify-end",
+    };
+
+    const verticalMap = {
+      top: "items-start",
+      center: "items-center",
+      bottom: "items-end",
+    };
+
+    return `${horizontalMap[position.horizontal]} ${verticalMap[position.vertical]}`;
   };
 
   return (
-    <div className="relative w-full h-[300px] md:h-[400px] overflow-hidden">
+    <section className="relative h-[60vh] overflow-hidden bg-cover bg-center">
       {/* Banner Image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${imageUrl})` }}
       >
-        {/* Overlay */}
-        {banner.style?.overlayColor && (
+        {/* Button */}
+        {banner.button && (
           <div
-            className="absolute inset-0"
-            style={{
-              backgroundColor: banner.style.overlayColor,
-              opacity: 0.5,
-            }}
-          ></div>
-        )}
-
-        {/* Content */}
-        <div className="relative h-full container mx-auto px-4">
-          <div
-            className={`h-full flex flex-col ${getPositionClass(
-              banner.style?.textPosition
-            )} py-12 md:py-16`}
+            className={`absolute inset-0 flex p-8 md:p-12 lg:p-16 ${getButtonPositionClasses()}`}
           >
-            {/* Title */}
-            {banner.title && (
-              <h1
-                className="text-2xl md:text-4xl lg:text-5xl font-bold mb-3 max-w-2xl"
+            <a href={banner.button.url}>
+              <Button
+                size="lg"
+                className="text-white font-semibold px-8 py-6 text-lg"
                 style={{
-                  color: banner.style?.textColor || "#FFFFFF",
+                  backgroundColor: banner.button.color || "#FF6B35",
                 }}
               >
-                {banner.title}
-              </h1>
-            )}
-
-            {/* Description */}
-            {banner.description && (
-              <p
-                className="text-base md:text-lg mb-6 max-w-xl"
-                style={{
-                  color: banner.style?.textColor || "#FFFFFF",
-                }}
-              >
-                {banner.description}
-              </p>
-            )}
-
-            {/* Button */}
-            {banner.button?.text && banner.button?.url && (
-              <div
-                className={`flex ${getPositionClass(banner.button.position)}`}
-              >
-                <a href={banner.button.url}>
-                  <Button
-                    size="lg"
-                    className="text-white font-semibold px-6 py-5"
-                    style={{
-                      backgroundColor: banner.button.color || "#FF6B35",
-                    }}
-                  >
-                    {banner.button.text}
-                  </Button>
-                </a>
-              </div>
-            )}
+                {banner.button.text}
+              </Button>
+            </a>
           </div>
-        </div>
+        )}
       </div>
-    </div>
+    </section>
   );
 }

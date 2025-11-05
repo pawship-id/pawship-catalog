@@ -1,9 +1,10 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 import softDelete from "mongoose-delete";
 
+type AlignmentHorizontal = "left" | "center" | "right";
+type AlignmentVertical = "top" | "center" | "bottom";
+
 export interface IBanner extends Document {
-  title?: string;
-  description?: string;
   page:
     | "home"
     | "our-collection"
@@ -18,40 +19,17 @@ export interface IBanner extends Document {
   mobileImageUrl?: string;
   mobileImagePublicId?: string;
   button?: {
-    desktop: {
-      text: string;
-      url: string;
-      color: string;
-      position: {
-        x: number; // percentage 0-100
-        y: number; // percentage 0-100
+    text: string;
+    url: string;
+    color: string;
+    position: {
+      desktop: {
+        horizontal: AlignmentHorizontal;
+        vertical: AlignmentVertical;
       };
-    };
-    mobile?: {
-      text: string;
-      url: string;
-      color: string;
-      position: {
-        x: number; // percentage 0-100
-        y: number; // percentage 0-100
-      };
-    };
-  };
-  style?: {
-    desktop?: {
-      textColor?: string;
-      overlayColor?: string;
-      textPosition?: {
-        x: number; // percentage 0-100
-        y: number; // percentage 0-100
-      };
-    };
-    mobile?: {
-      textColor?: string;
-      overlayColor?: string;
-      textPosition?: {
-        x: number; // percentage 0-100
-        y: number; // percentage 0-100
+      mobile?: {
+        horizontal: AlignmentHorizontal;
+        vertical: AlignmentVertical;
       };
     };
   };
@@ -66,14 +44,6 @@ export interface IBanner extends Document {
 
 const BannerSchema = new Schema<IBanner>(
   {
-    title: {
-      type: String,
-      trim: true,
-    },
-    description: {
-      type: String,
-      trim: true,
-    },
     page: {
       type: String,
       enum: [
@@ -106,111 +76,52 @@ const BannerSchema = new Schema<IBanner>(
     button: {
       _id: false,
       type: {
-        desktop: {
-          _id: false,
-          type: {
-            text: {
-              type: String,
-            },
-            url: {
-              type: String,
-            },
-            color: {
-              type: String,
-              default: "#FF6B35",
-            },
-            position: {
-              _id: false,
-              type: {
-                x: {
-                  type: Number,
-                  default: 50, // center horizontally
-                },
-                y: {
-                  type: Number,
-                  default: 70, // near bottom
-                },
-              },
-            },
-          },
+        text: {
+          type: String,
+          required: true,
         },
-        mobile: {
-          _id: false,
-          type: {
-            text: {
-              type: String,
-            },
-            url: {
-              type: String,
-            },
-            color: {
-              type: String,
-            },
-            position: {
-              _id: false,
-              type: {
-                x: {
-                  type: Number,
-                },
-                y: {
-                  type: Number,
-                },
-              },
-            },
-          },
+        url: {
+          type: String,
+          required: true,
         },
-      },
-    },
-    // Style is optional. If omitted, frontend should fall back to sensible defaults.
-    style: {
-      _id: false,
-      type: {
-        desktop: {
-          _id: false,
-          type: {
-            textColor: {
-              type: String,
-              default: "#FFFFFF",
-            },
-            overlayColor: {
-              type: String,
-            },
-            textPosition: {
-              _id: false,
-              type: {
-                x: {
-                  type: Number,
-                  default: 50,
-                },
-                y: {
-                  type: Number,
-                  default: 50,
-                },
-              },
-            },
-          },
+        color: {
+          type: String,
+          default: "#FF6B35",
         },
-        mobile: {
+        position: {
           _id: false,
           type: {
-            textColor: {
-              type: String,
-            },
-            overlayColor: {
-              type: String,
-            },
-            textPosition: {
+            desktop: {
               _id: false,
               type: {
-                x: {
-                  type: Number,
+                horizontal: {
+                  type: String,
+                  enum: ["left", "center", "right"],
+                  required: true,
                 },
-                y: {
-                  type: Number,
+                vertical: {
+                  type: String,
+                  enum: ["top", "center", "bottom"],
+                  required: true,
+                },
+              },
+              required: true,
+            },
+            mobile: {
+              _id: false,
+              type: {
+                horizontal: {
+                  type: String,
+                  enum: ["left", "center", "right"],
+                },
+                vertical: {
+                  type: String,
+                  enum: ["top", "center", "bottom"],
                 },
               },
             },
           },
+          required: true,
         },
       },
     },
@@ -220,7 +131,7 @@ const BannerSchema = new Schema<IBanner>(
     },
     isActive: {
       type: Boolean,
-      default: false,
+      default: true,
     },
   },
   { timestamps: true }

@@ -73,33 +73,48 @@ export async function PUT(req: NextRequest, { params }: Context) {
     const formData = await req.formData();
 
     // Extract simple fields
-    const title = (formData.get("title") as string) || banner.title || "";
-    const description =
-      (formData.get("description") as string) || banner.description || "";
     const page = (formData.get("page") as string) || banner.page || "home";
     const isActive =
       formData.get("isActive") === "true" ? true : !!banner.isActive;
     const order =
       parseInt((formData.get("order") as string) || "") || banner.order;
 
-    // Parse nested JSON for button and style
-    let buttonObj: any = null;
-    const buttonRaw = formData.get("button") as string | null;
-    if (buttonRaw) {
-      try {
-        buttonObj = JSON.parse(buttonRaw);
-      } catch (err) {
-        console.warn("Failed to parse button JSON", err);
-      }
-    }
+    // Check if button should be removed
+    const removeButton = formData.get("removeButton") === "true";
 
-    let styleObj: any = null;
-    const styleRaw = formData.get("style") as string | null;
-    if (styleRaw) {
-      try {
-        styleObj = JSON.parse(styleRaw);
-      } catch (err) {
-        console.warn("Failed to parse style JSON", err);
+    // Parse button JSON
+    let buttonObj: any = null;
+    if (!removeButton) {
+      const buttonRaw = formData.get("button") as string | null;
+      if (buttonRaw) {
+        try {
+          buttonObj = JSON.parse(buttonRaw);
+
+          // Validate button structure
+          if (buttonObj) {
+            if (!buttonObj.text || !buttonObj.url) {
+              return NextResponse.json(
+                { success: false, message: "Button text and URL are required" },
+                { status: 400 }
+              );
+            }
+
+            if (
+              !buttonObj.position?.desktop?.horizontal ||
+              !buttonObj.position?.desktop?.vertical
+            ) {
+              return NextResponse.json(
+                {
+                  success: false,
+                  message: "Desktop button position is required",
+                },
+                { status: 400 }
+              );
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to parse button JSON", err);
+        }
       }
     }
 
@@ -110,10 +125,6 @@ export async function PUT(req: NextRequest, { params }: Context) {
     const isNewMobileImage = formData.get("isNewMobileImage") === "true";
     const removeMobileImage = formData.get("removeMobileImage") === "true";
 
-    // Check if text or button should be removed
-    const removeText = formData.get("removeText") === "true";
-    const removeButton = formData.get("removeButton") === "true";
-
     // Update data
     const updateData: any = {
       page,
@@ -121,27 +132,10 @@ export async function PUT(req: NextRequest, { params }: Context) {
       order,
     };
 
-    // Handle text-related fields
-    if (removeText) {
-      // Remove text-related fields
-      updateData.title = "";
-      updateData.description = "";
-      updateData.style = undefined;
-    } else {
-      // Include text fields if provided
-      updateData.title = title;
-      updateData.description = description;
-      if (styleObj && typeof styleObj === "object") {
-        updateData.style = styleObj;
-      }
-    }
-
     // Handle button update
     if (removeButton) {
-      // Remove button
       updateData.button = undefined;
     } else if (buttonObj && typeof buttonObj === "object") {
-      // Include button if provided
       updateData.button = buttonObj;
     }
 

@@ -62,30 +62,45 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
 
     // Extract form fields
-    const title = (formData.get("title") as string) || "";
-    const description = (formData.get("description") as string) || "";
     const page = (formData.get("page") as string) || "home";
     const isActive = formData.get("isActive") === "true";
     const order = parseInt((formData.get("order") as string) || "0") || 0;
 
-    // Parse nested JSON for button and style (sent by the form)
+    // Parse button JSON (optional)
     let buttonObj: any = null;
     const buttonRaw = formData.get("button") as string | null;
     if (buttonRaw) {
       try {
         buttonObj = JSON.parse(buttonRaw);
+
+        // Validate button structure
+        if (buttonObj) {
+          if (!buttonObj.text || !buttonObj.url) {
+            return NextResponse.json(
+              { success: false, message: "Button text and URL are required" },
+              { status: 400 }
+            );
+          }
+
+          if (
+            !buttonObj.position?.desktop?.horizontal ||
+            !buttonObj.position?.desktop?.vertical
+          ) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: "Desktop button position is required",
+              },
+              { status: 400 }
+            );
+          }
+        }
       } catch (err) {
         console.warn("Failed to parse button JSON", err);
-      }
-    }
-
-    let styleObj: any = null;
-    const styleRaw = formData.get("style") as string | null;
-    if (styleRaw) {
-      try {
-        styleObj = JSON.parse(styleRaw);
-      } catch (err) {
-        console.warn("Failed to parse style JSON", err);
+        return NextResponse.json(
+          { success: false, message: "Invalid button data format" },
+          { status: 400 }
+        );
       }
     }
 
@@ -109,14 +124,20 @@ export async function POST(req: NextRequest) {
     ];
     if (!validImageTypes.includes(desktopImage.type)) {
       return NextResponse.json(
-        { success: false, message: "Invalid desktop image type" },
+        {
+          success: false,
+          message: "Invalid desktop image type. Supported: JPG, PNG, WebP",
+        },
         { status: 400 }
       );
     }
 
     if (mobileImage && !validImageTypes.includes(mobileImage.type)) {
       return NextResponse.json(
-        { success: false, message: "Invalid mobile image type" },
+        {
+          success: false,
+          message: "Invalid mobile image type. Supported: JPG, PNG, WebP",
+        },
         { status: 400 }
       );
     }
@@ -146,7 +167,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create banner data following new schema (nested desktop/mobile objects)
+    // Create banner data
     const bannerData: any = {
       page,
       desktopImageUrl: desktopUploadResult.secureUrl,
@@ -155,22 +176,12 @@ export async function POST(req: NextRequest) {
       isActive,
     };
 
-    // Only include text-related fields if provided (when useText is true)
-    if (title || description || styleObj) {
-      bannerData.title = title;
-      bannerData.description = description;
-
-      // Style: expect { desktop: { textColor, overlayColor, textPosition }, mobile?: { ... } }
-      if (styleObj && typeof styleObj === "object") {
-        bannerData.style = styleObj;
-      }
-    }
-
-    // Button: expect { desktop: {...}, mobile?: {...} } - only include if provided (when useButton is true)
+    // Add button if provided
     if (buttonObj && typeof buttonObj === "object") {
       bannerData.button = buttonObj;
     }
 
+    // Add mobile image if uploaded
     if (mobileUploadResult) {
       bannerData.mobileImageUrl = mobileUploadResult.secureUrl;
       bannerData.mobileImagePublicId = mobileUploadResult.publicId;

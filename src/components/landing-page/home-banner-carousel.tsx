@@ -5,37 +5,26 @@ import { Button } from "@/components/ui/button";
 
 interface Banner {
   _id: string;
-  title: string;
-  description?: string;
   page: string;
   desktopImageUrl: string;
   mobileImageUrl?: string;
   button?: {
-    desktop?: {
-      text?: string;
-      url?: string;
-      color?: string;
-      position?: { x: number; y: number } | "left" | "center" | "right";
-    };
-    mobile?: {
-      text?: string;
-      url?: string;
-      color?: string;
-      position?: { x: number; y: number } | "left" | "center" | "right";
-    };
-  };
-  style?: {
-    desktop?: {
-      textColor?: string;
-      overlayColor?: string;
-      textPosition?: { x: number; y: number } | "left" | "center" | "right";
-    };
-    mobile?: {
-      textColor?: string;
-      overlayColor?: string;
-      textPosition?: { x: number; y: number } | "left" | "center" | "right";
+    text: string;
+    url: string;
+    color: string;
+    position: {
+      desktop: {
+        horizontal: "left" | "center" | "right";
+        vertical: "top" | "center" | "bottom";
+      };
+      mobile?: {
+        horizontal: "left" | "center" | "right";
+        vertical: "top" | "center" | "bottom";
+      };
     };
   };
+  order: number;
+  isActive: boolean;
 }
 
 interface HomeBannerCarouselProps {
@@ -114,141 +103,55 @@ export default function HomeBannerCarousel({
       ? currentBanner.mobileImageUrl
       : currentBanner.desktopImageUrl;
 
-  const mapKeywordToPercent = (pos?: "left" | "center" | "right") => {
-    switch (pos) {
-      case "left":
-        return { x: 10, y: 50 };
-      case "right":
-        return { x: 90, y: 50 };
-      default:
-        return { x: 50, y: 50 };
-    }
+  // Get button position classes based on alignment
+  const getButtonPositionClasses = () => {
+    if (!currentBanner.button) return "";
+
+    const position =
+      isMobile && currentBanner.button.position.mobile
+        ? currentBanner.button.position.mobile
+        : currentBanner.button.position.desktop;
+
+    const horizontalMap = {
+      left: "justify-start",
+      center: "justify-center",
+      right: "justify-end",
+    };
+
+    const verticalMap = {
+      top: "items-start",
+      center: "items-center",
+      bottom: "items-end",
+    };
+
+    return `${horizontalMap[position.horizontal]} ${verticalMap[position.vertical]}`;
   };
-
-  const getDeviceStyle = (banner: Banner) => {
-    // choose mobile if available and isMobile true will be handled below
-    return banner.style || {};
-  };
-
-  const normalizePosition = (
-    pos: any,
-    fallback: { x: number; y: number }
-  ): { x: number; y: number } => {
-    if (!pos) return fallback;
-    if (typeof pos === "object" && typeof pos.x === "number") return pos;
-    if (typeof pos === "string") return mapKeywordToPercent(pos as any);
-    return fallback;
-  };
-
-  const getCurrentSettings = (banner: Banner) => {
-    const styleDesktop = banner.style?.desktop;
-    const styleMobile = banner.style?.mobile;
-    const buttonDesktop = banner.button?.desktop;
-    const buttonMobile = banner.button?.mobile;
-
-    const style = isMobile
-      ? styleMobile || styleDesktop
-      : styleDesktop || styleMobile;
-    const button = isMobile
-      ? buttonMobile || buttonDesktop
-      : buttonDesktop || buttonMobile;
-
-    return { style, button };
-  };
-
-  const deviceSettings = getCurrentSettings(currentBanner as Banner);
-  const overlayColor = deviceSettings.style?.overlayColor;
 
   return (
-    // <div className="relative w-full h-[400px] md:h-[700px] overflow-hidden">
     <div className="relative min-h-[calc(100vh-100px)] min-w-screen overflow-hidden">
       {/* Banner Image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${imageUrl})` }}
       >
-        {/* Overlay */}
-        {overlayColor && (
+        {/* Button */}
+        {currentBanner.button && (
           <div
-            className="absolute inset-0"
-            style={{
-              backgroundColor: overlayColor,
-              opacity: 0.5,
-            }}
-          ></div>
+            className={`absolute inset-0 flex p-8 md:p-12 lg:p-16 ${getButtonPositionClasses()}`}
+          >
+            <a href={currentBanner.button.url}>
+              <Button
+                size="lg"
+                className="text-white font-semibold px-8 py-6 text-lg"
+                style={{
+                  backgroundColor: currentBanner.button.color || "#FF6B35",
+                }}
+              >
+                {currentBanner.button.text}
+              </Button>
+            </a>
+          </div>
         )}
-
-        {/* Content */}
-        <div className="relative h-full container mx-auto px-4">
-          {/* Positioning: use absolute positioning with percentages coming from the banner settings */}
-          {/* Text */}
-          {(() => {
-            const { style, button } = getCurrentSettings(
-              currentBanner as Banner
-            );
-            const textPos = normalizePosition(style?.textPosition, {
-              x: 50,
-              y: 50,
-            });
-            const textColor = style?.textColor || "#FFFFFF";
-            return (
-              <>
-                {currentBanner.title && (
-                  <div
-                    style={{
-                      left: `${textPos.x}%`,
-                      top: `${textPos.y}%`,
-                    }}
-                    className="absolute max-w-3xl transform -translate-x-1/2 -translate-y-1/2 px-4"
-                  >
-                    <h1
-                      className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4"
-                      style={{ color: textColor }}
-                    >
-                      {currentBanner.title}
-                    </h1>
-                    {currentBanner.description && (
-                      <p
-                        className="text-lg md:text-xl"
-                        style={{ color: textColor }}
-                      >
-                        {currentBanner.description}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Button */}
-                {button?.text &&
-                  button?.url &&
-                  (() => {
-                    const btnPos = normalizePosition(button.position, {
-                      x: 50,
-                      y: 70,
-                    });
-                    return (
-                      <div
-                        style={{ left: `${btnPos.x}%`, top: `${btnPos.y}%` }}
-                        className="absolute transform -translate-x-1/2 -translate-y-1/2 px-4"
-                      >
-                        <a href={button.url}>
-                          <Button
-                            size="lg"
-                            className="text-white font-semibold px-8 py-6"
-                            style={{
-                              backgroundColor: button.color || "#FF6B35",
-                            }}
-                          >
-                            {button.text}
-                          </Button>
-                        </a>
-                      </div>
-                    );
-                  })()}
-              </>
-            );
-          })()}
-        </div>
       </div>
 
       {/* Navigation Arrows - Only show if multiple banners */}

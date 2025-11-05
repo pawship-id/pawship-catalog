@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Info, Plus } from "lucide-react";
 import TableBanner from "@/components/admin/banners/table-banner";
 
 export const metadata: Metadata = {
@@ -49,45 +49,55 @@ export default function BannersPage() {
 
         <div>
           <h4 className="font-medium text-blue-900 mb-1">
-            📐 Image Size Recommendations:
+            📐 Recommended Image Sizes:
           </h4>
           <div className="text-sm text-blue-800 space-y-2 ml-4">
             <div className="bg-blue-100 p-2 rounded">
-              <strong>Home Page Banner (Carousel)</strong>
+              <strong>Home Page Banner</strong>
               <ul className="mt-1 space-y-1">
                 <li>
-                  • Desktop: <strong>1920x600px</strong> (Aspect Ratio: 3.2:1)
+                  • Desktop: <strong>1920 × 1080px (16:9)</strong> • Max 2MB
                 </li>
                 <li>
-                  • Mobile: <strong>768x400px</strong> (Aspect Ratio: 1.92:1)
+                  • Mobile: <strong>720 × 1280px (9:16)</strong> • Max 1MB
                 </li>
-                <li>• Display Height: 600px (desktop) / 400px (mobile)</li>
               </ul>
             </div>
             <div className="bg-blue-100 p-2 rounded">
-              <strong>Other Pages Banner (Single)</strong>
+              <strong>Other Pages Banner</strong>
               <ul className="mt-1 space-y-1">
                 <li>
-                  • Desktop: <strong>1920x400px</strong> (Aspect Ratio: 4.8:1)
+                  • Desktop: <strong>1920 × 650px (3:1)</strong> • Max 2MB
                 </li>
                 <li>
-                  • Mobile: <strong>768x300px</strong> (Aspect Ratio: 2.56:1)
+                  • Mobile: <strong>768 × 400px (1.92:1)</strong> • Max 1MB
                 </li>
-                <li>• Display Height: 400px (desktop) / 300px (mobile)</li>
               </ul>
             </div>
           </div>
         </div>
 
         <div>
-          <h4 className="font-medium text-blue-900 mb-1">💡 Tips:</h4>
+          <h4 className="font-medium text-blue-900 mb-1">
+            ⚠️ Important Notes:
+          </h4>
           <ul className="text-sm text-blue-800 space-y-1 ml-4">
             <li>
-              • Mobile image is optional (fallback to desktop if not provided)
+              • <strong>Design text in image</strong> - Use safe zones (64px
+              desktop, 32px mobile)
             </li>
-            <li>• Use high-quality, optimized images (max 5MB)</li>
-            <li>• Ensure text is readable on all backgrounds</li>
-            <li>• Drag & drop to reorder banners within each page</li>
+            <li>
+              • <strong>Button positioning</strong> - Horizontal
+              (left/center/right) and Vertical (top/center/bottom)
+            </li>
+            <li>
+              • <strong>Format</strong> - JPG, PNG, or WebP (WebP recommended
+              for smaller size)
+            </li>
+            <li>
+              • <strong>Create 2 versions</strong> - Desktop (landscape) &
+              Mobile (portrait) for best results
+            </li>
           </ul>
         </div>
       </div>
