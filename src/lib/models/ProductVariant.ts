@@ -1,6 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose";
 import softDelete from "mongoose-delete";
-import { VariantRow } from "@/lib/types/product";
 
 export interface IProductVariant extends Document {
   codeRow: string;
@@ -58,7 +57,7 @@ const ProductVariantSchema = new Schema<IProductVariant>(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "product_variants" }
 );
 
 // mongoose-delete plugin for soft delete

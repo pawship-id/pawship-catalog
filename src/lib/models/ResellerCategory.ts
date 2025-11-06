@@ -70,7 +70,7 @@ const ResellerCategorySchema = new Schema<IResellerCategory>(
       default: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "reseller_categories" }
 );
 
 // mongoose-delete plugin for soft delete
