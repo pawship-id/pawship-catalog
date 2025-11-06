@@ -73,7 +73,7 @@ export default function BulkUploadStock() {
       `Are you sure you want to upload "${selectedFile.name}"? This will update stock for all matching SKUs.`
     );
 
-    if (!confirm) return;
+    if (!confirm.isConfirmed) return;
 
     setUploading(true);
     setUploadResult(null);

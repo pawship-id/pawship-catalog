@@ -107,6 +107,12 @@ export async function POST(req: NextRequest) {
     for (const row of csvData) {
       const { sku, stock } = row;
 
+      // Skip if stock is 0
+      if (stock === 0) {
+        skipped.push(sku);
+        continue;
+      }
+
       // Find variant by SKU
       const variant = await ProductVariant.findOne({ sku }).populate(
         "productId"
