@@ -16,6 +16,7 @@ import {
   Store,
   ReceiptText,
   SquareLibrary,
+  GalleryThumbnails,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -40,6 +41,11 @@ const navigation = [
     name: "Collections",
     href: "/dashboard/collections",
     icon: SquareLibrary,
+  },
+  {
+    name: "Banners",
+    href: "/dashboard/banners",
+    icon: GalleryThumbnails,
   },
   { name: "Website", href: "/", icon: Globe },
 ];
