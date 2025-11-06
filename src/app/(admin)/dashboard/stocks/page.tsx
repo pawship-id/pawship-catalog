@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BulkUploadStock from "@/components/admin/stock/bulk-upload-stock";
 import StockLogsTable from "@/components/admin/stock/stock-logs-table";
+import GuidelinesCard from "@/components/admin/stock/guidelines-card";
 
 export default function StockManagementPage() {
   const [activeTab, setActiveTab] = useState("upload");
@@ -23,41 +24,29 @@ export default function StockManagementPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+        <div className="mb-6 space-y-2">
+          <h1 className="text-3xl font-playfair font-bold text-foreground">
             Stock Management
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-lg">
             Bulk update product stock via CSV upload
           </p>
         </div>
         <Button
           onClick={handleDownloadTemplate}
-          variant="outline"
-          className="gap-2"
+          className="gap-2 cursor-pointer"
         >
           <Download className="h-4 w-4" />
           Download Template
         </Button>
       </div>
 
-      {/* Info Alert */}
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>How it works:</strong> Upload a CSV file with columns{" "}
-          <code className="px-1 py-0.5 bg-muted rounded text-sm">sku</code> and{" "}
-          <code className="px-1 py-0.5 bg-muted rounded text-sm">stock</code>.
-          The system will update matching products and log all changes.
-        </AlertDescription>
-      </Alert>
-
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+        <TabsList className="grid w-full grid-cols-2 ">
           <TabsTrigger value="upload" className="gap-2">
             <Upload className="h-4 w-4" />
             Bulk Upload
@@ -69,24 +58,24 @@ export default function StockManagementPage() {
         </TabsList>
 
         {/* Bulk Upload Tab */}
-        <TabsContent value="upload" className="space-y-6">
-          <BulkUploadStock />
-
+        <TabsContent value="upload" className="space-y-6 mt-3">
           {/* Guidelines Card */}
-          <Card>
+          <Card className="bg-blue-50 border border-blue-200">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 font-semibold text-blue-900">
                 <FileText className="h-5 w-5" />
                 CSV Guidelines
               </CardTitle>
-              <CardDescription>
+              <CardDescription className=" text-blue-800 ">
                 Follow these guidelines for successful stock updates
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h4 className="font-semibold mb-2">📋 Required Format</h4>
-                <div className="bg-muted p-3 rounded-md font-mono text-sm">
+                <h4 className="font-medium text-blue-900 mb-2">
+                  📋 Required Format
+                </h4>
+                <div className="bg-gray-200 p-3 rounded-md font-mono text-sm">
                   <div>sku,stock</div>
                   <div>SKU-COLLAR-001,150</div>
                   <div>SKU-HARNESS-002,200</div>
@@ -95,7 +84,9 @@ export default function StockManagementPage() {
               </div>
 
               <div>
-                <h4 className="font-semibold mb-2">✅ Requirements</h4>
+                <h4 className="font-medium text-blue-900 mb-2">
+                  ✅ Requirements
+                </h4>
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   <li>
                     Header row must be exactly: <code>sku,stock</code>
@@ -112,7 +103,9 @@ export default function StockManagementPage() {
               </div>
 
               <div>
-                <h4 className="font-semibold mb-2">⚠️ Important Notes</h4>
+                <h4 className="font-medium text-blue-900 mb-2">
+                  ⚠️ Important Notes
+                </h4>
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   <li>SKUs not found in database will be skipped</li>
                   <li>Negative stock values are not allowed</li>
@@ -122,7 +115,9 @@ export default function StockManagementPage() {
               </div>
 
               <div>
-                <h4 className="font-semibold mb-2">🎯 Best Practices</h4>
+                <h4 className="font-medium text-blue-900 mb-2">
+                  🎯 Best Practices
+                </h4>
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   <li>Download and use the template for correct format</li>
                   <li>Test with a small batch first (5-10 rows)</li>
@@ -133,10 +128,13 @@ export default function StockManagementPage() {
               </div>
             </CardContent>
           </Card>
+          {/* <GuidelinesCard /> */}
+
+          <BulkUploadStock />
         </TabsContent>
 
         {/* Logs Tab */}
-        <TabsContent value="logs" className="space-y-4">
+        <TabsContent value="logs" className="space-y-4 mt-3">
           <StockLogsTable />
         </TabsContent>
       </Tabs>
