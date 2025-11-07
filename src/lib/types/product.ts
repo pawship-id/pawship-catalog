@@ -18,6 +18,7 @@ export interface VariantRowForm {
   productId?: string;
   stock?: number;
   price?: any;
+  discountedPrice?: any;
   selected?: boolean;
 }
 
@@ -36,6 +37,7 @@ export interface VariantRow {
   product: ProductData;
   stock: number;
   price?: any;
+  discountedPrice?: any;
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;

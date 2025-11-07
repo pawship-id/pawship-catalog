@@ -58,16 +58,62 @@ export default function PricingDisplay({
   // Get base price based on effective currency
   const basePrice = useMemo(() => {
     const variantPrices = selectedVariant.selectedVariantDetail.price;
+    const discountedPrices =
+      selectedVariant.selectedVariantDetail.discountedPrice;
+
+    // For reseller, always show original price (not discounted)
+    if (session?.user.role === "reseller") {
+      return (
+        variantPrices[effectiveCurrency as keyof typeof variantPrices] || 0
+      );
+    }
+
+    // For regular customers, use discounted price if available
+    if (
+      discountedPrices &&
+      discountedPrices[effectiveCurrency as keyof typeof discountedPrices]
+    ) {
+      return discountedPrices[
+        effectiveCurrency as keyof typeof discountedPrices
+      ];
+    }
+
     return variantPrices[effectiveCurrency as keyof typeof variantPrices] || 0;
+  }, [selectedVariant, effectiveCurrency, session]);
+
+  // Get original price (for strikethrough display)
+  const originalPrice = useMemo(() => {
+    const variantPrices = selectedVariant.selectedVariantDetail.price;
+    const discountedPrices =
+      selectedVariant.selectedVariantDetail.discountedPrice;
+
+    // Only show original price if there's a discounted price
+    if (
+      discountedPrices &&
+      discountedPrices[effectiveCurrency as keyof typeof discountedPrices]
+    ) {
+      return (
+        variantPrices[effectiveCurrency as keyof typeof variantPrices] || 0
+      );
+    }
+
+    return null;
   }, [selectedVariant, effectiveCurrency]);
 
   // Calculate tier prices with discount
   const calculatedTiers = useMemo(() => {
     if (!resellerPricing || !resellerPricing.tiers) return [];
 
+    // For reseller tiers, use the actual variant price (before any strikethrough discount)
+    // to ensure reseller discounts are calculated correctly
+    const variantPrices = selectedVariant.selectedVariantDetail.price;
+    const priceForTiers =
+      variantPrices[effectiveCurrency as keyof typeof variantPrices] ||
+      basePrice;
+
     return resellerPricing.tiers.map((tier) => {
-      const discountAmount = (basePrice * tier.discount) / 100;
-      const unitPrice = basePrice - discountAmount;
+      const discountAmount = (priceForTiers * tier.discount) / 100;
+      const unitPrice = priceForTiers - discountAmount;
 
       return {
         name: tier.name,
@@ -76,7 +122,7 @@ export default function PricingDisplay({
         unitPrice: Math.round(unitPrice),
       };
     });
-  }, [resellerPricing, basePrice]);
+  }, [resellerPricing, basePrice, selectedVariant, effectiveCurrency]);
 
   // Show reseller pricing if user is reseller and has pricing tiers
   const showResellerPricing =
@@ -88,8 +134,16 @@ export default function PricingDisplay({
     <div className="space-y-4">
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="text-2xl font-semibold text-gray-900">
-            {format(basePrice)}
+          <div className="space-y-1">
+            {/* Only show strikethrough price for non-reseller users */}
+            {originalPrice && !showResellerPricing && (
+              <div className="text-sm text-gray-400 line-through">
+                {format(originalPrice)}
+              </div>
+            )}
+            <div className="text-2xl font-semibold text-gray-900">
+              {format(basePrice)}
+            </div>
           </div>
           {showResellerPricing && (
             <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
