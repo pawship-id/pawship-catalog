@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, MoreVertical } from "lucide-react";
+import { Edit, MoreVertical, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAll } from "@/lib/apiService";
 import { UserData } from "@/lib/types/user";
@@ -119,6 +119,13 @@ export default function TableUser() {
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </Link>
                       </DropdownMenuItem>
+                      {(user.role === "reseller" || user.role === "retail") && (
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link href={`/dashboard/users/profile/${user._id}`}>
+                            <User className="mr-2 h-4 w-4" /> Update Profile
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem className="p-0">
                         <DeleteButton
                           id={user._id}
