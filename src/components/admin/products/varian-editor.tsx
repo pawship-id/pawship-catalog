@@ -531,6 +531,13 @@ export function VariantEditor({
                         </th>
                       ))
                     : ""}
+                  {value.length && currencyList.length
+                    ? currencyList.map((el, idx) => (
+                        <th key={`disc-${idx}`} className="w-40 px-2 text-left">
+                          Discounted Price ({el.currency})
+                        </th>
+                      ))
+                    : ""}
                 </tr>
               </thead>
               <tbody>
@@ -651,6 +658,29 @@ export function VariantEditor({
                               })
                             }
                             placeholder="0"
+                            className="h-8 text-xs border-gray-300"
+                          />
+                        </td>
+                      ))}
+                    {value.length > 0 &&
+                      currencyList.length &&
+                      currencyList.map((item, idx) => (
+                        <td key={`disc-${idx}`} className="px-2">
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            value={row.discountedPrice?.[item.currency] ?? ""}
+                            onChange={(e) =>
+                              updateRow(row.codeRow, {
+                                discountedPrice: {
+                                  ...row.discountedPrice,
+                                  [item.currency]: e.target.value
+                                    ? Number(e.target.value)
+                                    : "",
+                                },
+                              })
+                            }
+                            placeholder="Optional"
                             className="h-8 text-xs border-gray-300"
                           />
                         </td>

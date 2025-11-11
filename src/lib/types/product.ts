@@ -18,6 +18,7 @@ export interface VariantRowForm {
   productId?: string;
   stock?: number;
   price?: any;
+  discountedPrice?: any;
   selected?: boolean;
 }
 
@@ -36,6 +37,7 @@ export interface VariantRow {
   product: ProductData;
   stock: number;
   price?: any;
+  discountedPrice?: any;
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;
@@ -73,7 +75,7 @@ export interface ProductData {
     imagePublicId: string;
     type: string;
   }[];
-  preOrder?: { enabled: boolean; leadTime: string };
+  preOrder: { enabled: boolean; leadTime: string };
   moq: number;
   sizeProduct?: File | string | null;
   tags?: TagData[];
@@ -81,6 +83,15 @@ export interface ProductData {
   variantTypes?: VariantType[];
   productVariantsData?: VariantRow[];
   marketingLinks?: string[];
+  resellerPricing?: {
+    currency: string;
+    tiers: Array<{
+      name: string;
+      minimumQuantity: number;
+      discount: number;
+      categoryProduct: string | string[];
+    }>;
+  };
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;

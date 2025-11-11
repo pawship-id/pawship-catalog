@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import Tooltip from "./tooltip";
 import { VariantRow } from "@/lib/types/product";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -10,40 +10,153 @@ interface PriceTier {
   unitPrice: number;
 }
 
+interface ResellerTier {
+  name: string;
+  minimumQuantity: number;
+  discount: number;
+  categoryProduct: string | string[];
+}
+
 interface PricingDisplayProps {
   selectedVariant: {
     selectedVariantTypes: Record<string, string | undefined>;
     selectedVariantDetail: VariantRow;
   };
   moq: number;
+  resellerPricing?: {
+    currency: string;
+    tiers: ResellerTier[];
+  };
 }
 
 export default function PricingDisplay({
   selectedVariant,
   moq,
+  resellerPricing,
 }: PricingDisplayProps) {
-  // Static data
-  const { currency, format } = useCurrency();
   const { data: session } = useSession();
 
-  const tiers: PriceTier[] = [
-    { quantity: 10, discount: 15, unitPrice: 210_000 },
-    { quantity: 30, discount: 25, unitPrice: 190_000 },
-    { quantity: 50, discount: 30, unitPrice: 175_000 },
-  ];
+  // Determine which currency to use:
+  // 1. If reseller pricing exists, use its currency as default
+  // 2. Otherwise, use the currency from context (user can change from navbar)
+  const { currency: userCurrency, format } = useCurrency();
+
+  // Use reseller currency if available and user is reseller, otherwise use user selected currency
+  const effectiveCurrency = useMemo(() => {
+    if (session?.user.role === "reseller" && resellerPricing) {
+      // Check if user selected currency is available in variant prices
+      const variantPrices = selectedVariant.selectedVariantDetail.price;
+      if (variantPrices[userCurrency as keyof typeof variantPrices]) {
+        return userCurrency;
+      }
+      // Fallback to reseller pricing currency
+      return resellerPricing.currency;
+    }
+    return userCurrency;
+  }, [session, resellerPricing, userCurrency, selectedVariant]);
+
+  // Get base price based on effective currency
+  const basePrice = useMemo(() => {
+    const variantPrices = selectedVariant.selectedVariantDetail.price;
+    const discountedPrices =
+      selectedVariant.selectedVariantDetail.discountedPrice;
+
+    // For reseller, always show original price (not discounted)
+    if (session?.user.role === "reseller") {
+      return (
+        variantPrices[effectiveCurrency as keyof typeof variantPrices] || 0
+      );
+    }
+
+    // For regular customers, use discounted price if available
+    if (
+      discountedPrices &&
+      discountedPrices[effectiveCurrency as keyof typeof discountedPrices]
+    ) {
+      return discountedPrices[
+        effectiveCurrency as keyof typeof discountedPrices
+      ];
+    }
+
+    return variantPrices[effectiveCurrency as keyof typeof variantPrices] || 0;
+  }, [selectedVariant, effectiveCurrency, session]);
+
+  // Get original price (for strikethrough display)
+  const originalPrice = useMemo(() => {
+    const variantPrices = selectedVariant.selectedVariantDetail.price;
+    const discountedPrices =
+      selectedVariant.selectedVariantDetail.discountedPrice;
+
+    // Only show original price if there's a discounted price
+    if (
+      discountedPrices &&
+      discountedPrices[effectiveCurrency as keyof typeof discountedPrices]
+    ) {
+      return (
+        variantPrices[effectiveCurrency as keyof typeof variantPrices] || 0
+      );
+    }
+
+    return null;
+  }, [selectedVariant, effectiveCurrency]);
+
+  // Calculate tier prices with discount
+  const calculatedTiers = useMemo(() => {
+    if (!resellerPricing || !resellerPricing.tiers) return [];
+
+    // For reseller tiers, use the actual variant price (before any strikethrough discount)
+    // to ensure reseller discounts are calculated correctly
+    const variantPrices = selectedVariant.selectedVariantDetail.price;
+    const priceForTiers =
+      variantPrices[effectiveCurrency as keyof typeof variantPrices] ||
+      basePrice;
+
+    return resellerPricing.tiers.map((tier) => {
+      const discountAmount = (priceForTiers * tier.discount) / 100;
+      const unitPrice = priceForTiers - discountAmount;
+
+      return {
+        name: tier.name,
+        quantity: tier.minimumQuantity,
+        discount: tier.discount,
+        unitPrice: Math.round(unitPrice),
+      };
+    });
+  }, [resellerPricing, basePrice, selectedVariant, effectiveCurrency]);
+
+  // Show reseller pricing if user is reseller and has pricing tiers
+  const showResellerPricing =
+    session?.user.role === "reseller" &&
+    resellerPricing &&
+    calculatedTiers.length > 0;
 
   return (
     <div className="space-y-4">
       <div className="space-y-4">
-        <div className="text-2xl font-semibold text-gray-900">
-          {format(selectedVariant.selectedVariantDetail.price[currency])}
+        <div className="flex items-center gap-3">
+          <div className="space-y-1">
+            {/* Only show strikethrough price for non-reseller users */}
+            {originalPrice && !showResellerPricing && (
+              <div className="text-sm text-gray-400 line-through">
+                {format(originalPrice)}
+              </div>
+            )}
+            <div className="text-2xl font-semibold text-gray-900">
+              {format(basePrice)}
+            </div>
+          </div>
+          {showResellerPricing && (
+            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
+              Base Price
+            </span>
+          )}
         </div>
 
-        {session?.user.role === "reseller" && (
+        {showResellerPricing && (
           <div>
             <div className="flex items-center gap-2 mb-3">
               <h3 className="font-semibold text-gray-900">
-                Reseller Discount Tiers
+                Your Reseller Discount Tiers
               </h3>
               <Tooltip />
             </div>
@@ -53,7 +166,7 @@ export default function PricingDisplay({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Qty
+                      Min Qty
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
                       Discount
@@ -64,7 +177,7 @@ export default function PricingDisplay({
                   </tr>
                 </thead>
                 <tbody>
-                  {tiers.map((tier, index) => (
+                  {calculatedTiers.map((tier, index) => (
                     <tr
                       key={index}
                       className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
@@ -72,7 +185,7 @@ export default function PricingDisplay({
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         {tier.quantity}+
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
+                      <td className="px-4 py-3 text-sm text-green-700 font-semibold">
                         {tier.discount}%
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-orange-600">
@@ -82,6 +195,11 @@ export default function PricingDisplay({
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-2 text-xs text-gray-500">
+              * Prices shown in {effectiveCurrency}. Discount applies
+              automatically at checkout.
             </div>
           </div>
         )}

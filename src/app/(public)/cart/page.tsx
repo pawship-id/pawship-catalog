@@ -29,13 +29,13 @@ import { useRouter } from "next/navigation";
 export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const { currency, format } = useCurrency();
 
   const [formData, setFormData] = useState<OrderForm>({
     orderDate: new Date(),
-    invoiceNumber: "INV-00001",
+    invoiceNumber: "INV-00003",
     totalAmount: 0,
     status: "pending confirmation" as
       | "pending confirmation"
@@ -86,22 +86,54 @@ export default function CartPage() {
     }
 
     // update state setCartItemData
-    const updatedCartItemData = formData.orderDetails.map((item) =>
-      item.variantId === id
-        ? {
-            ...item,
-            quantity: newQuantity,
-            subTotal: newQuantity * item.price[currency],
+    const updatedCartItemData = formData.orderDetails.map((item) => {
+      if (item.variantId === id) {
+        // Recalculate discount for new quantity
+        const basePrice = item.originalPrice[currency];
+        let finalPrice = basePrice;
+        let discountInfo: {
+          discountPercentage: number;
+          tierName: string | null;
+        } = {
+          discountPercentage: 0,
+          tierName: null,
+        };
+
+        // Calculate reseller discount if applicable
+        if (session?.user.role === "reseller" && item.resellerPricing) {
+          discountInfo = calculateResellerDiscount(
+            newQuantity,
+            item.resellerPricing
+          );
+
+          if (discountInfo.discountPercentage > 0) {
+            const discountAmount =
+              (basePrice * discountInfo.discountPercentage) / 100;
+            finalPrice = Math.round(basePrice - discountAmount);
           }
-        : item
-    );
+        }
+
+        // TODO: Add B2C discount calculation here in the future
+
+        return {
+          ...item,
+          quantity: newQuantity,
+          discountPercentage: discountInfo.discountPercentage,
+          discountedPrice:
+            discountInfo.discountPercentage > 0
+              ? { [currency]: finalPrice }
+              : null,
+          subTotal: newQuantity * finalPrice,
+        };
+      }
+      return item;
+    });
 
     setFormData((prev) => ({
       ...prev,
       orderDetails: updatedCartItemData,
       totalAmount: updatedCartItemData.reduce(
-        (sum: number, element: any) =>
-          sum + element.price[currency] * element.quantity,
+        (sum: number, element: any) => sum + element.subTotal,
         0
       ),
     }));
@@ -128,8 +160,7 @@ export default function CartPage() {
       ...prev,
       orderDetails: filter,
       totalAmount: filter.reduce(
-        (sum: number, element: any) =>
-          sum + element.price[currency] * element.quantity,
+        (sum: number, element: any) => sum + element.subTotal,
         0
       ),
     }));
@@ -143,7 +174,7 @@ export default function CartPage() {
   };
 
   const totalAmount = formData.orderDetails.reduce(
-    (sum, item) => sum + item.price[currency] * item.quantity,
+    (sum, item) => sum + item.subTotal,
     0
   );
 
@@ -167,14 +198,54 @@ export default function CartPage() {
     } catch (error) {
       console.error(error);
       showConfirmAlert(
-        "Terjadi kesalahan saat checkout. Coba lagi nanti.",
-        "OK"
+        "An error occurred during checkout. Please try again later.",
+        "Ok"
       );
     }
   };
 
   const shipping = totalAmount > 50 ? 0 : 9.99;
   const total = totalAmount + shipping;
+
+  // Helper function to calculate reseller discount
+  const calculateResellerDiscount = (
+    quantity: number,
+    resellerPricing?: {
+      currency: string;
+      tiers: Array<{
+        name: string;
+        minimumQuantity: number;
+        discount: number;
+        categoryProduct: string | string[];
+      }>;
+    }
+  ) => {
+    if (!resellerPricing || !resellerPricing.tiers) {
+      return { discountPercentage: 0, tierName: null };
+    }
+
+    // Find the highest applicable tier based on quantity
+    let applicableTier = null;
+    for (const tier of resellerPricing.tiers) {
+      if (quantity >= tier.minimumQuantity) {
+        if (
+          !applicableTier ||
+          tier.minimumQuantity > applicableTier.minimumQuantity
+        ) {
+          applicableTier = tier;
+        }
+      }
+    }
+
+    if (applicableTier) {
+      return {
+        discountPercentage: applicableTier.discount,
+        tierName: applicableTier.name,
+      };
+    }
+
+    return { discountPercentage: 0, tierName: null };
+  };
 
   const fetchCartItem = async () => {
     setIsLoading(true);
@@ -184,7 +255,7 @@ export default function CartPage() {
       const detailCartItem = await Promise.all(
         cartItem.map(async (el: any) => {
           const { data: product } = await getById<ProductData>(
-            "/api/admin/products",
+            "/api/public/products",
             el.productId
           );
 
@@ -192,18 +263,55 @@ export default function CartPage() {
             (item) => item._id === el.variantId
           );
 
+          const basePrice = variant?.price[currency] || 0;
+
+          // Calculate discount (for both B2B reseller and B2C customer)
+          let discountInfo: {
+            discountPercentage: number;
+            tierName: string | null;
+          } = {
+            discountPercentage: 0,
+            tierName: null,
+          };
+          let finalPrice = basePrice;
+
+          // Calculate reseller discount if applicable
+          if (session?.user.role === "reseller" && product?.resellerPricing) {
+            discountInfo = calculateResellerDiscount(
+              el.quantity,
+              product.resellerPricing
+            );
+
+            if (discountInfo.discountPercentage > 0) {
+              const discountAmount =
+                (basePrice * discountInfo.discountPercentage) / 100;
+              finalPrice = Math.round(basePrice - discountAmount);
+            }
+          }
+
+          // TODO: Add B2C discount calculation here in the future
+          // Example: promotional discount, coupon code, etc.
+
           return {
             productId: product?._id,
             productName: product?.productName,
             variantId: el.variantId,
             variantName: variant?.name,
-            price: variant?.price,
+            originalPrice: variant?.price, // Always set original price
+            discountedPrice:
+              discountInfo.discountPercentage > 0
+                ? { [currency]: finalPrice }
+                : null, // Only set if discount applied
             quantity: el.quantity,
             image:
               variant?.image ||
               product?.productMedia.find((el) => el.type === "image"),
             stock: variant?.stock,
-            subTotal: el.quantity * variant?.price[currency],
+            discountPercentage: discountInfo.discountPercentage,
+            subTotal: el.quantity * finalPrice,
+            preOrder: product?.preOrder,
+            moq: product?.moq,
+            resellerPricing: product?.resellerPricing,
           };
         })
       );
@@ -212,8 +320,7 @@ export default function CartPage() {
         ...prev,
         orderDetails: detailCartItem,
         totalAmount: detailCartItem.reduce(
-          (sum: number, element: any) =>
-            sum + element.price[currency] * element.quantity,
+          (sum: number, element: any) => sum + element.subTotal,
           0
         ),
         currency,
@@ -226,8 +333,12 @@ export default function CartPage() {
   };
 
   useEffect(() => {
-    fetchCartItem();
-  }, [currency]);
+    // Only fetch cart items when session status is not "loading"
+    if (status !== "loading") {
+      fetchCartItem();
+    }
+  }, [currency, status]);
+
   if (isLoading) {
     return <LoadingPage />;
   }
@@ -292,26 +403,34 @@ export default function CartPage() {
                             Variant: {item.variantName}
                           </div>
 
-                          {/* {!item.inStock ? (
-                            <div className="text-red-600 text-sm font-medium mb-2">
-                              Out of Stock
-                            </div>
-                          ) : (
-                            <div className="text-orange-600 text-sm font-medium mb-2">
-                              Pre-Order
-                            </div>
-                          )} */}
+                          {item.quantity > item.stock &&
+                            item.preOrder.enabled && (
+                              <div className="text-amber-500 text-sm font-medium">
+                                Pre-Order
+                              </div>
+                            )}
 
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-lg font-bold text-gray-800">
-                                {format(item.price[currency])}
-                              </span>
-                              {/* {item.originalPrice && (
-                                <span className="text-sm text-gray-500 line-through">
-                                  ${item.originalPrice}
+                            <div className="flex flex-col space-y-1">
+                              {item.discountedPrice ? (
+                                <>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-lg font-bold text-orange-600">
+                                      {format(item.discountedPrice[currency])}
+                                    </span>
+                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
+                                      -{item.discountPercentage}%
+                                    </span>
+                                  </div>
+                                  <span className="text-sm text-gray-500 line-through">
+                                    {format(item.originalPrice[currency])}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-lg font-bold text-gray-800">
+                                  {format(item.originalPrice[currency])}
                                 </span>
-                              )} */}
+                              )}
                             </div>
 
                             <div className="flex items-center space-x-3">
@@ -323,8 +442,8 @@ export default function CartPage() {
                                       item.quantity - 1
                                     )
                                   }
-                                  className="p-2 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity === 0}
+                                  className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={item.quantity === item.moq}
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
@@ -338,8 +457,11 @@ export default function CartPage() {
                                       item.quantity + 1
                                     )
                                   }
-                                  className="p-2 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity >= item.stock}
+                                  className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={
+                                    item.quantity >= item.stock &&
+                                    !item.preOrder.enabled
+                                  }
                                 >
                                   <Plus className="h-4 w-4" />
                                 </button>
@@ -353,11 +475,19 @@ export default function CartPage() {
                               </button>
                             </div>
                           </div>
+                          <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100">
+                            <span className="text-sm font-semibold text-gray-700">
+                              Subtotal
+                            </span>
+                            <span className="text-lg font-bold text-primary">
+                              {format(item.subTotal)}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Compact Desktop Cart Item - For >= 416px && < 750px */}
-                      <div className="hidden min-[416px]:max-[750px]:flex items-start space-x-3">
+                      {/* Compact Desktop Cart Item - For >= 490px && < 750px */}
+                      <div className="hidden min-[490px]:max-[750px]:flex items-start space-x-3">
                         <img
                           src={item.image?.imageUrl}
                           alt={item.name}
@@ -372,26 +502,34 @@ export default function CartPage() {
                             Variant: {item.variantName}
                           </div>
 
-                          {/* {!item.inStock ? (
-                            <div className="text-red-600 text-xs font-medium mb-2">
-                              Out of Stock
-                            </div>
-                          ) : (
-                            <div className="text-orange-600 text-xs font-medium mb-2">
-                              Pre-order
-                            </div>
-                          )} */}
+                          {item.quantity > item.stock &&
+                            item.preOrder.enabled && (
+                              <div className="text-amber-500 text-xs font-medium">
+                                Pre-order
+                              </div>
+                            )}
 
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-base font-bold text-gray-800">
-                                {format(item.price[currency])}
-                              </span>
-                              {/* {item.originalPrice && (
-                                <span className="text-xs text-gray-500 line-through">
-                                  ${item.originalPrice}
+                            <div className="flex flex-col space-y-0.5">
+                              {item.discountedPrice ? (
+                                <>
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="text-base font-bold text-orange-600">
+                                      {format(item.discountedPrice[currency])}
+                                    </span>
+                                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                      -{item.discountPercentage}%
+                                    </span>
+                                  </div>
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {format(item.originalPrice[currency])}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-base font-bold text-gray-800">
+                                  {format(item.originalPrice[currency])}
                                 </span>
-                              )} */}
+                              )}
                             </div>
 
                             <div className="flex items-center space-x-2">
@@ -403,8 +541,8 @@ export default function CartPage() {
                                       item.quantity - 1
                                     )
                                   }
-                                  className="p-1 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity === 0}
+                                  className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={item.quantity === item.moq}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -418,8 +556,11 @@ export default function CartPage() {
                                       item.quantity + 1
                                     )
                                   }
-                                  className="p-1 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity >= item.stock}
+                                  className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={
+                                    item.quantity >= item.stock &&
+                                    !item.preOrder.enabled
+                                  }
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>
@@ -433,11 +574,20 @@ export default function CartPage() {
                               </button>
                             </div>
                           </div>
+
+                          <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100">
+                            <span className="text-sm font-semibold text-gray-700">
+                              Subtotal
+                            </span>
+                            <span className="text-base font-bold text-primary">
+                              {format(item.subTotal)}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Mobile Cart Item - Only show on screens <= 415px */}
-                      <div className="block min-[416px]:hidden">
+                      {/* Mobile Cart Item - Only show on screens <= 489px */}
+                      <div className="block min-[490px]:hidden">
                         <div className="flex gap-3">
                           {/* Product Image */}
                           <div className="w-25 h-25 flex-shrink-0">
@@ -460,29 +610,44 @@ export default function CartPage() {
                               Variant: {item.variantName}
                             </div>
 
-                            {/* Price */}
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm font-bold text-gray-800">
-                                {format(item.price[currency])}
-                              </span>
-                              {/* {item.originalPrice && (
-                                <span className="text-xs text-gray-500 line-through">
-                                  ${item.originalPrice}
-                                </span>
-                              )} */}
-                            </div>
-
                             {/* Stock Status */}
-                            <div>
-                              {/* {!item.inStock ? (
-                                <span className="text-xs text-red-600 font-medium">
-                                  Out of Stock
-                                </span>
-                              ) : (
-                                <span className="text-xs text-orange-600 font-medium">
+                            {item.quantity > item.stock &&
+                              item.preOrder.enabled && (
+                                <span className="text-xs text-amber-500 font-medium">
                                   Pre-order
                                 </span>
-                              )} */}
+                              )}
+
+                            {/* Price */}
+                            <div className="flex flex-col space-y-0.5">
+                              {item.discountedPrice ? (
+                                <>
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="text-sm font-bold text-orange-600">
+                                      {format(item.discountedPrice[currency])}
+                                    </span>
+                                    <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                      -{item.discountPercentage}%
+                                    </span>
+                                  </div>
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {format(item.originalPrice[currency])}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-sm font-bold text-gray-800">
+                                  {format(item.originalPrice[currency])}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs font-semibold text-gray-700">
+                                Subtotal:
+                              </span>
+                              <span className="text-sm font-bold text-primary">
+                                {format(item.subTotal)}
+                              </span>
                             </div>
 
                             {/* Bottom Row: Quantity Controls and Delete Button */}
@@ -495,8 +660,8 @@ export default function CartPage() {
                                       item.quantity - 1
                                     )
                                   }
-                                  className="p-1.5 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity === 0}
+                                  className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={item.quantity === item.moq}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -510,8 +675,11 @@ export default function CartPage() {
                                       item.quantity + 1
                                     )
                                   }
-                                  className="p-1.5 hover:bg-gray-100 transition-colors"
-                                  disabled={item.quantity >= item.stock}
+                                  className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={
+                                    item.quantity >= item.stock &&
+                                    !item.preOrder.enabled
+                                  }
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>
@@ -718,9 +886,9 @@ export default function CartPage() {
                   </button>
                   {isAddressValid() && (
                     <small>
-                      <span className="text-red-500">*disclaimer note:</span>{" "}
-                      you will be directed to Whatsapp for secure and faster
-                      order confirmation
+                      <span className="text-red-500">* note:</span> you will be
+                      directed to Whatsapp for secure and faster order
+                      confirmation
                     </small>
                   )}
                 </div>

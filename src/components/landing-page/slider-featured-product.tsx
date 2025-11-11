@@ -1,43 +1,106 @@
 "use client";
-import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { Badge } from "../ui/badge";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { products as productData } from "@/lib/data/products";
 import ScrollHorizontalCard from "../scroll-horizontal-card";
+import { ProductData } from "@/lib/types/product";
+import LoadingPage from "../loading";
+
+interface Collection {
+  _id: string;
+  name: string;
+  rules: string;
+  products: ProductData[];
+  slug: string;
+}
+
+interface HomepageData {
+  allProducts: ProductData[];
+  newArrivals: ProductData[];
+  collections: Collection[];
+}
 
 export default function SliderFeaturedProduct() {
   const [activeTab, setActiveTab] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [homepageData, setHomepageData] = useState<HomepageData>({
+    allProducts: [],
+    newArrivals: [],
+    collections: [],
+  });
 
-  const products = productData;
+  // Fetch homepage products and collections
+  useEffect(() => {
+    const fetchHomepageProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch("/api/public/homepage/products");
+        const result = await response.json();
 
-  const tabs = ["All", "New Arrivals", "Best Sellers", "Sale"];
+        if (result.success) {
+          setHomepageData(result.data);
+        }
+      } catch (error) {
+        console.error("Error fetching homepage products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomepageProducts();
+  }, []);
+
+  // Build tabs dynamically: All, New Arrivals, + Collections
+  const tabs = [
+    "All",
+    "New Arrivals",
+    ...homepageData.collections.map((col) => col.name),
+  ];
 
   // Get URL path for the active tab
   const getTabPath = (tab: string) => {
-    switch (tab) {
-      case "All":
-        return "/catalog";
-      case "New Arrivals":
-        return "/catalog/new-arrivals";
-      case "Best Sellers":
-        return "/catalog/best-sellers";
-      case "Sale":
-        return "/catalog/sale";
-      default:
-        return "/";
+    if (tab === "All") {
+      return "/catalog";
+    } else if (tab === "New Arrivals") {
+      return "/catalog?filter=new-arrivals";
+    } else {
+      // For collection tabs, link to catalog filtered by collection ID
+      const collection = homepageData.collections.find(
+        (col) => col.name === tab
+      );
+      if (collection) {
+        return `/catalog?collection=${collection.slug}`;
+      }
+      return "/catalog";
     }
   };
 
-  // Filter products based on active tab
-  const filteredProducts = products.filter((product) =>
-    activeTab === "All" ? product : product.tag === activeTab
-  );
+  // Get products based on active tab
+  const getFilteredProducts = () => {
+    if (activeTab === "All") {
+      return homepageData.allProducts;
+    } else if (activeTab === "New Arrivals") {
+      return homepageData.newArrivals;
+    } else {
+      // Find collection by name
+      const collection = homepageData.collections.find(
+        (col) => col.name === activeTab
+      );
+      return collection ? collection.products : [];
+    }
+  };
+
+  const filteredProducts = getFilteredProducts();
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
   };
+
+  if (loading) {
+    return <LoadingPage />;
+  }
 
   return (
     <>
@@ -52,7 +115,7 @@ export default function SliderFeaturedProduct() {
                 : "bg-white text-primary"
             }`}
             style={{
-              width: "120px",
+              minWidth: "120px",
               minHeight: "36px",
               whiteSpace: "normal",
               lineHeight: "1.2",
@@ -66,24 +129,32 @@ export default function SliderFeaturedProduct() {
 
       <div className="relative">
         {/* Products Grid */}
-        <ScrollHorizontalCard products={filteredProducts} />
+        {filteredProducts.length > 0 ? (
+          <ScrollHorizontalCard products={filteredProducts} />
+        ) : (
+          <div className="text-center py-10 text-gray-500">
+            No products available for {activeTab}
+          </div>
+        )}
 
         {/* View All Link */}
-        <div className="flex justify-center mt-6">
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="rounded-xl px-8 border-primary text-primary hover:bg-primary hover:text-white font-semibold mt-3"
-          >
-            <Link href={getTabPath(activeTab)}>
-              View All {activeTab === "All" ? "Products" : activeTab}
-              <span>
-                <ArrowRight className="h-4 w-6" />
-              </span>
-            </Link>
-          </Button>
-        </div>
+        {filteredProducts.length > 0 && (
+          <div className="flex justify-center mt-6">
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="rounded-xl px-8 border-primary text-primary hover:bg-primary hover:text-white font-semibold mt-3"
+            >
+              <Link href={getTabPath(activeTab)}>
+                View All {activeTab === "All" ? "Products" : activeTab}
+                <span>
+                  <ArrowRight className="h-4 w-6" />
+                </span>
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </>
   );

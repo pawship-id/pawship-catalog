@@ -71,19 +71,19 @@ export default function NavigationHeader() {
         },
         {
           name: "New Arrivals",
-          href: "/catalog/new-arrivals",
+          href: "/catalog?filter=new-arrivals",
         },
         {
           name: "Limited Stocks",
-          href: "/catalog/limited-stocks",
+          href: "#",
         },
         {
           name: "Best Sellers",
-          href: "/catalog/best-sellers",
+          href: "#",
         },
         {
           name: "Sale",
-          href: "/catalog/sale",
+          href: "#",
         },
       ],
     },
@@ -101,7 +101,6 @@ export default function NavigationHeader() {
       subItems: [
         { name: "About Us", href: "/about-us" },
         { name: "Contact Us", href: "/contact-us" },
-        { name: "FAQ", href: "/faq" },
         { name: "Stores", href: "/stores" },
         { name: "Payments", href: "/payments" },
       ],
@@ -143,7 +142,7 @@ export default function NavigationHeader() {
       if (response.data) {
         let mappingCategory = response.data.map((el: CategoryData) => ({
           name: el.name,
-          href: `/catalog/${el.slug}`,
+          href: `/catalog?category=${el.slug}`,
         }));
         setCategories(mappingCategory);
       }

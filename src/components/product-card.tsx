@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCurrency } from "@/context/CurrencyContext";
 import { TagData } from "@/lib/types/tag";
 import { isNewArrival } from "@/lib/helpers/product";
+import { useSession } from "next-auth/react";
 
 interface ProductCardProps {
   product: ProductData;
@@ -17,6 +18,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const { currency, format } = useCurrency();
+  const { data: session } = useSession();
 
   const router = useRouter();
 
@@ -30,9 +32,34 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const variants: VariantRow[] | undefined = product.productVariantsData;
 
+  const isReseller = session?.user.role === "reseller";
+
+  // Calculate minimum price
+  // For reseller: always use original price
+  // For customer: use discounted price if available, otherwise original price
   const minPrice = Math.min(
-    ...(variants || []).map((v: VariantRow) => v.price[currency] ?? Infinity)
+    ...(variants || []).map((v: VariantRow) => {
+      if (isReseller) {
+        return v.price[currency] || Infinity;
+      }
+      return v.discountedPrice?.[currency] || v.price[currency] || Infinity;
+    })
   );
+
+  // Check if any variant has a discounted price for the selected currency
+  const hasDiscount = variants?.some(
+    (v: VariantRow) => v.discountedPrice && v.discountedPrice[currency]
+  );
+
+  // Get original minimum price (before discount) - only for non-reseller
+  const minOriginalPrice =
+    hasDiscount && !isReseller
+      ? Math.min(
+          ...(variants || []).map(
+            (v: VariantRow) => v.price[currency] ?? Infinity
+          )
+        )
+      : null;
 
   // const discount =
   //   product.originalPrice && product.originalPrice[currency]
@@ -132,11 +159,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Bottom: Price + Button */}
         <div className="mt-auto">
           <div className="mb-3">
-            {/* {product.originalPrice && (
-              <p className="text-base text-gray-400 line-through">
-                {format(product.originalPrice[currency])}
+            {/* Only show strikethrough price for non-reseller users */}
+            {minOriginalPrice && (
+              <p className="text-sm text-gray-400 line-through">
+                {format(minOriginalPrice)}
               </p>
-            )} */}
+            )}
             <p className="text-lg font-bold text-gray-900">
               {format(minPrice)}
             </p>

@@ -11,15 +11,17 @@ import { Separator } from "@/components/ui/separator";
 import { getById } from "@/lib/apiService";
 import { ProductData, VariantRow } from "@/lib/types/product";
 import { Download, ShoppingCart } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { enrichProduct, hasTag } from "@/lib/helpers/product";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useSession } from "next-auth/react";
-import { showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
+
+  const router = useRouter();
 
   const { currency } = useCurrency();
   const { data: session } = useSession();
@@ -59,18 +61,32 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     let isDisabled = true;
-    if (selectedVariant?.selectedVariantTypes) {
+
+    if (selectedVariant && product) {
       const selectedTypeCount = Object.keys(
         selectedVariant.selectedVariantTypes
       ).length;
       const selectedVariantCount = Object.keys(
         selectedVariant.selectedVariantDetail.attrs
       ).length;
+
       isDisabled = selectedTypeCount !== selectedVariantCount;
+
+      if (
+        !product.preOrder.enabled &&
+        quantity > selectedVariant.selectedVariantDetail.stock
+      ) {
+        // if product no PO and quantity > stock
+        isDisabled = true;
+      }
+
+      if (quantity < product.moq) {
+        isDisabled = true;
+      }
     }
 
     setDisabledAddToCart(isDisabled);
-  }, [selectedVariant]);
+  }, [selectedVariant, quantity]);
 
   if (loading) {
     return <LoadingPage />;
@@ -85,6 +101,12 @@ export default function ProductDetailPage() {
   }
 
   const handleAddToCart = async () => {
+    if (!session) {
+      router.push(`/login?callbackUrl=/product/${slug}`);
+      showErrorAlert(undefined, "Please login first");
+      return;
+    }
+
     let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
 
     if (selectedVariant) {
@@ -176,10 +198,6 @@ export default function ProductDetailPage() {
     );
   };
 
-  const isEssentialOrBasic = hasTag(product.tags, "Essentials").isFound
-    ? hasTag(product.tags, "Essentials")
-    : hasTag(product.tags, "Basic");
-
   const enrichProductData = enrichProduct(product, currency);
 
   return (
@@ -226,18 +244,19 @@ export default function ProductDetailPage() {
                   {product?.productName}
                 </h1>
               </div>
-              {/* optional */}
-              <p className="text-lg text-gray-600">
-                {product.categoryDetail.name}
-              </p>
 
-              {/* if product essential or basic */}
-              {isEssentialOrBasic.isFound && (
-                <div className="flex gap-2">
-                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                    {isEssentialOrBasic.tagToCheck}
-                  </span>
-                </div>
+              {/* category */}
+              {product.categoryDetail.name.toLowerCase() === "essential" ||
+              product.categoryDetail.name.toLowerCase() === "basic" ? (
+                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                  {product.categoryDetail.name}
+                </span>
+              ) : (
+                <span
+                  className={`bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium`}
+                >
+                  {product.categoryDetail.name}
+                </span>
               )}
             </div>
 
@@ -246,6 +265,7 @@ export default function ProductDetailPage() {
               <PricingDisplay
                 selectedVariant={selectedVariant}
                 moq={product.moq}
+                resellerPricing={product.resellerPricing}
               />
             )}
 
@@ -257,6 +277,7 @@ export default function ProductDetailPage() {
               moq={product.moq || 1}
               attributes={enrichProductData.attributes}
               setSelectedVariant={setSelectedVariant}
+              preOrder={product.preOrder}
             />
 
             {/* CTA Buttons */}

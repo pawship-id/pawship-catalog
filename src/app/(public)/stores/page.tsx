@@ -1,3 +1,4 @@
+import SingleBanner from "@/components/common/single-banner";
 import { Badge } from "@/components/ui/badge";
 import React from "react";
 
@@ -5,13 +6,7 @@ export default function StorePage() {
   return (
     <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* Hero Section */}
-      <section
-        className="relative h-[60vh] overflow-hidden bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('/images/banner/about-us-banner-pawship-offline-store.jpeg')",
-        }}
-      >
+      <SingleBanner page="stores">
         <div className="absolute inset-0 bg-black opacity-50"></div>
         {/* Overlay hitam */}
         <div className="relative z-10 flex items-center justify-center h-full text-white">
@@ -28,7 +23,7 @@ export default function StorePage() {
             </p>
           </div>
         </div>
-      </section>
+      </SingleBanner>
 
       <section className="py-20">
         <div className="container mx-auto px-4">

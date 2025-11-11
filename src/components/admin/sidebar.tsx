@@ -15,6 +15,9 @@ import {
   Globe,
   Store,
   ReceiptText,
+  SquareLibrary,
+  GalleryThumbnails,
+  Warehouse,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -34,6 +37,21 @@ const navigation = [
     name: "Orders",
     href: "/dashboard/orders",
     icon: ReceiptText,
+  },
+  {
+    name: "Collections",
+    href: "/dashboard/collections",
+    icon: SquareLibrary,
+  },
+  {
+    name: "Banners",
+    href: "/dashboard/banners",
+    icon: GalleryThumbnails,
+  },
+  {
+    name: "Stocks",
+    href: "/dashboard/stocks",
+    icon: Warehouse,
   },
   { name: "Website", href: "/", icon: Globe },
 ];

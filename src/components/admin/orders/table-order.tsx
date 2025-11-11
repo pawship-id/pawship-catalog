@@ -19,7 +19,7 @@ import {
   CircleCheckBig,
   Clock,
   CreditCard,
-  Edit,
+  Eye,
   Loader,
   MoreVertical,
 } from "lucide-react";
@@ -160,8 +160,8 @@ export default function TableOrder({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link href={`/dashboard/items/edit/${item._id}`}>
-                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        <Link href={`/dashboard/orders/${item._id}/detail`}>
+                          <Eye className="mr-2 h-4 w-4" /> Detail
                         </Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>

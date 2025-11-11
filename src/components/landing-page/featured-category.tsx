@@ -52,42 +52,6 @@ export default function FeaturedCategory() {
           {loading ? (
             <Loading />
           ) : (
-            // <div className="grid sm:grid-cols-2 gap-12 items-center mt-15">
-            //   {categories.map((category, idx) => (
-            //     <div
-            //       key={idx}
-            //       className="flex flex-col md:space-x-6 md:flex-row items-center"
-            //     >
-            //       <div className="h-70 w-70 overflow-hidden rounded-l-xl">
-            //         <img
-            //           src={category.imageUrl}
-            //           alt={category.name}
-            //           className="h-full w-full object-cover rounded-l-xl"
-            //         />
-            //       </div>
-
-            //       <div className="space-y-4 px-2 text-center my-5 md:text-start">
-            //         <h3 className="text-xl font-bold text-foreground">
-            //           {category.name}
-            //         </h3>
-            //         <p className="text-sm">{category.description}</p>
-            //         <Button
-            //           asChild
-            //           variant="outline"
-            //           size="lg"
-            //           className="rounded-lg border-primary/50 text-primary hover:bg-primary hover:text-white font-semibold"
-            //         >
-            //           <Link href={`/${category.slug}`}>
-            //             Shop Now
-            //             <span>
-            //               <ArrowRight className="h-4 w-6" />
-            //             </span>
-            //           </Link>
-            //         </Button>
-            //       </div>
-            //     </div>
-            //   ))}
-            // </div>
             <div className="grid sm:grid-cols-2 gap-12 items-center mt-15">
               {categories.map((category, idx) => (
                 <div
@@ -117,7 +81,7 @@ export default function FeaturedCategory() {
                       size="lg"
                       className="rounded-lg border-primary/50 text-primary hover:bg-primary hover:text-white font-semibold"
                     >
-                      <Link href={`/catalog/${category.slug}`}>
+                      <Link href={`/catalog?category=${category.slug}`}>
                         Shop Now
                         <span>
                           <ArrowRight className="h-4 w-6" />

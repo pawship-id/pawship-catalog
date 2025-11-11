@@ -5,12 +5,23 @@ export interface IOrderDetail {
   stock?: number;
   variantId: string;
   variantName: string;
-  price: any;
+  originalPrice: any; // Original price before any discount (for both B2B and B2C)
+  discountedPrice?: any; // Price after discount (if discount applied)
   image: {
     imagePublicId: string;
     imageUrl: string;
   };
   subTotal: number;
+  discountPercentage?: number; // Discount percentage applied (if any)
+  resellerPricing?: {
+    currency: string;
+    tiers: Array<{
+      name: string;
+      minimumQuantity: number;
+      discount: number;
+      categoryProduct: string | string[];
+    }>;
+  };
 }
 
 export interface IShippingAddress {

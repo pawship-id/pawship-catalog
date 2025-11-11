@@ -1,4 +1,5 @@
 "use client";
+import SingleBanner from "@/components/common/single-banner";
 import { Badge } from "@/components/ui/badge";
 import { Instagram, Mail, MessageCircle, Send } from "lucide-react";
 import React, { useState } from "react";
@@ -31,13 +32,7 @@ export default function ContactUsPage() {
   return (
     <div>
       {/* Hero Section */}
-      <section
-        className="relative h-[60vh] overflow-hidden bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('https://i.pinimg.com/736x/59/eb/44/59eb44067105c010445fadca18eb7c1d.jpg')",
-        }}
-      >
+      <SingleBanner page="contact-us">
         <div className="absolute inset-0 bg-black opacity-50"></div>
         {/* Overlay hitam */}
         <div className="relative z-10 flex items-center justify-center h-full text-white">
@@ -50,7 +45,7 @@ export default function ContactUsPage() {
             </h1>
           </div>
         </div>
-      </section>
+      </SingleBanner>
 
       {/* Contact Form & Info */}
       <section className="py-16">
