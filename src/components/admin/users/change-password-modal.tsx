@@ -118,6 +118,7 @@ export default function ChangePasswordModal({
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
                   disabled={isLoading}
+                  className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                 />
                 <button
                   type="button"
@@ -146,6 +147,7 @@ export default function ChangePasswordModal({
                   onChange={(e) => setConfirmNewPassword(e.target.value)}
                   placeholder="Confirm new password"
                   disabled={isLoading}
+                  className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                 />
                 <button
                   type="button"
