@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, MoreVertical, User, Search } from "lucide-react";
+import { Edit, MoreVertical, User, Search, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAll } from "@/lib/apiService";
@@ -23,6 +23,7 @@ import Link from "next/link";
 import DeleteButton from "@/components/admin/delete-button";
 import LoadingTable from "@/components/admin/loading-table";
 import ErrorTable from "@/components/admin/error-table";
+import ChangePasswordModal from "./change-password-modal";
 
 export default function TableUser() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -30,6 +31,15 @@ export default function TableUser() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [changePasswordModal, setChangePasswordModal] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+  }>({
+    isOpen: false,
+    userId: "",
+    userName: "",
+  });
 
   const fetchUsers = async () => {
     try {
@@ -68,6 +78,22 @@ export default function TableUser() {
     );
     setFilteredUsers(filtered);
   }, [searchQuery, users]);
+
+  const handleOpenChangePassword = (userId: string, userName: string) => {
+    setChangePasswordModal({
+      isOpen: true,
+      userId,
+      userName,
+    });
+  };
+
+  const handleCloseChangePassword = () => {
+    setChangePasswordModal({
+      isOpen: false,
+      userId: "",
+      userName: "",
+    });
+  };
 
   if (loading) {
     return <LoadingTable text="Loading fetch users..." />;
@@ -182,6 +208,14 @@ export default function TableUser() {
                             </Link>
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() =>
+                            handleOpenChangePassword(user._id, user.fullName)
+                          }
+                        >
+                          <KeyRound className="mr-2 h-4 w-4" /> Change Password
+                        </DropdownMenuItem>
                         <DropdownMenuItem className="p-0">
                           <DeleteButton
                             id={user._id}
@@ -198,6 +232,14 @@ export default function TableUser() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={changePasswordModal.isOpen}
+        onClose={handleCloseChangePassword}
+        userId={changePasswordModal.userId}
+        userName={changePasswordModal.userName}
+      />
     </div>
   );
 }

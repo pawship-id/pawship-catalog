@@ -2,14 +2,15 @@ import User from "@/lib/models/User";
 import dbConnect from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+interface Context {
+  params: Promise<{ id: string }>;
+}
+
+export async function PUT(req: NextRequest, { params }: Context) {
   await dbConnect();
 
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
 
     const user = await User.findById(id);
@@ -66,14 +67,11 @@ export async function PUT(
   }
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, { params }: Context) {
   await dbConnect();
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const user = await User.findById(id).select(
       "fullName email role resellerProfile retailProfile"
