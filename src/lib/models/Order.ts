@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 import { IOrderDetail, IShippingAddress } from "../types/order";
 
 export interface IOrder extends Document {
+  userId: string;
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
@@ -82,6 +83,11 @@ const ShippingAddressSchema = new Schema<IShippingAddress>(
 
 const OrderSchema = new Schema<IOrder>(
   {
+    userId: {
+      type: String,
+      required: [true, "User ID is required"],
+      index: true,
+    },
     orderDate: {
       type: Date,
       default: Date.now,

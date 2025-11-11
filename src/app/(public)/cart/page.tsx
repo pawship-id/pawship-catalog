@@ -185,6 +185,18 @@ export default function CartPage() {
   );
 
   const handleCheckout = async () => {
+    // Check if user is logged in
+    if (!session || status !== "authenticated") {
+      const result = await showConfirmAlert(
+        "You need to log in to complete your order. Would you like to log in now?",
+        "Yes, Log In"
+      );
+      if (result.isConfirmed) {
+        router.push("/login");
+      }
+      return;
+    }
+
     const result = await showConfirmAlert(
       "You want to continue checkout? Make sure all data is correct.",
       "Yes, Checkout Now"
