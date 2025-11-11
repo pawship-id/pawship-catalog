@@ -283,6 +283,21 @@ export default function NavigationHeader() {
               <Search className="h-4 w-4" />
             </Button>
 
+            {/* nav item favorite and cart  */}
+            {/* Favorite */}
+            <Button variant="ghost" size="sm" className="relative" asChild>
+              <Link href="/wishlist">
+                <Heart className="h-4 w-4" />
+              </Link>
+            </Button>
+
+            {/* Cart */}
+            <Button variant="ghost" size="sm" className="relative" asChild>
+              <Link href="/cart">
+                <ShoppingCart className="h-4 w-4" />
+              </Link>
+            </Button>
+
             {/* User */}
             {session && status === "authenticated" ? (
               <DropdownMenu>
@@ -315,21 +330,6 @@ export default function NavigationHeader() {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link
-                      href="/wishlist"
-                      className="flex items-center space-x-2"
-                    >
-                      <Heart className="h-4 w-4" />
-                      <span>Favorite</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/cart" className="flex items-center space-x-2">
-                      <ShoppingCart className="h-4 w-4" />
-                      <span>Shopping Cart</span>
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link
                       href="/address"
@@ -371,28 +371,6 @@ export default function NavigationHeader() {
                   <User className="h-4 w-4" />
                 </Link>
               </Button>
-            )}
-
-            {/* nav item favorite and cart before login */}
-            {!session && status === "unauthenticated" && (
-              <>
-                {/* Favorite */}
-                <Button variant="ghost" size="sm" className="relative" asChild>
-                  <Link href="/wishlist">
-                    <Heart className="h-4 w-4" />
-                  </Link>
-                </Button>
-
-                {/* Cart */}
-                <Button variant="ghost" size="sm" className="relative" asChild>
-                  <Link href="/cart">
-                    <ShoppingCart className="h-4 w-4" />
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                      3
-                    </Badge>
-                  </Link>
-                </Button>
-              </>
             )}
 
             {/* Mobile Menu Toggle */}
