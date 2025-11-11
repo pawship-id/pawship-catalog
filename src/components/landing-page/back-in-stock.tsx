@@ -1,14 +1,39 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { products as productData } from "@/lib/data/products";
 import ScrollHorizontalCard from "../scroll-horizontal-card";
+import { ProductData } from "@/lib/types/product";
 
 export default function BackInStock() {
-  const products = productData.filter(
-    (product) => product.tag === "Back in Stock"
-  );
+  const [products, setProducts] = useState<ProductData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBackInStockProducts = async () => {
+      try {
+        const response = await fetch("/api/public/back-in-stock");
+        const result = await response.json();
+
+        if (result.success) {
+          setProducts(result.data);
+        }
+      } catch (error) {
+        console.error("Error fetching back in stock products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBackInStockProducts();
+  }, []);
+
+  // Don't show section if no products
+  if (!loading && products.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-16">
@@ -18,12 +43,18 @@ export default function BackInStock() {
             Back in Stock 🐾
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Popular picks are back in stock. Don’t miss out this time!
+            Popular picks are back in stock. Don't miss out this time!
           </p>
         </div>
 
         {/* Products Grid */}
-        <ScrollHorizontalCard products={products} />
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <ScrollHorizontalCard products={products} />
+        )}
 
         <div className="text-center mt-10">
           <Button

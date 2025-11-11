@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 
     // Add resellerPricing if user is reseller
     const enrichedAllProducts =
-      isReseller && resellerTierDiscount.tiers
+      isReseller && resellerTierDiscount.tiers.length
         ? allProducts.map((product: any) => {
             // Filter tier discount based on product's categoryId
             const applicableTiers = resellerTierDiscount.tiers.filter(
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
 
     // Add resellerPricing if user is reseller
     const enrichedNewArrivals =
-      isReseller && resellerTierDiscount.tiers
+      isReseller && resellerTierDiscount.tiers.length
         ? newArrivals.map((product: any) => {
             // Filter tier discount based on product's categoryId
             const applicableTiers = resellerTierDiscount.tiers.filter(
@@ -213,7 +213,7 @@ export async function GET(req: NextRequest) {
 
         // Add resellerPricing if user is reseller
         const enrichedProducts =
-          isReseller && resellerTierDiscount.tiers
+          isReseller && resellerTierDiscount.tiers.length
             ? products.slice(0, 20).map((product: any) => {
                 // Filter tier discount based on product's categoryId
                 const applicableTiers = resellerTierDiscount.tiers.filter(

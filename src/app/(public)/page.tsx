@@ -17,7 +17,7 @@ export default function Home() {
       <HomeBannerCarousel page="home" />
       <FeaturedProduct />
       <FeaturedCategory />
-      {/* <BackInStock /> */}
+      <BackInStock />
       <WhyPawship />
       <OurGalery />
       <Testimonial />

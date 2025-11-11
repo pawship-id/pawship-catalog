@@ -125,7 +125,7 @@ export default function AddToCartModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="lg:max-w-[60vw] max-h-[95vh] overflow-y-auto">
+      <DialogContent className="lg:max-w-[60vw] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold"></DialogTitle>
         </DialogHeader>
