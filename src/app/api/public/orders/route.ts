@@ -3,11 +3,18 @@ import ProductVariant from "@/lib/models/ProductVariant";
 import dbConnect from "@/lib/mongodb";
 import { IOrderDetail, OrderForm } from "@/lib/types/order";
 import { NextRequest, NextResponse } from "next/server";
+import { generateInvoiceNumber } from "@/lib/helpers/invoice";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
   try {
     const body: OrderForm = await req.json();
+
+    // Generate unique invoice number based on shipping address country
+    const invoiceNumber = await generateInvoiceNumber(
+      body.shippingAddress.country
+    );
+    body.invoiceNumber = invoiceNumber;
 
     body.orderDetails.forEach((el: IOrderDetail) => {
       delete el.stock;
