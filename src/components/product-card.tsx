@@ -8,6 +8,7 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { TagData } from "@/lib/types/tag";
 import { isNewArrival } from "@/lib/helpers/product";
 import { useSession } from "next-auth/react";
+import AddToCartModal from "./add-to-cart-modal";
 
 interface ProductCardProps {
   product: ProductData;
@@ -16,15 +17,15 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { currency, format } = useCurrency();
   const { data: session } = useSession();
 
   const router = useRouter();
 
-  const handleAddToCart = () => {
-    setIsAddingToCart(true);
-    setTimeout(() => setIsAddingToCart(false), 1500);
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsModalOpen(true);
   };
 
   const productMedia =
@@ -173,14 +174,20 @@ export default function ProductCard({ product }: ProductCardProps) {
           <Button
             variant="outline"
             onClick={handleAddToCart}
-            disabled={isAddingToCart}
-            className="w-full py-1 bg-primary/85 text-white border-primary rounded-lg font-semibold transition-all duration-200 hover:bg-primary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-1 bg-primary/85 text-white border-primary rounded-lg font-semibold transition-all duration-200 hover:bg-primary hover:text-white flex items-center justify-center gap-2 cursor-pointer"
           >
             <ShoppingCart className="w-4 h-4" />
-            {isAddingToCart ? "Adding to Cart..." : "Add to Cart"}
+            Add to Cart
           </Button>
         </div>
       </div>
+
+      {/* Add to Cart Modal */}
+      <AddToCartModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        product={product}
+      />
     </div>
   );
 }
