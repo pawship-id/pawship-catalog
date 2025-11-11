@@ -8,8 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, MoreVertical, User } from "lucide-react";
+import { Edit, MoreVertical, User, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getAll } from "@/lib/apiService";
 import { UserData } from "@/lib/types/user";
 import {
@@ -25,8 +26,10 @@ import ErrorTable from "@/components/admin/error-table";
 
 export default function TableUser() {
   const [users, setUsers] = useState<UserData[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchUsers = async () => {
     try {
@@ -37,6 +40,7 @@ export default function TableUser() {
 
       if (response.data?.length) {
         setUsers(response.data);
+        setFilteredUsers(response.data);
       }
     } catch (err: any) {
       setError(err.message);
@@ -49,6 +53,22 @@ export default function TableUser() {
     fetchUsers();
   }, []);
 
+  // Search filter effect
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredUsers(users);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = users.filter(
+      (user) =>
+        user.fullName.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query)
+    );
+    setFilteredUsers(filtered);
+  }, [searchQuery, users]);
+
   if (loading) {
     return <LoadingTable text="Loading fetch users..." />;
   }
@@ -58,89 +78,126 @@ export default function TableUser() {
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Full Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Phone Number</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.length === 0 ? (
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 border-1 border-border focus:border-primary"
+          />
+        </div>
+        {searchQuery && (
+          <Button
+            variant="ghost"
+            onClick={() => setSearchQuery("")}
+            className="cursor-pointer"
+          >
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {/* Results Counter */}
+      {searchQuery && (
+        <div className="text-sm text-muted-foreground">
+          Found {filteredUsers.length} user
+          {filteredUsers.length !== 1 ? "s" : ""} matching "{searchQuery}"
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell
-                colSpan={6}
-                className="text-center py-8 text-muted-foreground"
-              >
-                No users found
-              </TableCell>
+              <TableHead>Full Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Phone Number</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
-          ) : (
-            users.map((user) => (
-              <TableRow key={user._id}>
-                <TableCell className="font-medium">{user.fullName}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {user.phoneNumber}
-                </TableCell>
-                <TableCell>
-                  <span className="capitalize">{user.role}</span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      !user.deleted
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {!user.deleted ? "Active" : "Non Active"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="cursor-pointer"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link href={`/dashboard/users/edit/${user._id}`}>
-                          <Edit className="mr-2 h-4 w-4" /> Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      {(user.role === "reseller" || user.role === "retail") && (
-                        <DropdownMenuItem asChild className="cursor-pointer">
-                          <Link href={`/dashboard/users/profile/${user._id}`}>
-                            <User className="mr-2 h-4 w-4" /> Update Profile
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem className="p-0">
-                        <DeleteButton
-                          id={user._id}
-                          onFetch={fetchUsers}
-                          resource="users"
-                        />
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+          </TableHeader>
+          <TableBody>
+            {filteredUsers.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="text-center py-8 text-muted-foreground"
+                >
+                  {searchQuery
+                    ? `No users found matching "${searchQuery}"`
+                    : "No users found"}
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              filteredUsers.map((user) => (
+                <TableRow key={user._id}>
+                  <TableCell className="font-medium">{user.fullName}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {user.phoneNumber}
+                  </TableCell>
+                  <TableCell>
+                    <span className="capitalize">{user.role}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                        !user.deleted
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {!user.deleted ? "Active" : "Non Active"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link href={`/dashboard/users/edit/${user._id}`}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        {(user.role === "reseller" ||
+                          user.role === "retail") && (
+                          <DropdownMenuItem asChild className="cursor-pointer">
+                            <Link href={`/dashboard/users/profile/${user._id}`}>
+                              <User className="mr-2 h-4 w-4" /> Update Profile
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem className="p-0">
+                          <DeleteButton
+                            id={user._id}
+                            onFetch={fetchUsers}
+                            resource="users"
+                          />
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
