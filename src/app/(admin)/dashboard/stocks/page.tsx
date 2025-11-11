@@ -95,7 +95,7 @@ export default function StockManagementPage() {
                     SKU must match exactly with products in database
                     (case-sensitive)
                   </li>
-                  <li>Stock must be a valid number (0 or positive)</li>
+                  <li>Stock must be a valid positive number</li>
                   <li>File must be in CSV format (.csv extension)</li>
                   <li>Maximum file size: 5MB</li>
                   <li>UTF-8 encoding recommended</li>

@@ -32,13 +32,11 @@ import { showErrorAlert } from "@/lib/helpers/sweetalert2";
 
 interface StockLog {
   _id: string;
-  productId: {
-    _id: string;
-    name: string;
+  product: {
+    productName: string;
     slug: string;
   };
-  variantId: {
-    _id: string;
+  variantProduct: {
     name: string;
     sku: string;
   };
@@ -212,14 +210,14 @@ export default function StockLogsTable() {
                         <TableCell>
                           <div className="max-w-[200px]">
                             <p className="font-medium truncate">
-                              {log.productId?.name || "N/A"}
+                              {log.product?.productName || "N/A"}
                             </p>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="max-w-[150px]">
                             <p className="text-sm truncate">
-                              {log.variantId?.name || "N/A"}
+                              {log.variantProduct?.name || "N/A"}
                             </p>
                           </div>
                         </TableCell>

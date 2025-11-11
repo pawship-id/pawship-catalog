@@ -65,8 +65,8 @@ export async function GET(req: NextRequest) {
 
     // Get logs with pagination
     const logs = await BackInStockLog.find(filter)
-      .populate("productId", "name slug") // Populate product name
-      .populate("variantId", "name sku") // Populate variant name
+      .populate("product", "productName slug") // Populate product name
+      .populate("variantProduct", "name sku") // Populate variant name
       .sort({ updatedAt: -1 }) // Sort by newest first
       .skip(skip)
       .limit(limit);

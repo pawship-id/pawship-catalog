@@ -70,6 +70,23 @@ BackInStockLogSchema.index({ productId: 1, updatedAt: -1 });
 // Compound index untuk query kombinasi (variant + tanggal)
 BackInStockLogSchema.index({ variantId: 1, updatedAt: -1 });
 
+BackInStockLogSchema.virtual("product", {
+  ref: "Product",
+  localField: "productId",
+  foreignField: "_id",
+  justOne: true,
+});
+
+BackInStockLogSchema.virtual("variantProduct", {
+  ref: "ProductVariant",
+  localField: "variantId",
+  foreignField: "_id",
+  justOne: true,
+});
+
+BackInStockLogSchema.set("toObject", { virtuals: true });
+BackInStockLogSchema.set("toJSON", { virtuals: true });
+
 /**
  * Export model
  * Gunakan singleton pattern untuk menghindari re-compile saat hot reload

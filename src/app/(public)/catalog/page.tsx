@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { ProductData } from "@/lib/types/product";
 import { useSearchParams } from "next/navigation";
 import MainContent from "@/components/catalog/main-content";
@@ -16,7 +16,7 @@ interface CatalogData {
   };
 }
 
-export default function CatalogProductPage() {
+function CatalogContent() {
   const [catalogData, setCatalogData] = useState<CatalogData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,5 +125,13 @@ export default function CatalogProductPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function CatalogProductPage() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <CatalogContent />
+    </Suspense>
   );
 }
