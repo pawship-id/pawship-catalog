@@ -8,9 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, MoreVertical, User, Search, KeyRound } from "lucide-react";
+import { Edit, MoreVertical, User, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { getAll } from "@/lib/apiService";
 import { UserData } from "@/lib/types/user";
 import {
@@ -25,12 +24,15 @@ import LoadingTable from "@/components/admin/loading-table";
 import ErrorTable from "@/components/admin/error-table";
 import ChangePasswordModal from "./change-password-modal";
 
-export default function TableUser() {
+interface TableUserProps {
+  searchQuery: string;
+}
+
+export default function TableUser({ searchQuery }: TableUserProps) {
   const [users, setUsers] = useState<UserData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [changePasswordModal, setChangePasswordModal] = useState<{
     isOpen: boolean;
     userId: string;
@@ -105,29 +107,6 @@ export default function TableUser() {
 
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 border-1 border-border focus:border-primary"
-          />
-        </div>
-        {searchQuery && (
-          <Button
-            variant="ghost"
-            onClick={() => setSearchQuery("")}
-            className="cursor-pointer"
-          >
-            Clear
-          </Button>
-        )}
-      </div>
-
       {/* Results Counter */}
       {searchQuery && (
         <div className="text-sm text-muted-foreground">

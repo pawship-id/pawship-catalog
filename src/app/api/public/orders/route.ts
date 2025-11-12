@@ -4,23 +4,40 @@ import dbConnect from "@/lib/mongodb";
 import { IOrderDetail, OrderForm } from "@/lib/types/order";
 import { NextRequest, NextResponse } from "next/server";
 import { generateInvoiceNumber } from "@/lib/helpers/invoice";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
   try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized. Please log in." },
+        { status: 401 }
+      );
+    }
+
     const body: OrderForm = await req.json();
+
+    // Add userId from session
+    const orderData = {
+      ...body,
+      userId: session.user.id,
+    };
 
     // Generate unique invoice number based on shipping address country
     const invoiceNumber = await generateInvoiceNumber(
       body.shippingAddress.country
     );
-    body.invoiceNumber = invoiceNumber;
+    orderData.invoiceNumber = invoiceNumber;
 
-    body.orderDetails.forEach((el: IOrderDetail) => {
+    orderData.orderDetails.forEach((el: IOrderDetail) => {
       delete el.stock;
     });
 
-    const order = await Order.create(body);
+    const order = await Order.create(orderData);
 
     for (const detail of order.orderDetails) {
       const variantProduct = await ProductVariant.findById(detail.variantId);

@@ -24,6 +24,7 @@ import {
   MapPin,
   LogOut,
   Home,
+  ReceiptText,
 } from "lucide-react";
 import SearchBar from "@/components/search-bar";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -330,6 +331,15 @@ export default function NavigationHeader() {
                       </Link>
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      href="/my-orders"
+                      className="flex items-center space-x-2"
+                    >
+                      <ReceiptText className="h-4 w-4" />
+                      <span>My Orders</span>
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link
                       href="/address"

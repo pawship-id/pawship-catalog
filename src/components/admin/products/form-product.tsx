@@ -815,8 +815,8 @@ export default function FormProduct({
                 {loading
                   ? "Loading..."
                   : isEditMode
-                    ? "Update Category"
-                    : "Create Category"}
+                    ? "Update Product"
+                    : "Create Product"}
               </Button>
             )}
           </div>
