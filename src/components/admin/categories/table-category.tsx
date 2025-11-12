@@ -8,9 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, MoreVertical, Search } from "lucide-react";
+import { Edit, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { getAll } from "@/lib/apiService";
 import { CategoryData } from "@/lib/types/category";
 import {
@@ -24,14 +23,17 @@ import LoadingTable from "@/components/admin/loading-table";
 import ErrorTable from "@/components/admin/error-table";
 import Link from "next/link";
 
-export default function TableCategory() {
+interface TableCategoryProps {
+  searchQuery: string;
+}
+
+export default function TableCategory({ searchQuery }: TableCategoryProps) {
   const [categories, setCategories] = useState<CategoryData[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<CategoryData[]>(
     []
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchCategories = async () => {
     try {
@@ -42,6 +44,7 @@ export default function TableCategory() {
 
       if (response.data) {
         setCategories(response.data);
+        setFilteredCategories(response.data);
       }
     } catch (err: any) {
       setError(err.message);
@@ -61,8 +64,9 @@ export default function TableCategory() {
       return;
     }
 
+    const query = searchQuery.toLowerCase();
     const filtered = categories.filter((category) =>
-      category.name.toLowerCase().includes(searchQuery.toLowerCase())
+      category.name.toLowerCase().includes(query)
     );
     setFilteredCategories(filtered);
   }, [searchQuery, categories]);
@@ -77,29 +81,6 @@ export default function TableCategory() {
 
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search by category name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 border-1 border-border focus:border-primary"
-          />
-        </div>
-        {searchQuery && (
-          <Button
-            variant="ghost"
-            onClick={() => setSearchQuery("")}
-            className="cursor-pointer"
-          >
-            Clear
-          </Button>
-        )}
-      </div>
-
       {/* Results Counter */}
       {searchQuery && (
         <div className="text-sm text-muted-foreground">
