@@ -22,6 +22,7 @@ import { getAll } from "@/lib/apiService";
 import { ProductData } from "@/lib/types/product";
 import LoadingTable from "@/components/admin/loading-table";
 import ErrorTable from "@/components/admin/error-table";
+import DeleteButton from "@/components/admin/delete-button";
 
 interface TableProductProps {
   searchQuery: string;
@@ -187,11 +188,11 @@ export default function TableProduct({
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem className="p-0">
-                          {/* <DeleteButton
-                      id={item._id}
-                      onFetch={fetchCategories}
-                      resource="categories"
-                    /> */}
+                          <DeleteButton
+                            id={item._id}
+                            onFetch={fetchProducts}
+                            resource="products"
+                          />
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
