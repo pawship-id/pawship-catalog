@@ -36,10 +36,11 @@ import { ApiResponse } from "@/lib/types/api";
 import { useRouter } from "next/navigation";
 import TagInput from "./input-tag";
 import { TagForm } from "@/lib/types/tag";
+import Link from "next/link";
 
 interface ProductFormProps {
-  initialData?: any;
-  productId?: string;
+  initialData?: ProductData;
+  mode?: "create" | "edit";
 }
 
 const getVariantRows = (): VariantRowForm[] => {
@@ -68,11 +69,11 @@ const initialFormState: ProductForm = {
 
 export default function FormProduct({
   initialData,
-  productId,
+  mode = "create",
 }: ProductFormProps) {
   const [formData, setFormData] = useState<ProductForm>(initialFormState);
   const [loading, setLoading] = useState(false);
-  const isEditMode = !!productId;
+  const isEditMode = mode === "edit";
   const router = useRouter();
 
   const [inputTagValue, setInputTagValue] = useState<
@@ -83,6 +84,12 @@ export default function FormProduct({
     null
   );
   const [showSizeProductModal, setShowSizeProductModal] = useState(false);
+
+  // State untuk existing media dari database (untuk edit mode)
+  const [existingProductMedia, setExistingProductMedia] = useState<
+    { imageUrl: string; imagePublicId: string }[]
+  >([]);
+  const [deleteMediaIds, setDeleteMediaIds] = useState<string[]>([]);
 
   const [variantRows, setVariantRows] =
     useState<VariantRowForm[]>(getVariantRows());
@@ -126,6 +133,7 @@ export default function FormProduct({
       setActiveTab(tabMenu[currentTabIndex + 1].value);
     }
   };
+  console.log(formData);
 
   // function to move to the previous tab
   const handlePrevTab = () => {
@@ -215,6 +223,11 @@ export default function FormProduct({
         JSON.stringify(formData.marketingLinks)
       );
 
+      // add delete media IDs for edit mode
+      if (isEditMode && deleteMediaIds.length > 0) {
+        formDataToSend.append("deleteMediaIds", JSON.stringify(deleteMediaIds));
+      }
+
       let response: ApiResponse<ProductData>;
 
       if (!isEditMode) {
@@ -225,7 +238,7 @@ export default function FormProduct({
       } else {
         response = await updateData<ProductData, FormData>(
           "/api/admin/products",
-          productId,
+          initialData?._id as string,
           formDataToSend
         );
       }
@@ -249,6 +262,65 @@ export default function FormProduct({
   useEffect(() => {
     localStorage.setItem("variantRows", JSON.stringify(variantRows));
   }, [variantRows]);
+
+  // Populate form with initialData when in edit mode
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      setFormData({
+        productName: initialData.productName || "",
+        categoryId: initialData.categoryId || "",
+        moq: initialData.moq || 1,
+        productDescription: initialData.productDescription || "",
+        sizeProduct: null, // Will be shown as preview
+        productMedia: [], // Will be shown as previews from existingProductMedia
+        tags: (initialData.tags || []).map((tag: any) => ({
+          isNew: false,
+          tagName: tag.tagName || tag,
+          _id: tag._id,
+        })),
+        exclusive: initialData.exclusive || {
+          enabled: false,
+          country: [],
+        },
+        preOrder: initialData.preOrder || { enabled: false, leadTime: "" },
+        variantTypes: initialData.variantTypes || [],
+        variantRows: initialData.productVariantsData || [],
+        marketingLinks: initialData.marketingLinks || [],
+      });
+
+      // Set variant types and rows from initial data
+      if (initialData.variantTypes) {
+        setVariantTypes(initialData.variantTypes);
+      }
+      if (initialData.productVariantsData) {
+        setVariantRows(initialData.productVariantsData);
+      }
+
+      // Set tags
+      if (initialData.tags) {
+        setInputTagValue(
+          initialData.tags.map((tag: any) => ({
+            isNew: false,
+            tagName: tag.tagName || tag,
+          }))
+        );
+      }
+
+      // Set size product preview
+      if (
+        initialData.sizeProduct &&
+        typeof initialData.sizeProduct === "object" &&
+        "imageUrl" in initialData.sizeProduct
+      ) {
+        setPreviewSizeProduct(initialData.sizeProduct.imageUrl as string);
+      }
+
+      // Set existing product media
+      if (initialData.productMedia && initialData.productMedia.length > 0) {
+        setExistingProductMedia(initialData.productMedia);
+      }
+    }
+  }, [isEditMode, initialData, categoryList]);
 
   return (
     <>
@@ -403,19 +475,11 @@ export default function FormProduct({
                   } else {
                     setFormData((prev) => ({
                       ...prev,
-                      sizeProduct:
-                        isEditMode && initialData?.imageUrl
-                          ? initialData.imageUrl
-                          : null,
+                      sizeProduct: null,
                     }));
                   }
 
-                  setPreviewSizeProduct(
-                    url ||
-                      (isEditMode && initialData?.imageUrl
-                        ? initialData.imageUrl
-                        : null)
-                  );
+                  setPreviewSizeProduct(url);
                 }}
               />
 
@@ -505,6 +569,7 @@ export default function FormProduct({
                   </p>
                 </div>
               </div>
+              {/* Display new product media yang baru di-upload */}
               {formData.productMedia && formData.productMedia.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {formData.productMedia?.map((image, index) => (
@@ -526,6 +591,48 @@ export default function FormProduct({
                       </button>
                     </Badge>
                   ))}
+                </div>
+              )}
+
+              {/* Display existing product media dari database */}
+              {isEditMode && existingProductMedia.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Existing Product Media ({existingProductMedia.length})
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {existingProductMedia.map((media, index) => (
+                      <div
+                        key={media.imagePublicId}
+                        className="relative group w-20 h-20 md:w-24 md:h-24 rounded-lg border border-gray-200 overflow-hidden"
+                      >
+                        <img
+                          src={media.imageUrl}
+                          alt={`Product media ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Add to delete list
+                            setDeleteMediaIds((prev) => [
+                              ...prev,
+                              media.imagePublicId,
+                            ]);
+                            // Remove from display
+                            setExistingProductMedia((prev) =>
+                              prev.filter(
+                                (m) => m.imagePublicId !== media.imagePublicId
+                              )
+                            );
+                          }}
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -779,7 +886,7 @@ export default function FormProduct({
 
         <div className="flex justify-between pt-4">
           {/* prev button*/}
-          {currentTabIndex > 0 && (
+          {currentTabIndex > 0 ? (
             <Button
               type="button"
               variant="outline"
@@ -788,6 +895,10 @@ export default function FormProduct({
             >
               <ChevronsLeft />
               Prev
+            </Button>
+          ) : (
+            <Button asChild variant="outline" className="w-30 cursor-pointer">
+              <Link href="/dashboard/products">Cancel</Link>
             </Button>
           )}
 
