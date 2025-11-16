@@ -56,6 +56,8 @@ export default function FormResellerCategory({
     isActive: true,
   });
 
+  const currencyList = ["IDR", "USD", "SGD", "HKD"];
+
   const [loading, setLoading] = useState(false);
   const isEditMode = !!resellerCategoryId;
   const router = useRouter();
@@ -88,6 +90,23 @@ export default function FormResellerCategory({
     setLoading(true);
 
     try {
+      // Validasi: Setiap tier harus memiliki minimal 1 kategori yang dipilih
+      const tierWithoutCategory = formData.tierDiscount.find(
+        (tier) =>
+          !tier.categoryProduct ||
+          (Array.isArray(tier.categoryProduct) &&
+            tier.categoryProduct.length === 0)
+      );
+
+      if (tierWithoutCategory) {
+        showErrorAlert(
+          "Validation Error",
+          `${tierWithoutCategory.name} must have at least 1 category selected`
+        );
+        setLoading(false);
+        return;
+      }
+
       let response: ApiResponse<ResellerCategoryData>;
 
       if (!isEditMode) {
@@ -200,7 +219,7 @@ export default function FormResellerCategory({
         isActive: initialData.isActive ?? true,
       });
     }
-  }, [initialData]);
+  }, [initialData, categories]);
 
   return (
     <form
@@ -256,9 +275,9 @@ export default function FormResellerCategory({
               <SelectValue placeholder="Select currency" />
             </SelectTrigger>
             <SelectContent>
-              {["IDR", "USD", "SGD", "HKD"].map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
+              {currencyList.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}
                 </SelectItem>
               ))}
             </SelectContent>
