@@ -7,10 +7,17 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import {
   Search,
   ShoppingCart,
@@ -204,25 +211,22 @@ export default function NavigationHeader() {
                       {item.subItems.map((subItem, idx) => (
                         <Fragment key={idx}>
                           {subItem.subItems ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger className="flex items-center justify-between w-full px-2 py-1.5 text-sm hover:bg-accent rounded-sm">
-                                <span>{subItem.name}</span>
-                                <ChevronDown className="h-4 w-4" />
-                              </DropdownMenuTrigger>
-
-                              <DropdownMenuContent
-                                className="w-full"
-                                side="right"
-                              >
-                                {subItem.subItems.map((subItem, idx) => (
-                                  <DropdownMenuItem asChild key={idx}>
-                                    <Link href={subItem.href}>
-                                      {subItem.name}
-                                    </Link>
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                {subItem.name}
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                  {subItem.subItems.map((subItem, idx) => (
+                                    <DropdownMenuItem asChild key={idx}>
+                                      <Link href={subItem.href}>
+                                        {subItem.name}
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuPortal>
+                            </DropdownMenuSub>
                           ) : (
                             <DropdownMenuItem asChild key={idx}>
                               <Link href={subItem.href ?? "/"}>
