@@ -23,7 +23,7 @@ import {
   OrderData,
   OrderForm,
 } from "@/lib/types/order";
-import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
+import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
 import { useRouter } from "next/navigation";
 
 export default function CartPage() {
@@ -179,10 +179,14 @@ export default function CartPage() {
     localStorage.setItem("cartItem", JSON.stringify(filterCartItem));
   };
 
-  const totalAmount = formData.orderDetails.reduce(
-    (sum, item) => sum + item.subTotal,
-    0
-  );
+  const totalAmount = formData.orderDetails
+    .filter((el) => el.quantity <= el.stock || el.preOrder.enabled)
+    .reduce((sum, item) => sum + item.subTotal, 0);
+
+  const hasOutOfStock =
+    formData.orderDetails.filter(
+      (el) => el.quantity > el.stock && !el.preOrder.enabled
+    ).length !== 0;
 
   const handleCheckout = async () => {
     // Check if user is logged in
@@ -194,6 +198,14 @@ export default function CartPage() {
       if (result.isConfirmed) {
         router.push("/login");
       }
+      return;
+    }
+
+    if (hasOutOfStock) {
+      showErrorAlert(
+        undefined,
+        "there are items that are not available (out of stock)"
+      );
       return;
     }
 
@@ -415,11 +427,27 @@ export default function CartPage() {
                     <div key={item.variantId} className="py-4">
                       {/* Desktop Cart Item - Full size for >= 750px */}
                       <div className="hidden min-[750px]:flex items-start space-x-4">
-                        <img
-                          src={item.image?.imageUrl}
-                          alt={item.name}
-                          className="w-30 h-30 object-cover rounded-lg"
-                        />
+                        <div className="relative w-30 h-30">
+                          <img
+                            src={item.image?.imageUrl}
+                            alt={item.name}
+                            className={`w-30 h-30 object-cover rounded-lg ${
+                              item.quantity > item.stock &&
+                              !item.preOrder.enabled
+                                ? "opacity-50 grayscale"
+                                : ""
+                            }`}
+                          />
+
+                          {item.quantity > item.stock &&
+                            !item.preOrder.enabled && (
+                              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">
+                                  Out of Stock
+                                </span>
+                              </div>
+                            )}
+                        </div>
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-lg font-semibold text-gray-800 mb-1">
@@ -473,9 +501,20 @@ export default function CartPage() {
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
-                                <span className="px-4 py-2 font-medium">
-                                  {item.quantity}
-                                </span>
+                                <input
+                                  type="text"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const value =
+                                      parseInt(e.target.value) || item.moq;
+
+                                    if (value >= item.moq) {
+                                      updateQuantity(item.variantId, value);
+                                    }
+                                  }}
+                                  className="w-16 px-2 py-2 text-center font-medium border-0 focus:outline-none focus:ring-0"
+                                  min={item.moq}
+                                />
                                 <button
                                   onClick={() =>
                                     updateQuantity(
@@ -485,7 +524,7 @@ export default function CartPage() {
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity >= item.stock &&
+                                    item.quantity > item.stock &&
                                     !item.preOrder.enabled
                                   }
                                 >
@@ -514,11 +553,27 @@ export default function CartPage() {
 
                       {/* Compact Desktop Cart Item - For >= 490px && < 750px */}
                       <div className="hidden min-[490px]:max-[750px]:flex items-start space-x-3">
-                        <img
-                          src={item.image?.imageUrl}
-                          alt={item.name}
-                          className="w-25 h-25 object-cover rounded-lg"
-                        />
+                        <div className="relative w-25 h-25">
+                          <img
+                            src={item.image?.imageUrl}
+                            alt={item.name}
+                            className={`w-25 h-25 object-cover rounded-lg ${
+                              item.quantity > item.stock &&
+                              !item.preOrder.enabled
+                                ? "opacity-50 grayscale"
+                                : ""
+                            }`}
+                          />
+
+                          {item.quantity > item.stock &&
+                            !item.preOrder.enabled && (
+                              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">
+                                  Out of Stock
+                                </span>
+                              </div>
+                            )}
+                        </div>
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base font-semibold text-gray-800 mb-1">
@@ -572,9 +627,20 @@ export default function CartPage() {
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
-                                <span className="px-2 py-1 font-medium text-sm">
-                                  {item.quantity}
-                                </span>
+                                <input
+                                  type="text"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const value =
+                                      parseInt(e.target.value) || item.moq;
+
+                                    if (value >= item.moq) {
+                                      updateQuantity(item.variantId, value);
+                                    }
+                                  }}
+                                  className="w-14 px-2 py-1 text-center font-medium text-sm border-0 focus:outline-none focus:ring-0"
+                                  min={item.moq}
+                                />
                                 <button
                                   onClick={() =>
                                     updateQuantity(
@@ -584,7 +650,7 @@ export default function CartPage() {
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity >= item.stock &&
+                                    item.quantity > item.stock &&
                                     !item.preOrder.enabled
                                   }
                                 >
@@ -616,12 +682,26 @@ export default function CartPage() {
                       <div className="block min-[490px]:hidden">
                         <div className="flex gap-3">
                           {/* Product Image */}
-                          <div className="w-25 h-25 flex-shrink-0">
+                          <div className="relative w-25 h-25 flex-shrink-0">
                             <img
                               src={item.image?.imageUrl}
                               alt={item.name}
-                              className="w-full h-full object-cover rounded-lg"
+                              className={`w-25 h-25 object-cover rounded-lg ${
+                                item.quantity > item.stock &&
+                                !item.preOrder.enabled
+                                  ? "opacity-50 grayscale"
+                                  : ""
+                              }`}
                             />
+
+                            {item.quantity > item.stock &&
+                              !item.preOrder.enabled && (
+                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                  <span className="text-white text-sm font-bold">
+                                    Out of Stock
+                                  </span>
+                                </div>
+                              )}
                           </div>
 
                           {/* Product Info */}
@@ -691,9 +771,20 @@ export default function CartPage() {
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
-                                <span className="px-2 py-1.5 font-medium text-sm min-w-[32px] text-center">
-                                  {item.quantity}
-                                </span>
+                                <input
+                                  type="text"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const value =
+                                      parseInt(e.target.value) || item.moq;
+
+                                    if (value >= item.moq) {
+                                      updateQuantity(item.variantId, value);
+                                    }
+                                  }}
+                                  className="w-12 px-2 py-1.5 text-center font-medium text-sm border-0 focus:outline-none focus:ring-0"
+                                  min={item.moq}
+                                />
                                 <button
                                   onClick={() =>
                                     updateQuantity(
@@ -703,7 +794,7 @@ export default function CartPage() {
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity >= item.stock &&
+                                    item.quantity > item.stock &&
                                     !item.preOrder.enabled
                                   }
                                 >

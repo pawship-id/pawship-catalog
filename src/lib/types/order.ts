@@ -2,7 +2,8 @@ export interface IOrderDetail {
   productId: string;
   productName: string;
   quantity: number;
-  stock?: number;
+  stock: number;
+  preOrder: { enabled: boolean; leadTime: string };
   variantId: string;
   variantName: string;
   originalPrice: any; // Original price before any discount (for both B2B and B2C)
