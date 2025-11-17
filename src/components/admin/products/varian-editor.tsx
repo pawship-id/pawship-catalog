@@ -2,13 +2,21 @@
 
 import type * as React from "react";
 import { useMemo, useRef, useState } from "react";
-import { GripVertical, ImagePlus, X, Plus, ChevronDown } from "lucide-react";
+import {
+  GripVertical,
+  ImagePlus,
+  X,
+  Plus,
+  ChevronDown,
+  Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
 import { VariantRowForm, VariantType } from "@/lib/types/product";
 import ImageGalleryModal from "./image-gallery-modal";
+import VariantPriceModal from "./variant-price-modal";
 
 type VariantEditorProps = {
   value: VariantRowForm[];
@@ -43,6 +51,9 @@ export function VariantEditor({
   const [currentEditingRowId, setCurrentEditingRowId] = useState<string | null>(
     null
   );
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+  const [currentPriceEditingRow, setCurrentPriceEditingRow] =
+    useState<VariantRowForm | null>(null);
 
   const typeNames = useMemo(
     () => variantTypes.map((t) => t.name),
@@ -467,6 +478,17 @@ export function VariantEditor({
     }
   }
 
+  function handleOpenPriceModal(row: VariantRowForm) {
+    setCurrentPriceEditingRow(row);
+    setIsPriceModalOpen(true);
+  }
+
+  function handleSavePrices(prices: Record<string, number>) {
+    if (currentPriceEditingRow) {
+      updateRow(currentPriceEditingRow.codeRow, { price: prices });
+    }
+  }
+
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between">
@@ -650,13 +672,7 @@ export function VariantEditor({
                   ))}
                   <th className="w-56 px-2 text-left">Variation Name</th>
                   <th className="w-40 px-2 text-left">Stock</th>
-                  {value.length && currencyList.length
-                    ? currencyList.map((el, idx) => (
-                        <th key={idx} className="w-40 px-2 text-left">
-                          Price ({el.currency})
-                        </th>
-                      ))
-                    : ""}
+                  <th className="w-40 px-2 text-left">Price</th>
                 </tr>
               </thead>
               <tbody>
@@ -758,35 +774,24 @@ export function VariantEditor({
                         placeholder="0"
                       />
                     </td>
-                    {value.length > 0 &&
-                      currencyList.length &&
-                      currencyList.map((item, idx) => (
-                        <td key={idx} className="px-2">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            value={row.price?.[item.currency] ?? ""}
-                            onChange={(e) =>
-                              updateRow(row.codeRow, {
-                                price: {
-                                  ...row.price,
-                                  [item.currency]: e.target.value
-                                    ? Number(e.target.value)
-                                    : "",
-                                },
-                              })
-                            }
-                            placeholder="0"
-                            className="h-8 text-xs border-gray-300"
-                          />
-                        </td>
-                      ))}
+                    <td className="px-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenPriceModal(row)}
+                        className="cursor-pointer w-full"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Set Prices
+                      </Button>
+                    </td>
                   </tr>
                 ))}
                 {value.length === 0 && (
                   <tr>
                     <td
-                      colSpan={10 + typeNames.length}
+                      colSpan={7 + typeNames.length}
                       className="px-4 py-8 text-center text-muted-foreground"
                     >
                       There are no variations yet.
@@ -809,6 +814,21 @@ export function VariantEditor({
         onSelectImage={handleSelectImageFromGallery}
         onUploadNew={handleUploadNewImage}
       />
+
+      {/* Price Setting Modal */}
+      {currentPriceEditingRow && (
+        <VariantPriceModal
+          isOpen={isPriceModalOpen}
+          onClose={() => {
+            setIsPriceModalOpen(false);
+            setCurrentPriceEditingRow(null);
+          }}
+          variantName={currentPriceEditingRow.name || "Variant"}
+          currentPrices={currentPriceEditingRow.price || {}}
+          currencies={currencyList}
+          onSave={handleSavePrices}
+        />
+      )}
     </div>
   );
 }
