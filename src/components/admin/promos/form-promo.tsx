@@ -60,33 +60,46 @@ export default function FormPromo({
 
   const handleProductsSelected = async (selectedProducts: ProductData[]) => {
     // Convert selected products to PromoProduct format
-    const promoProducts: PromoProduct[] = selectedProducts.map((product) => ({
-      productId: product._id,
-      productName: product.productName,
-      variants:
-        product.productVariantsData?.map((variant) => {
-          // Initialize prices and discounts for all currencies
-          const originalPrice: Record<string, number> = {};
-          const discountedPrice: Record<string, number> = {};
-          const discountPercentage: Record<string, number> = {};
+    const promoProducts: PromoProduct[] = selectedProducts.map((product) => {
+      const productImage = product.productMedia.find(
+        (el) => el.type === "image"
+      );
 
-          CURRENCIES.forEach((currency) => {
-            originalPrice[currency] = variant.price[currency] || 0;
-            discountedPrice[currency] = variant.price[currency] || 0;
-            discountPercentage[currency] = 0; // Initialize to 0% for each currency
-          });
+      return {
+        productId: product._id,
+        image: productImage
+          ? {
+              imageUrl: productImage.imageUrl,
+              imagePublicId: productImage.imagePublicId,
+            }
+          : undefined,
+        productName: product.productName,
+        variants:
+          product.productVariantsData?.map((variant) => {
+            // Initialize prices and discounts for all currencies
+            const originalPrice: Record<string, number> = {};
+            const discountedPrice: Record<string, number> = {};
+            const discountPercentage: Record<string, number> = {};
 
-          return {
-            variantId: variant._id,
-            variantName: variant.name,
-            originalPrice,
-            discountPercentage, // Now per currency
-            discountedPrice,
-            isActive: true,
-            image: variant.image,
-          };
-        }) || [],
-    }));
+            CURRENCIES.forEach((currency) => {
+              originalPrice[currency] = variant.price[currency] || 0;
+              discountedPrice[currency] = variant.price[currency] || 0;
+              discountPercentage[currency] = 0; // Initialize to 0% for each currency
+            });
+
+            return {
+              variantId: variant._id,
+              variantName: variant.name,
+              stock: variant.stock,
+              originalPrice,
+              discountPercentage, // Now per currency
+              discountedPrice,
+              isActive: variant.stock > 0,
+              image: variant.image,
+            };
+          }) || [],
+      };
+    });
 
     setFormData((prev) => ({
       ...prev,
@@ -118,24 +131,6 @@ export default function FormPromo({
             }
           : product
       ),
-    }));
-  };
-
-  const handleRemoveVariant = (productId: string, variantId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      products: prev.products
-        .map((product) =>
-          product.productId === productId
-            ? {
-                ...product,
-                variants: product.variants.filter(
-                  (v) => v.variantId !== variantId
-                ),
-              }
-            : product
-        )
-        .filter((product) => product.variants.length > 0), // Remove products with no variants
     }));
   };
 
@@ -201,143 +196,149 @@ export default function FormPromo({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Information */}
-      <div className="bg-white rounded-lg border p-6 space-y-4">
-        <h2 className="text-xl font-semibold">Basic Information</h2>
+      <div className="space-y-2">
+        <Label
+          htmlFor="promoName"
+          className="text-base font-medium text-gray-700"
+        >
+          Promotion Name <span className="text-red-500">*</span>
+        </Label>
+        <Input
+          id="promoName"
+          placeholder="Enter promotion name"
+          className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
+          value={formData.promoName}
+          onChange={(e) => handleBasicInfoChange("promoName", e.target.value)}
+          required
+          autoFocus
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label
-            htmlFor="promoName"
+            htmlFor="startDate"
             className="text-base font-medium text-gray-700"
           >
-            Promotion Name <span className="text-red-500">*</span>
+            Start Date <span className="text-red-500">*</span>
           </Label>
           <Input
-            id="promoName"
-            placeholder="Enter promotion name"
+            id="startDate"
+            type="date"
             className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
-            value={formData.promoName}
-            onChange={(e) => handleBasicInfoChange("promoName", e.target.value)}
+            value={formData.startDate}
+            onChange={(e) => handleBasicInfoChange("startDate", e.target.value)}
             required
-            autoFocus
           />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label
-              htmlFor="startDate"
-              className="text-base font-medium text-gray-700"
-            >
-              Start Date <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="startDate"
-              type="date"
-              className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
-              value={formData.startDate}
-              onChange={(e) =>
-                handleBasicInfoChange("startDate", e.target.value)
-              }
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="endDate"
-              className="text-base font-medium text-gray-700"
-            >
-              End Date <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="endDate"
-              type="date"
-              className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
-              value={formData.endDate}
-              onChange={(e) => handleBasicInfoChange("endDate", e.target.value)}
-              required
-            />
-          </div>
+        <div className="space-y-2">
+          <Label
+            htmlFor="endDate"
+            className="text-base font-medium text-gray-700"
+          >
+            End Date <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="endDate"
+            type="date"
+            className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
+            value={formData.endDate}
+            onChange={(e) => handleBasicInfoChange("endDate", e.target.value)}
+            required
+          />
         </div>
       </div>
 
-      {/* Products in Promotion */}
-      <div className="bg-white rounded-lg border p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Products in Promotion</h2>
-          <Button
-            type="button"
-            onClick={() => setShowProductModal(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Product
-          </Button>
-        </div>
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="isActive"
+          checked={formData.isActive}
+          onCheckedChange={(checked) =>
+            handleBasicInfoChange("isActive", checked)
+          }
+          className="data-[state=unchecked]:bg-gray-200"
+        />
+        <Label htmlFor="isActive">Active Promo</Label>
+      </div>
 
-        {formData.products.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed rounded-lg">
-            <p className="text-gray-500">
-              There are no products yet. Click "Add Product" to add one.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {formData.products.map((product) => (
-              <div
-                key={product.productId}
-                className="border rounded-lg p-4 space-y-4"
-              >
-                {/* Product Header */}
-                <div className="flex items-center justify-between border-b pb-3">
+      {/* Products in Promotion */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium text-gray-700">
+          Products in Promotion
+        </h2>
+        <Button
+          type="button"
+          onClick={() => setShowProductModal(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Add Product
+        </Button>
+      </div>
+
+      {formData.products.length === 0 ? (
+        <div className="text-center py-12 border-2 border-dashed rounded-lg">
+          <p className="text-gray-500">
+            There are no products yet. Click "Add Product" to add one.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4 border rounded-lg p-2">
+          {formData.products.map((product) => (
+            <div key={product.productId} className="p-4 space-y-4">
+              {/* Product Header */}
+              <div className="flex items-center justify-between border-b pb-3">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={product.image?.imageUrl || "/placeholder.png"}
+                    alt={product.productName}
+                    className="w-20 h-20 object-cover rounded border"
+                  />
+
                   <div>
-                    <h3 className="font-semibold text-lg">
+                    <h3 className="font-semibold text-base">
                       {product.productName}
                     </h3>
                     <p className="text-sm text-gray-500">
                       {product.variants.length} variant(s)
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveProduct(product.productId)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
-
-                {/* Variants */}
-                <div className="space-y-3">
-                  {product.variants.map((variant) => (
-                    <VariantDiscountItem
-                      key={variant.variantId}
-                      variant={variant}
-                      currencies={CURRENCIES}
-                      onUpdate={(updatedVariant) =>
-                        handleVariantUpdate(
-                          product.productId,
-                          variant.variantId,
-                          updatedVariant
-                        )
-                      }
-                      onRemove={() =>
-                        handleRemoveVariant(
-                          product.productId,
-                          variant.variantId
-                        )
-                      }
-                    />
-                  ))}
-                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveProduct(product.productId)}
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+
+              {/* Variants */}
+              <div className="space-y-3">
+                {product.variants.map((variant) => (
+                  <VariantDiscountItem
+                    key={variant.variantId}
+                    variant={variant}
+                    currencies={CURRENCIES}
+                    onUpdate={(updatedVariant) =>
+                      handleVariantUpdate(
+                        product.productId,
+                        variant.variantId,
+                        updatedVariant
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Submit Buttons */}
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 mt-6">
         <Button
           type="button"
           variant="outline"

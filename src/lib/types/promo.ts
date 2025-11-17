@@ -1,6 +1,7 @@
 export interface PromoVariant {
   variantId: string;
   variantName: string;
+  stock: number;
   originalPrice: Record<string, number>;
   discountPercentage: Record<string, number>; // Per currency
   discountedPrice: Record<string, number>;
@@ -13,6 +14,10 @@ export interface PromoVariant {
 
 export interface PromoProduct {
   productId: string;
+  image?: {
+    imageUrl: string;
+    imagePublicId: string;
+  };
   productName: string;
   variants: PromoVariant[];
 }

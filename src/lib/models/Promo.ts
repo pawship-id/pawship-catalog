@@ -17,6 +17,10 @@ export interface IPromoVariant {
 export interface IPromoProduct {
   productId: Types.ObjectId;
   productName: string;
+  image?: {
+    imageUrl: string;
+    imagePublicId: string;
+  };
   variants: IPromoVariant[];
 }
 
@@ -95,6 +99,13 @@ const PromoProductSchema = new Schema(
     productName: {
       type: String,
       required: true,
+    },
+    image: {
+      _id: false,
+      type: {
+        imageUrl: String,
+        imagePublicId: String,
+      },
     },
     variants: [PromoVariantSchema],
   },

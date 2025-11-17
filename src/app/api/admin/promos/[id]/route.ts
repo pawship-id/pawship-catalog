@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectToDatabase from "@/lib/mongodb";
 import Promo from "@/lib/models/Promo";
+import dbConnect from "@/lib/mongodb";
+
+interface Context {
+  params: Promise<{ id: string }>;
+}
 
 // GET - Fetch single promo by ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: Context) {
   try {
-    await connectToDatabase();
+    await dbConnect();
 
-    const promo = await Promo.findById(params.id);
+    const { id } = await params;
+
+    const promo = await Promo.findById(id);
 
     if (!promo || promo.deleted) {
       return NextResponse.json(
@@ -40,12 +43,11 @@ export async function GET(
 }
 
 // PUT - Update promo
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: Context) {
   try {
-    await connectToDatabase();
+    await dbConnect();
+
+    const { id } = await params;
 
     const body = await request.json();
     const { promoName, startDate, endDate, products, isActive } = body;
@@ -67,7 +69,7 @@ export async function PUT(
     }
 
     const promo = await Promo.findByIdAndUpdate(
-      params.id,
+      id,
       {
         promoName,
         startDate: startDate ? new Date(startDate) : undefined,
@@ -106,32 +108,36 @@ export async function PUT(
 }
 
 // DELETE - Soft delete promo
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, { params }: Context) {
   try {
-    await connectToDatabase();
+    await dbConnect();
 
-    const promo = await Promo.findById(params.id);
+    const { id } = await params;
 
-    if (!promo || promo.deleted) {
+    const deletedPromo = await Promo.findByIdAndUpdate(
+      id,
+      {
+        deleted: true,
+        deletedAt: new Date(),
+      },
+      { new: true }
+    );
+
+    if (deletedPromo.deletedCount === 0) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Promo not found",
-        },
+        { success: false, message: "Promo not found" },
         { status: 404 }
       );
     }
 
-    // Soft delete using mongoose-delete plugin
-    await promo.delete();
-
-    return NextResponse.json({
-      success: true,
-      message: "Promo deleted successfully",
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: deletedPromo,
+        message: `Promo successfully deleted`,
+      },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("Error deleting promo:", error);
     return NextResponse.json(

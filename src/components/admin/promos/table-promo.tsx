@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Eye, MoreVertical, Trash2 } from "lucide-react";
 import { PromoData } from "@/lib/types/promo";
 import { getAll, deleteById } from "@/lib/apiService";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,14 @@ import {
 } from "@/components/ui/table";
 import LoadingTable from "@/components/admin/loading-table";
 import ErrorTable from "@/components/admin/error-table";
+import DeleteButton from "../delete-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 interface TablePromoProps {
   searchQuery: string;
@@ -169,8 +177,8 @@ export default function TablePromo({ searchQuery }: TablePromoProps) {
                   <TableCell>{formatDate(promo.endDate)}</TableCell>
                   <TableCell>{promo.products.length} product(s)</TableCell>
                   <TableCell>{getPromoStatus(promo)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <TableCell>
+                    {/* <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -190,7 +198,37 @@ export default function TablePromo({ searchQuery }: TablePromoProps) {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </div>
+                    </div> */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link href={`/dashboard/promos/${promo._id}/detail`}>
+                            <Eye className="mr-2 h-4 w-4" /> Detail
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link href={`/dashboard/promos/${promo._id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="p-0">
+                          <DeleteButton
+                            id={promo._id}
+                            onFetch={fetchPromos}
+                            resource="promos"
+                          />
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))
