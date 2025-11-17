@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: Context) {
 
     const promo = await Promo.findById(id);
 
-    if (!promo || promo.deleted) {
+    if (!promo) {
       return NextResponse.json(
         {
           success: false,

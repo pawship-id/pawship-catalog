@@ -15,7 +15,6 @@ import {
 import ErrorPage from "@/components/admin/error-page";
 import LoadingPage from "@/components/admin/loading-page";
 import ShowVariantDiscountItem from "./show-variant-discount-item";
-import { Separator } from "@/components/ui/separator";
 
 interface DetailPromoProps {
   promoId: string;
@@ -85,7 +84,7 @@ export default function DetailPromo({ promoId }: DetailPromoProps) {
         <Button
           variant="ghost"
           className="cursor-pointer"
-          onClick={() => router.back()}
+          onClick={() => router.push(`/dashboard/promos`)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Promotions

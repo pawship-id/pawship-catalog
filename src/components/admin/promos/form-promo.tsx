@@ -18,7 +18,7 @@ import VariantDiscountItem from "./variant-discount-item";
 import { createData, updateData } from "@/lib/apiService";
 
 interface FormPromoProps {
-  initialData?: PromoData;
+  initialData?: any;
   isEdit?: boolean;
 }
 

@@ -30,7 +30,6 @@ interface TablePromoProps {
 }
 
 export default function TablePromo({ searchQuery }: TablePromoProps) {
-  const router = useRouter();
   const [promos, setPromos] = useState<PromoData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,21 +49,6 @@ export default function TablePromo({ searchQuery }: TablePromoProps) {
       console.error("Error fetching promos:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string, promoName: string) => {
-    if (!confirm(`Are you sure you want to delete promo "${promoName}"?`)) {
-      return;
-    }
-
-    try {
-      await deleteById("/api/admin/promos", id);
-      alert("Promo deleted successfully!");
-      fetchPromos();
-    } catch (error: any) {
-      console.error("Error deleting promo:", error);
-      alert(error.message || "Failed to delete promo");
     }
   };
 
@@ -178,27 +162,6 @@ export default function TablePromo({ searchQuery }: TablePromoProps) {
                   <TableCell>{promo.products.length} product(s)</TableCell>
                   <TableCell>{getPromoStatus(promo)}</TableCell>
                   <TableCell>
-                    {/* <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          router.push(`/dashboard/promos/${promo._id}/edit`)
-                        }
-                        title="Edit"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(promo._id, promo.promoName)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div> */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
