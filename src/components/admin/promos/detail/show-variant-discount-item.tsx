@@ -2,8 +2,9 @@
 import React, { useState } from "react";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PromoVariant } from "@/lib/types/promo";
+import { PromoData, PromoVariant } from "@/lib/types/promo";
 import ShowVariantPriceModal from "./show-variant-price-modal";
+import { Badge } from "@/components/ui/badge";
 
 interface ShowVariantDiscountItemProps {
   variant: PromoVariant;
@@ -30,9 +31,17 @@ export default function ShowVariantDiscountItem({
     }
   };
 
+  const getPromoStatus = (status: boolean) => {
+    if (!status) {
+      return { label: "Inactive", variant: "secondary" as const };
+    }
+
+    return { label: "Active", variant: "default" as const };
+  };
+
   return (
     <div>
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-4 mx-6">
         {/* Variant Image */}
         <img
           src={variant.image?.imageUrl || "/placeholder.png"}
@@ -51,6 +60,10 @@ export default function ShowVariantDiscountItem({
             </div>
 
             <div className="flex items-center gap-2">
+              <Badge variant={getPromoStatus(variant.isActive).variant}>
+                {getPromoStatus(variant.isActive).label}
+              </Badge>
+
               {/* Setting Price Button */}
               <Button
                 type="button"
@@ -68,7 +81,6 @@ export default function ShowVariantDiscountItem({
       </div>
 
       {/* Price Modal */}
-
       <ShowVariantPriceModal
         isOpen={showPriceModal}
         onClose={() => setShowPriceModal(false)}

@@ -6,19 +6,16 @@ import { PromoData } from "@/lib/types/promo";
 import { getById } from "@/lib/apiService";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import Image from "next/image";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import ErrorPage from "@/components/admin/error-page";
 import LoadingPage from "@/components/admin/loading-page";
 import ShowVariantDiscountItem from "./show-variant-discount-item";
+import { Separator } from "@/components/ui/separator";
 
 interface DetailPromoProps {
   promoId: string;
@@ -56,15 +53,6 @@ export default function DetailPromo({ promoId }: DetailPromoProps) {
       month: "long",
       day: "numeric",
     });
-  };
-
-  const formatCurrency = (amount: number, currency: string) => {
-    const formatter = new Intl.NumberFormat("en-US", {
-      style: "decimal",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    });
-    return `${currency} ${formatter.format(amount)}`;
   };
 
   const getPromoStatus = (promo: PromoData) => {
@@ -182,41 +170,53 @@ export default function DetailPromo({ promoId }: DetailPromoProps) {
                 <p className="text-gray-500">There are no products yet.</p>
               </div>
             ) : (
-              <div className="space-y-4 border rounded-lg p-2">
-                {promo.products.map((product) => (
-                  <div key={product.productId} className="p-4 space-y-4">
-                    {/* Product Header */}
-                    <div className="flex items-center justify-between border-b pb-3">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={product.image?.imageUrl || "/placeholder.png"}
-                          alt={product.productName}
-                          className="w-20 h-20 object-cover rounded border"
-                        />
+              <div className="space-y-4 border rounded-lg p-6 overflow-x-auto">
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="w-full"
+                  defaultValue={promo.products[0].productId}
+                >
+                  {promo.products.map((product) => (
+                    <AccordionItem
+                      value={product.productId}
+                      key={product.productId}
+                    >
+                      <AccordionTrigger className="flex items-center justify-between pb-3 no-underline hover:no-underline cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={product.image?.imageUrl || "/placeholder.png"}
+                            alt={product.productName}
+                            className="w-20 h-20 object-cover rounded border"
+                          />
 
-                        <div>
-                          <h3 className="font-semibold text-base">
-                            {product.productName}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {product.variants.length} variant(s)
-                          </p>
+                          <div>
+                            <h3 className="font-semibold text-base">
+                              {product.productName}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              {product.variants.length} variants (
+                              {
+                                product.variants.filter((el) => el.isActive)
+                                  .length
+                              }{" "}
+                              Active variants)
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Variants */}
-                    <div className="space-y-3">
-                      {product.variants.map((variant) => (
-                        <ShowVariantDiscountItem
-                          key={variant.variantId}
-                          variant={variant}
-                          currencies={CURRENCIES}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3 overflow-x-auto">
+                        {product.variants.map((variant) => (
+                          <ShowVariantDiscountItem
+                            key={variant.variantId}
+                            variant={variant}
+                            currencies={CURRENCIES}
+                          />
+                        ))}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               </div>
             )}
           </div>
