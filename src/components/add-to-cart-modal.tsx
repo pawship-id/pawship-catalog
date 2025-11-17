@@ -188,6 +188,7 @@ export default function AddToCartModal({
               <PricingDisplay
                 selectedVariant={selectedVariant}
                 moq={product.moq}
+                productId={product._id}
                 resellerPricing={product.resellerPricing}
               />
             )}

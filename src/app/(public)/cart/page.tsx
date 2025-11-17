@@ -15,6 +15,8 @@ import Link from "next/link";
 import { createData, getById } from "@/lib/apiService";
 import { ProductData } from "@/lib/types/product";
 import { useCurrency } from "@/context/CurrencyContext";
+import { usePromo } from "@/context/PromoContext";
+import { calculateFinalPrice } from "@/lib/helpers/promo-helper";
 import { useSession } from "next-auth/react";
 import LoadingPage from "@/components/loading";
 import {
@@ -30,6 +32,7 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const { data: session, status } = useSession();
+  const { activePromos, loading: promosLoading } = usePromo();
 
   const { currency, format } = useCurrency();
 
@@ -79,57 +82,22 @@ export default function CartPage() {
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
 
-    let findProduct = formData.orderDetails.find((el) => el.variantId === id);
-
-    if (!findProduct) {
-      return;
-    }
-
-    // update state setCartItemData
-    const updatedCartItemData = formData.orderDetails.map((item) => {
+    const updated = formData.orderDetails.map((item: any) => {
       if (item.variantId === id) {
-        // Recalculate discount for new quantity
-        const basePrice = item.originalPrice[currency];
-        let finalPrice = basePrice;
-        let discountInfo: {
-          discountPercentage: number;
-          tierName: string | null;
-        } = {
-          discountPercentage: 0,
-          tierName: null,
-        };
-
-        // B2B: Calculate reseller discount if applicable
-        if (session?.user.role === "reseller" && item.resellerPricing) {
-          discountInfo = calculateResellerDiscount(
-            newQuantity,
-            item.resellerPricing
-          );
-
-          if (discountInfo.discountPercentage > 0) {
-            const discountAmount =
-              (basePrice * discountInfo.discountPercentage) / 100;
-            finalPrice = Math.round(basePrice - discountAmount);
-          }
-        }
-        // B2C: Use existing discountedPrice if available (doesn't change with quantity)
-        else if (item.discountedPrice && item.discountedPrice[currency]) {
-          finalPrice = item.discountedPrice[currency];
-          // Calculate discount percentage
-          discountInfo.discountPercentage = Math.round(
-            ((basePrice - finalPrice) / basePrice) * 100
-          );
-        }
+        const result = getDiscountedPrice(
+          item.originalPrice[currency],
+          newQuantity,
+          item.productId,
+          item.variantId,
+          item.resellerPricing
+        );
 
         return {
           ...item,
           quantity: newQuantity,
-          discountPercentage: discountInfo.discountPercentage,
-          discountedPrice:
-            discountInfo.discountPercentage > 0
-              ? { [currency]: finalPrice }
-              : null,
-          subTotal: newQuantity * finalPrice,
+          discountPercentage: result.discountPercentage,
+          discountedPrice: result.discountedPrice,
+          subTotal: newQuantity * result.finalPrice,
         };
       }
       return item;
@@ -137,25 +105,19 @@ export default function CartPage() {
 
     setFormData((prev) => ({
       ...prev,
-      orderDetails: updatedCartItemData,
-      totalAmount: updatedCartItemData.reduce(
-        (sum: number, element: any) => sum + element.subTotal,
-        0
-      ),
+      orderDetails: updated,
+      totalAmount: updated.reduce((sum, el) => sum + el.subTotal, 0),
     }));
 
-    // update localStorage
-    let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
-
-    let updatedCartItem = cartItem.map((el: any) => {
-      if (el.variantId === id) {
-        el.quantity = newQuantity;
-      }
-
-      return el;
-    });
-
-    localStorage.setItem("cartItem", JSON.stringify(updatedCartItem));
+    const cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+    localStorage.setItem(
+      "cartItem",
+      JSON.stringify(
+        cartItem.map((c: any) =>
+          c.variantId === id ? { ...c, quantity: newQuantity } : c
+        )
+      )
+    );
   };
 
   const removeItem = (id: string) => {
@@ -277,107 +239,129 @@ export default function CartPage() {
     return { discountPercentage: 0, tierName: null };
   };
 
+  // Universal Discount Calculator (B2C & B2B)
+  const getDiscountedPrice = (
+    basePrice: number,
+    quantity: number,
+    productId: string,
+    variantId: string,
+    resellerPricing?: any
+  ) => {
+    let discountPercentage = 0;
+    let finalPrice = basePrice;
+
+    if (session?.user.role === "reseller" && resellerPricing) {
+      const tiers = resellerPricing.tiers || [];
+      const selectedTier = tiers
+        .filter((t: any) => quantity >= t.minimumQuantity)
+        .sort((a: any, b: any) => b.minimumQuantity - a.minimumQuantity)[0];
+
+      if (selectedTier) {
+        discountPercentage = selectedTier.discount;
+        finalPrice = Math.round(
+          basePrice - (basePrice * discountPercentage) / 100
+        );
+      }
+    } else {
+      const promoResult = calculateFinalPrice(
+        basePrice,
+        currency,
+        productId,
+        variantId,
+        activePromos,
+        false
+      );
+
+      if (promoResult.hasDiscount) {
+        discountPercentage = promoResult.discountPercentage;
+        finalPrice = promoResult.finalPrice;
+      }
+    }
+
+    return {
+      finalPrice,
+      discountPercentage,
+      discountedPrice:
+        discountPercentage > 0 ? { [currency]: finalPrice } : null,
+    };
+  };
+
   const fetchCartItem = async () => {
     setIsLoading(true);
     try {
-      let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+      const cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+
+      // Debug log to verify promos are loaded
+      console.log("Fetching cart with activePromos:", activePromos.length);
 
       const detailCartItem = await Promise.all(
         cartItem.map(async (el: any) => {
-          const { data: product } = await getById<ProductData>(
+          const { data } = await getById<ProductData>(
             "/api/public/products",
             el.productId
           );
 
-          let variant = product?.productVariantsData?.find(
-            (item) => item._id === el.variantId
+          const variant = data?.productVariantsData?.find(
+            (v) => v._id === el.variantId
           );
 
-          const basePrice = variant?.price[currency] || 0;
+          if (data && variant) {
+            const basePrice = variant.price[currency];
 
-          // Calculate discount (for both B2B reseller and B2C customer)
-          let discountInfo: {
-            discountPercentage: number;
-            tierName: string | null;
-          } = {
-            discountPercentage: 0,
-            tierName: null,
-          };
-          let finalPrice = basePrice;
-
-          // B2B: Calculate reseller discount if applicable
-          if (session?.user.role === "reseller" && product?.resellerPricing) {
-            discountInfo = calculateResellerDiscount(
+            const result = getDiscountedPrice(
+              basePrice,
               el.quantity,
-              product.resellerPricing
+              data._id,
+              variant._id,
+              data.resellerPricing
             );
 
-            if (discountInfo.discountPercentage > 0) {
-              const discountAmount =
-                (basePrice * discountInfo.discountPercentage) / 100;
-              finalPrice = Math.round(basePrice - discountAmount);
-            }
+            return {
+              productId: data._id,
+              productName: data.productName,
+              variantId: el.variantId,
+              variantName: variant.name,
+              originalPrice: variant.price,
+              discountedPrice: result.discountedPrice,
+              discountPercentage: result.discountPercentage,
+              quantity: el.quantity,
+              subTotal: el.quantity * result.finalPrice,
+              image:
+                variant.image ||
+                data.productMedia.find((m) => m.type === "image"),
+              stock: variant.stock,
+              preOrder: data.preOrder,
+              moq: data.moq,
+              resellerPricing: data.resellerPricing,
+            };
           }
-          // B2C: Use discountedPrice from variant if available
-          else if (
-            variant?.discountedPrice &&
-            variant.discountedPrice[currency]
-          ) {
-            finalPrice = variant.discountedPrice[currency];
-            // Calculate discount percentage
-            discountInfo.discountPercentage = Math.round(
-              ((basePrice - finalPrice) / basePrice) * 100
-            );
-          }
-
-          return {
-            productId: product?._id,
-            productName: product?.productName,
-            variantId: el.variantId,
-            variantName: variant?.name,
-            originalPrice: variant?.price, // Always set original price
-            discountedPrice:
-              discountInfo.discountPercentage > 0
-                ? { [currency]: finalPrice }
-                : null, // Only set if discount applied
-            quantity: el.quantity,
-            image:
-              variant?.image ||
-              product?.productMedia.find((el) => el.type === "image"),
-            stock: variant?.stock,
-            discountPercentage: discountInfo.discountPercentage,
-            subTotal: el.quantity * finalPrice,
-            preOrder: product?.preOrder,
-            moq: product?.moq,
-            resellerPricing: product?.resellerPricing,
-          };
         })
       );
 
       setFormData((prev) => ({
         ...prev,
         orderDetails: detailCartItem,
-        totalAmount: detailCartItem.reduce(
-          (sum: number, element: any) => sum + element.subTotal,
-          0
-        ),
-        currency,
+        totalAmount: detailCartItem.reduce((sum, el) => sum + el.subTotal, 0),
       }));
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    // Only fetch cart items when session status is not "loading"
-    if (status !== "loading") {
+    // Only fetch cart items when session is loaded AND promos are loaded
+    if (status !== "loading" && !promosLoading) {
       fetchCartItem();
+    } else {
+      // Keep loading state true while waiting for session or promos
+      setIsLoading(true);
     }
-  }, [currency, status]);
+  }, [currency, status, promosLoading, activePromos]);
 
-  if (isLoading) {
+  // Show loading while session or promos are loading
+  if (isLoading || promosLoading) {
     return <LoadingPage />;
   }
 
