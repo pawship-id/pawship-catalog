@@ -150,6 +150,55 @@ export default function CartPage() {
       (el) => el.quantity > el.stock && !el.preOrder.enabled
     ).length !== 0;
 
+  // Check MOQ per product for resellers
+  const getMOQWarnings = () => {
+    if (session?.user.role !== "reseller") return [];
+
+    const warnings: Array<{
+      productId: string;
+      productName: string;
+      moq: number;
+      currentQty: number;
+      needed: number;
+    }> = [];
+
+    // Group items by productId and sum quantities
+    const productQuantities = formData.orderDetails.reduce(
+      (acc, item) => {
+        if (!acc[item.productId]) {
+          acc[item.productId] = {
+            productName: item.productName,
+            moq: item.moq || 1,
+            totalQty: 0,
+          };
+        }
+        acc[item.productId].totalQty += item.quantity;
+        return acc;
+      },
+      {} as Record<
+        string,
+        { productName: string; moq: number; totalQty: number }
+      >
+    );
+
+    // Check each product against MOQ
+    Object.entries(productQuantities).forEach(([productId, data]) => {
+      if (data.moq > 1 && data.totalQty < data.moq) {
+        warnings.push({
+          productId,
+          productName: data.productName,
+          moq: data.moq,
+          currentQty: data.totalQty,
+          needed: data.moq - data.totalQty,
+        });
+      }
+    });
+
+    return warnings;
+  };
+
+  const moqWarnings = getMOQWarnings();
+
   const handleCheckout = async () => {
     // Check if user is logged in
     if (!session || status !== "authenticated") {
@@ -167,6 +216,15 @@ export default function CartPage() {
       showErrorAlert(
         undefined,
         "there are items that are not available (out of stock)"
+      );
+      return;
+    }
+
+    // Check MOQ for resellers
+    if (moqWarnings.length > 0) {
+      showErrorAlert(
+        "MOQ Requirements Not Met",
+        "Please add more items to meet the minimum order quantity requirements shown below."
       );
       return;
     }
@@ -396,6 +454,77 @@ export default function CartPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+            {/* MOQ Warnings for Resellers */}
+            {moqWarnings.length > 0 && (
+              <div className="max-w-full  mx-auto">
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl overflow-hidden">
+                  <div className="p-3 md:p-4 lg:p-5">
+                    <div className="space-x-3">
+                      <div className="flex gap-3">
+                        <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-white text-sm font-bold">
+                            !
+                          </span>
+                        </div>
+                        <h3 className="text-base md:text-lg font-semibold text-amber-900 mb-2">
+                          Minimum Order Quantity (MOQ) Not Met
+                        </h3>
+                      </div>
+
+                      <p className="text-sm text-amber-800 mb-4 md:mb-5">
+                        The following products require minimum order quantities.
+                        Please add more items to proceed with checkout.
+                      </p>
+
+                      {/* List Item */}
+                      <div className="space-y-3">
+                        {moqWarnings.map((warning) => (
+                          <div
+                            key={warning.productId}
+                            className="bg-white border border-amber-200 rounded-lg p-4"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0 pr-3">
+                                <h4 className="font-semibold text-gray-900 text-base mb-1 truncate">
+                                  {warning.productName}
+                                </h4>
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">
+                                    Current quantity in cart:
+                                  </span>{" "}
+                                  {warning.currentQty} pcs
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">
+                                    Minimum required (MOQ):
+                                  </span>{" "}
+                                  {warning.moq} pcs
+                                </div>
+                              </div>
+
+                              <div className="ml-2 flex-shrink-0">
+                                <div className="bg-amber-100 border border-amber-300 rounded-lg px-3 py-3 text-center">
+                                  <div className="text-xs text-amber-700 font-medium leading-none mb-1">
+                                    Add More
+                                  </div>
+                                  <div className="text-xl font-bold text-amber-900 leading-none">
+                                    +{warning.needed}
+                                  </div>
+                                  <div className="text-xs text-amber-700 leading-none mt-1">
+                                    pcs needed
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Cart Items Section */}
             <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-primary/30 overflow-hidden">
               <div className="p-4 md:p-6">
@@ -481,7 +610,7 @@ export default function CartPage() {
                                     )
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={item.quantity === item.moq}
+                                  disabled={item.quantity <= 1}
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
@@ -489,15 +618,16 @@ export default function CartPage() {
                                   type="text"
                                   value={item.quantity}
                                   onChange={(e) => {
-                                    const value =
-                                      parseInt(e.target.value) || item.moq;
+                                    const value = parseInt(e.target.value);
 
-                                    if (value >= item.moq) {
+                                    if (isNaN(value) || value <= 0) {
+                                      updateQuantity(item.variantId, 1);
+                                    } else {
                                       updateQuantity(item.variantId, value);
                                     }
                                   }}
                                   className="w-16 px-2 py-2 text-center font-medium border-0 focus:outline-none focus:ring-0"
-                                  min={item.moq}
+                                  min={1}
                                 />
                                 <button
                                   onClick={() =>
@@ -607,7 +737,7 @@ export default function CartPage() {
                                     )
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={item.quantity === item.moq}
+                                  disabled={item.quantity <= 1}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -615,15 +745,16 @@ export default function CartPage() {
                                   type="text"
                                   value={item.quantity}
                                   onChange={(e) => {
-                                    const value =
-                                      parseInt(e.target.value) || item.moq;
+                                    const value = parseInt(e.target.value);
 
-                                    if (value >= item.moq) {
+                                    if (isNaN(value) || value <= 0) {
+                                      updateQuantity(item.variantId, 1);
+                                    } else {
                                       updateQuantity(item.variantId, value);
                                     }
                                   }}
                                   className="w-14 px-2 py-1 text-center font-medium text-sm border-0 focus:outline-none focus:ring-0"
-                                  min={item.moq}
+                                  min={1}
                                 />
                                 <button
                                   onClick={() =>
@@ -751,7 +882,7 @@ export default function CartPage() {
                                     )
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={item.quantity === item.moq}
+                                  disabled={item.quantity <= 1}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -759,15 +890,16 @@ export default function CartPage() {
                                   type="text"
                                   value={item.quantity}
                                   onChange={(e) => {
-                                    const value =
-                                      parseInt(e.target.value) || item.moq;
+                                    const value = parseInt(e.target.value);
 
-                                    if (value >= item.moq) {
+                                    if (isNaN(value) || value <= 0) {
+                                      updateQuantity(item.variantId, 1);
+                                    } else {
                                       updateQuantity(item.variantId, value);
                                     }
                                   }}
                                   className="w-12 px-2 py-1.5 text-center font-medium text-sm border-0 focus:outline-none focus:ring-0"
-                                  min={item.moq}
+                                  min={1}
                                 />
                                 <button
                                   onClick={() =>
@@ -972,20 +1104,26 @@ export default function CartPage() {
                 <div className="space-y-2">
                   <button
                     className={`w-full font-semibold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg ${
-                      formData.orderDetails.length === 0 || !isAddressValid()
+                      formData.orderDetails.length === 0 ||
+                      !isAddressValid() ||
+                      moqWarnings.length > 0
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-primary/90 hover:bg-primary text-white transform hover:scale-105 cursor-pointer"
                     }`}
                     disabled={
-                      formData.orderDetails.length === 0 || !isAddressValid()
+                      formData.orderDetails.length === 0 ||
+                      !isAddressValid() ||
+                      moqWarnings.length > 0
                     }
                     onClick={handleCheckout}
                   >
-                    {!isAddressValid()
-                      ? "Complete Address to Continue"
-                      : "Confirm Order via Whatsapp"}
+                    {moqWarnings.length > 0
+                      ? "MOQ Requirements Not Met"
+                      : !isAddressValid()
+                        ? "Complete Address to Continue"
+                        : "Confirm Order via Whatsapp"}
                   </button>
-                  {isAddressValid() && (
+                  {isAddressValid() && moqWarnings.length === 0 && (
                     <small>
                       <span className="text-red-500">* note:</span> you will be
                       directed to Whatsapp for secure and faster order

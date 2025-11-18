@@ -14,6 +14,7 @@ export interface IOrderDetail {
   };
   subTotal: number;
   discountPercentage?: number; // Discount percentage applied (if any)
+  moq?: number; // Minimum Order Quantity per product (for resellers)
   resellerPricing?: {
     currency: string;
     tiers: Array<{
