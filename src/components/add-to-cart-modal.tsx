@@ -115,6 +115,9 @@ export default function AddToCartModal({
 
     localStorage.setItem("cartItem", JSON.stringify(existingCart));
 
+    // Trigger event to update cart badge in header
+    window.dispatchEvent(new Event("cartUpdated"));
+
     showSuccessAlert(
       "Added to Cart",
       `${product.productName} (${selectedVariant.selectedVariantDetail.name}) has been added to your cart!`

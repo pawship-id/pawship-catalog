@@ -7,12 +7,8 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -60,6 +56,8 @@ export default function NavigationHeader() {
 
   const { currency, setCurrency, loading } = useCurrency();
   const { data: session, status } = useSession();
+
+  const [cartItemCount, setCartItemCount] = useState(0);
 
   const [categories, setCategories] = useState<
     { name: string; href: string }[] | null
@@ -161,9 +159,51 @@ export default function NavigationHeader() {
     }
   };
 
+  const updateCartItemCount = () => {
+    try {
+      const cartItem = localStorage.getItem("cartItem");
+      if (cartItem) {
+        const items = JSON.parse(cartItem);
+        // Count unique items (length) instead of total quantity
+        const totalItems = Array.isArray(items) ? items.length : 0;
+        setCartItemCount(totalItems);
+      } else {
+        setCartItemCount(0);
+      }
+    } catch (error) {
+      console.error("Error reading cart items:", error);
+      setCartItemCount(0);
+    }
+  };
+
   useEffect(() => {
     fetchCategory();
-  }, []);
+
+    // Update cart count on mount
+    if (session && status === "authenticated") {
+      updateCartItemCount();
+    }
+
+    // Listen for storage changes (when cart is updated from other tabs/windows)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "cartItem") {
+        updateCartItemCount();
+      }
+    };
+
+    // Listen for custom cart update event (when cart is updated in same tab)
+    const handleCartUpdate = () => {
+      updateCartItemCount();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("cartUpdated", handleCartUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("cartUpdated", handleCartUpdate);
+    };
+  }, [session, status]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -300,6 +340,11 @@ export default function NavigationHeader() {
             <Button variant="ghost" size="sm" className="relative" asChild>
               <Link href="/cart">
                 <ShoppingCart className="h-4 w-4" />
+                {session && status === "authenticated" && cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                    {cartItemCount > 99 ? "99+" : cartItemCount}
+                  </span>
+                )}
               </Link>
             </Button>
 

@@ -127,6 +127,9 @@ export default function CartPage() {
         )
       )
     );
+
+    // Trigger event to update cart badge in header
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
   const removeItem = (id: string) => {
@@ -170,6 +173,9 @@ export default function CartPage() {
     let filterCartItem = cartItem.filter((item: any) => item.variantId !== id);
 
     localStorage.setItem("cartItem", JSON.stringify(filterCartItem));
+
+    // Trigger event to update cart badge in header
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
   const totalAmount = formData.orderDetails
@@ -276,6 +282,9 @@ export default function CartPage() {
       router.push(`/order-success/${data?._id}`);
 
       localStorage.removeItem("cartItem");
+
+      // Trigger event to update cart badge in header
+      window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
       console.error(error);
       showConfirmAlert(

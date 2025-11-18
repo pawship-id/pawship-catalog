@@ -130,6 +130,10 @@ export default function ProductDetailPage() {
       }
 
       localStorage.setItem("cartItem", JSON.stringify(cartItem));
+
+      // Trigger event to update cart badge in header
+      window.dispatchEvent(new Event("cartUpdated"));
+
       setQuantity(1);
 
       showSuccessAlert(undefined, "Successfully added product to cart");
