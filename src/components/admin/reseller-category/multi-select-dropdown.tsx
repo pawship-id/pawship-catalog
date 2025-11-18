@@ -32,6 +32,7 @@ export default function MultiSelectDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const hasInitialized = useRef(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -48,10 +49,22 @@ export default function MultiSelectDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Initialize with all categories selected
+  // Initialize with all categories selected (only once on mount if empty)
   useEffect(() => {
-    if (selectedCategories.length === 0 && categories.length > 0) {
+    // Mark as initialized if there is data (for edit mode)
+    if (selectedCategories.length > 0) {
+      hasInitialized.current = true;
+      return;
+    }
+
+    // Auto-initialize only if it has never been initialized and there is no data.
+    if (
+      !hasInitialized.current &&
+      selectedCategories.length === 0 &&
+      categories.length > 0
+    ) {
       onChange(categories.map((cat) => cat._id));
+      hasInitialized.current = true;
     }
   }, [categories, selectedCategories.length, onChange]);
 
@@ -67,12 +80,12 @@ export default function MultiSelectDropdown({
     }
   };
 
-  const toggleAll = () => {
-    if (selectedCategories.length === categories.length) {
-      onChange([]);
-    } else {
-      onChange(categories.map((cat) => cat._id));
-    }
+  const selectAll = () => {
+    onChange(categories.map((cat) => cat._id));
+  };
+
+  const deselectAll = () => {
+    onChange([]);
   };
 
   const getDisplayText = () => {
@@ -146,17 +159,25 @@ export default function MultiSelectDropdown({
           </div>
 
           {/* Action Buttons */}
-          {selectedCategories.length !== categories.length && (
-            <div className="p-2 border-b border-gray-200 flex gap-2 flex-shrink-0">
+          <div className="p-2 border-b border-gray-200 flex gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={selectAll}
+              className="flex-1 text-xs px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors font-medium"
+            >
+              Select All
+            </button>
+
+            {selectedCategories.length > 0 && (
               <button
                 type="button"
-                onClick={toggleAll}
-                className="flex-1 text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                onClick={deselectAll}
+                className="flex-1 text-xs px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors font-medium"
               >
-                Select All
+                Deselect All
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Categories List with dynamic max-height */}
           <div

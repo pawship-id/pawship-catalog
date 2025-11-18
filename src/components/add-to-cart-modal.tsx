@@ -68,9 +68,9 @@ export default function AddToCartModal({
         isDisabled = true;
       }
 
-      if (quantity < (product.moq || 1)) {
-        isDisabled = true;
-      }
+      // if (quantity < (product.moq || 1)) {
+      //   isDisabled = true;
+      // }
     }
 
     setDisabledAddToCart(isDisabled);
@@ -114,6 +114,9 @@ export default function AddToCartModal({
     }
 
     localStorage.setItem("cartItem", JSON.stringify(existingCart));
+
+    // Trigger event to update cart badge in header
+    window.dispatchEvent(new Event("cartUpdated"));
 
     showSuccessAlert(
       "Added to Cart",
@@ -188,6 +191,7 @@ export default function AddToCartModal({
               <PricingDisplay
                 selectedVariant={selectedVariant}
                 moq={product.moq}
+                productId={product._id}
                 resellerPricing={product.resellerPricing}
               />
             )}

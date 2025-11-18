@@ -408,14 +408,14 @@ export default function FormProduct({
                   htmlFor="moq"
                   className="text-base font-medium text-gray-700"
                 >
-                  MOQ
+                  MOQ Reseller
                 </Label>
                 <div>
                   <Input
                     id="moq"
                     type="number"
                     min={1}
-                    placeholder="Enter MOQ"
+                    placeholder="Enter MOQ reseller"
                     value={formData.moq || 1}
                     onChange={(e) =>
                       setFormData({ ...formData, moq: Number(e.target.value) })

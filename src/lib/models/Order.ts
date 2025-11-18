@@ -21,7 +21,6 @@ const OrderDetailSchema = new Schema<IOrderDetail>(
     productId: { type: String, required: true },
     productName: { type: String, required: true },
     quantity: { type: Number, required: true },
-    stock: { type: Number },
     variantId: { type: String, required: true },
     variantName: { type: String, required: true },
     originalPrice: {

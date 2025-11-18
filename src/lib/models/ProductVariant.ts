@@ -10,7 +10,6 @@ export interface IProductVariant extends Document {
   name: string;
   stock?: number;
   price?: any;
-  discountedPrice?: any; // Optional: object with currency keys (e.g., { IDR: 50000, USD: 3.5 })
   productId: Types.ObjectId;
   deleted?: boolean;
   deletedAt?: Date;
@@ -51,10 +50,6 @@ const ProductVariantSchema = new Schema<IProductVariant>(
     },
     price: {
       type: Schema.Types.Mixed,
-    },
-    discountedPrice: {
-      type: Schema.Types.Mixed,
-      required: false,
     },
     productId: {
       type: Schema.Types.ObjectId,

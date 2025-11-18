@@ -3,6 +3,8 @@ import Tooltip from "./tooltip";
 import { VariantRow } from "@/lib/types/product";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useSession } from "next-auth/react";
+import { usePromo } from "@/context/PromoContext";
+import { calculateFinalPrice } from "@/lib/helpers/promo-helper";
 
 interface PriceTier {
   quantity: number;
@@ -23,6 +25,7 @@ interface PricingDisplayProps {
     selectedVariantDetail: VariantRow;
   };
   moq: number;
+  productId: string; // Added: needed for promo lookup
   resellerPricing?: {
     currency: string;
     tiers: ResellerTier[];
@@ -32,9 +35,11 @@ interface PricingDisplayProps {
 export default function PricingDisplay({
   selectedVariant,
   moq,
+  productId,
   resellerPricing,
 }: PricingDisplayProps) {
   const { data: session } = useSession();
+  const { activePromos } = usePromo();
 
   // Determine which currency to use:
   // 1. If reseller pricing exists, use its currency as default
@@ -46,7 +51,10 @@ export default function PricingDisplay({
     if (session?.user.role === "reseller" && resellerPricing) {
       // Check if user selected currency is available in variant prices
       const variantPrices = selectedVariant.selectedVariantDetail.price;
-      if (variantPrices[userCurrency as keyof typeof variantPrices]) {
+      if (
+        variantPrices &&
+        variantPrices[userCurrency as keyof typeof variantPrices]
+      ) {
         return userCurrency;
       }
       // Fallback to reseller pricing currency
@@ -55,61 +63,38 @@ export default function PricingDisplay({
     return userCurrency;
   }, [session, resellerPricing, userCurrency, selectedVariant]);
 
-  // Get base price based on effective currency
-  const basePrice = useMemo(() => {
+  // Calculate price with promo discount (for retail customers only)
+  const priceInfo = useMemo(() => {
     const variantPrices = selectedVariant.selectedVariantDetail.price;
-    const discountedPrices =
-      selectedVariant.selectedVariantDetail.discountedPrice;
+    const basePrice =
+      variantPrices?.[effectiveCurrency as keyof typeof variantPrices] || 0;
+    const variantId = selectedVariant.selectedVariantDetail._id;
+    const isReseller = session?.user.role === "reseller";
 
-    // For reseller, always show original price (not discounted)
-    if (session?.user.role === "reseller") {
-      return (
-        variantPrices[effectiveCurrency as keyof typeof variantPrices] || 0
-      );
-    }
+    // Use promo helper to calculate final price
+    return calculateFinalPrice(
+      basePrice,
+      effectiveCurrency,
+      productId,
+      variantId,
+      activePromos,
+      isReseller
+    );
+  }, [selectedVariant, effectiveCurrency, session, activePromos, productId]);
 
-    // For regular customers, use discounted price if available
-    if (
-      discountedPrices &&
-      discountedPrices[effectiveCurrency as keyof typeof discountedPrices]
-    ) {
-      return discountedPrices[
-        effectiveCurrency as keyof typeof discountedPrices
-      ];
-    }
-
-    return variantPrices[effectiveCurrency as keyof typeof variantPrices] || 0;
-  }, [selectedVariant, effectiveCurrency, session]);
-
-  // Get original price (for strikethrough display)
-  const originalPrice = useMemo(() => {
-    const variantPrices = selectedVariant.selectedVariantDetail.price;
-    const discountedPrices =
-      selectedVariant.selectedVariantDetail.discountedPrice;
-
-    // Only show original price if there's a discounted price
-    if (
-      discountedPrices &&
-      discountedPrices[effectiveCurrency as keyof typeof discountedPrices]
-    ) {
-      return (
-        variantPrices[effectiveCurrency as keyof typeof variantPrices] || 0
-      );
-    }
-
-    return null;
-  }, [selectedVariant, effectiveCurrency]);
+  // Get base price and discount info
+  const basePrice = priceInfo.finalPrice;
+  const originalPrice = priceInfo.hasDiscount ? priceInfo.originalPrice : null;
+  const hasDiscount = priceInfo.hasDiscount;
 
   // Calculate tier prices with discount
   const calculatedTiers = useMemo(() => {
     if (!resellerPricing || !resellerPricing.tiers) return [];
 
-    // For reseller tiers, use the actual variant price (before any strikethrough discount)
-    // to ensure reseller discounts are calculated correctly
+    // For reseller tiers, use the actual variant base price
     const variantPrices = selectedVariant.selectedVariantDetail.price;
     const priceForTiers =
-      variantPrices[effectiveCurrency as keyof typeof variantPrices] ||
-      basePrice;
+      variantPrices?.[effectiveCurrency as keyof typeof variantPrices] || 0;
 
     return resellerPricing.tiers.map((tier) => {
       const discountAmount = (priceForTiers * tier.discount) / 100;
@@ -122,7 +107,7 @@ export default function PricingDisplay({
         unitPrice: Math.round(unitPrice),
       };
     });
-  }, [resellerPricing, basePrice, selectedVariant, effectiveCurrency]);
+  }, [resellerPricing, selectedVariant, effectiveCurrency]);
 
   // Show reseller pricing if user is reseller and has pricing tiers
   const showResellerPricing =
@@ -135,8 +120,8 @@ export default function PricingDisplay({
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="space-y-1">
-            {/* Only show strikethrough price for non-reseller users */}
-            {originalPrice && !showResellerPricing && (
+            {/* Show strikethrough price if there's a promo discount (retail only) */}
+            {originalPrice && hasDiscount && !showResellerPricing && (
               <div className="text-sm text-gray-400 line-through">
                 {format(originalPrice)}
               </div>
@@ -144,6 +129,12 @@ export default function PricingDisplay({
             <div className="text-2xl font-semibold text-gray-900">
               {format(basePrice)}
             </div>
+            {/* Show promo badge if discount is active */}
+            {hasDiscount && !showResellerPricing && (
+              <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
+                Promo {priceInfo.discountPercentage.toFixed(0)}% Off
+              </span>
+            )}
           </div>
           {showResellerPricing && (
             <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
@@ -205,7 +196,8 @@ export default function PricingDisplay({
         )}
       </div>
 
-      {moq > 1 && (
+      {/* Show MOQ only for resellers */}
+      {session?.user.role === "reseller" && moq > 1 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <div className="text-sm text-blue-800">
             <strong>MOQ:</strong> {moq} pieces minimum order for this product.

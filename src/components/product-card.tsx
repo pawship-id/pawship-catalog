@@ -5,6 +5,8 @@ import { Button } from "./ui/button";
 import { ProductData, VariantRow } from "@/lib/types/product";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/context/CurrencyContext";
+import { usePromo } from "@/context/PromoContext";
+import { getProductMinPrice } from "@/lib/helpers/promo-helper";
 import { TagData } from "@/lib/types/tag";
 import { isNewArrival } from "@/lib/helpers/product";
 import { useSession } from "next-auth/react";
@@ -20,6 +22,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { currency, format } = useCurrency();
   const { data: session } = useSession();
+  const { activePromos } = usePromo();
 
   const router = useRouter();
 
@@ -35,32 +38,18 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const isReseller = session?.user.role === "reseller";
 
-  // Calculate minimum price
-  // For reseller: always use original price
-  // For customer: use discounted price if available, otherwise original price
-  const minPrice = Math.min(
-    ...(variants || []).map((v: VariantRow) => {
-      if (isReseller) {
-        return v.price[currency] || Infinity;
-      }
-      return v.discountedPrice?.[currency] || v.price[currency] || Infinity;
-    })
+  // Calculate prices using promo helper
+  const priceInfo = getProductMinPrice(
+    variants || [],
+    product._id,
+    currency,
+    activePromos,
+    isReseller
   );
 
-  // Check if any variant has a discounted price for the selected currency
-  const hasDiscount = variants?.some(
-    (v: VariantRow) => v.discountedPrice && v.discountedPrice[currency]
-  );
-
-  // Get original minimum price (before discount) - only for non-reseller
-  const minOriginalPrice =
-    hasDiscount && !isReseller
-      ? Math.min(
-          ...(variants || []).map(
-            (v: VariantRow) => v.price[currency] ?? Infinity
-          )
-        )
-      : null;
+  const minPrice = priceInfo.minPrice;
+  const hasDiscount = priceInfo.hasDiscount;
+  const minOriginalPrice = priceInfo.minOriginalPrice;
 
   // const discount =
   //   product.originalPrice && product.originalPrice[currency]

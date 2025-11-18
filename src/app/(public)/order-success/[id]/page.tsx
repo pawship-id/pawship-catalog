@@ -162,7 +162,7 @@ Thank you!
             </Button>
           </div>
           <a
-            href="#"
+            href={`/my-orders/${order._id}`}
             className="text-sm font-medium text-gray-500 hover:text-green-500 transition duration-200"
           >
             View Order Details

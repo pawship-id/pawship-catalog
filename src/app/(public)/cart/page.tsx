@@ -15,6 +15,8 @@ import Link from "next/link";
 import { createData, getById } from "@/lib/apiService";
 import { ProductData } from "@/lib/types/product";
 import { useCurrency } from "@/context/CurrencyContext";
+import { usePromo } from "@/context/PromoContext";
+import { calculateFinalPrice } from "@/lib/helpers/promo-helper";
 import { useSession } from "next-auth/react";
 import LoadingPage from "@/components/loading";
 import {
@@ -23,13 +25,14 @@ import {
   OrderData,
   OrderForm,
 } from "@/lib/types/order";
-import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
+import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
 import { useRouter } from "next/navigation";
 
 export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const { data: session, status } = useSession();
+  const { activePromos, loading: promosLoading } = usePromo();
 
   const { currency, format } = useCurrency();
 
@@ -79,93 +82,86 @@ export default function CartPage() {
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
 
-    let findProduct = formData.orderDetails.find((el) => el.variantId === id);
-
-    if (!findProduct) {
-      return;
-    }
-
-    // update state setCartItemData
-    const updatedCartItemData = formData.orderDetails.map((item) => {
+    // First, update the quantity for the specific item
+    const updatedWithNewQty = formData.orderDetails.map((item: any) => {
       if (item.variantId === id) {
-        // Recalculate discount for new quantity
-        const basePrice = item.originalPrice[currency];
-        let finalPrice = basePrice;
-        let discountInfo: {
-          discountPercentage: number;
-          tierName: string | null;
-        } = {
-          discountPercentage: 0,
-          tierName: null,
-        };
-
-        // B2B: Calculate reseller discount if applicable
-        if (session?.user.role === "reseller" && item.resellerPricing) {
-          discountInfo = calculateResellerDiscount(
-            newQuantity,
-            item.resellerPricing
-          );
-
-          if (discountInfo.discountPercentage > 0) {
-            const discountAmount =
-              (basePrice * discountInfo.discountPercentage) / 100;
-            finalPrice = Math.round(basePrice - discountAmount);
-          }
-        }
-        // B2C: Use existing discountedPrice if available (doesn't change with quantity)
-        else if (item.discountedPrice && item.discountedPrice[currency]) {
-          finalPrice = item.discountedPrice[currency];
-          // Calculate discount percentage
-          discountInfo.discountPercentage = Math.round(
-            ((basePrice - finalPrice) / basePrice) * 100
-          );
-        }
-
-        return {
-          ...item,
-          quantity: newQuantity,
-          discountPercentage: discountInfo.discountPercentage,
-          discountedPrice:
-            discountInfo.discountPercentage > 0
-              ? { [currency]: finalPrice }
-              : null,
-          subTotal: newQuantity * finalPrice,
-        };
+        return { ...item, quantity: newQuantity };
       }
       return item;
     });
 
-    setFormData((prev) => ({
-      ...prev,
-      orderDetails: updatedCartItemData,
-      totalAmount: updatedCartItemData.reduce(
-        (sum: number, element: any) => sum + element.subTotal,
-        0
-      ),
-    }));
+    // For B2B (reseller), we need to recalculate ALL items' discounts
+    // because tier discounts depend on total category quantities
+    // For B2C (retail), we can just recalculate the changed item
+    const updated = updatedWithNewQty.map((item: any) => {
+      const result = getDiscountedPrice(
+        item.originalPrice[currency],
+        item.quantity,
+        item.productId,
+        item.variantId,
+        item.categoryId,
+        updatedWithNewQty, // Pass updated cart items for accurate B2B calculation
+        item.resellerPricing
+      );
 
-    // update localStorage
-    let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
-
-    let updatedCartItem = cartItem.map((el: any) => {
-      if (el.variantId === id) {
-        el.quantity = newQuantity;
-      }
-
-      return el;
+      return {
+        ...item,
+        discountPercentage: result.discountPercentage,
+        discountedPrice: result.discountedPrice,
+        subTotal: item.quantity * result.finalPrice,
+      };
     });
 
-    localStorage.setItem("cartItem", JSON.stringify(updatedCartItem));
+    setFormData((prev) => ({
+      ...prev,
+      orderDetails: updated,
+      totalAmount: updated.reduce((sum, el) => sum + el.subTotal, 0),
+    }));
+
+    const cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+    localStorage.setItem(
+      "cartItem",
+      JSON.stringify(
+        cartItem.map((c: any) =>
+          c.variantId === id ? { ...c, quantity: newQuantity } : c
+        )
+      )
+    );
+
+    // Trigger event to update cart badge in header
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
   const removeItem = (id: string) => {
     let filter = formData.orderDetails.filter((item) => item.variantId !== id);
 
+    // For B2B (reseller), recalculate discounts for remaining items
+    // since tier discounts depend on total category quantities
+    // For B2C (retail), prices remain the same as they are per variant
+    const recalculatedFilter = filter.map((item: any) => {
+      const result = getDiscountedPrice(
+        item.originalPrice[currency],
+        item.quantity,
+        item.productId,
+        item.variantId,
+        item.categoryId,
+        filter, // Pass filtered cart items for accurate B2B calculation
+        item.resellerPricing
+      );
+
+      return {
+        ...item,
+        discountPercentage: result.discountPercentage,
+        discountedPrice: result.discountedPrice,
+        subTotal: item.quantity * result.finalPrice,
+      };
+    });
+
     // update state
     setFormData((prev) => ({
       ...prev,
-      orderDetails: filter,
-      totalAmount: filter.reduce(
+      orderDetails: recalculatedFilter,
+      totalAmount: recalculatedFilter.reduce(
         (sum: number, element: any) => sum + element.subTotal,
         0
       ),
@@ -177,12 +173,68 @@ export default function CartPage() {
     let filterCartItem = cartItem.filter((item: any) => item.variantId !== id);
 
     localStorage.setItem("cartItem", JSON.stringify(filterCartItem));
+
+    // Trigger event to update cart badge in header
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
-  const totalAmount = formData.orderDetails.reduce(
-    (sum, item) => sum + item.subTotal,
-    0
-  );
+  const totalAmount = formData.orderDetails
+    .filter((el) => el.quantity <= el.stock || el.preOrder.enabled)
+    .reduce((sum, item) => sum + item.subTotal, 0);
+
+  const hasOutOfStock =
+    formData.orderDetails.filter(
+      (el) => el.quantity > el.stock && !el.preOrder.enabled
+    ).length !== 0;
+
+  // Check MOQ per product for resellers
+  const getMOQWarnings = () => {
+    if (session?.user.role !== "reseller") return [];
+
+    const warnings: Array<{
+      productId: string;
+      productName: string;
+      moq: number;
+      currentQty: number;
+      needed: number;
+    }> = [];
+
+    // Group items by productId and sum quantities
+    const productQuantities = formData.orderDetails.reduce(
+      (acc, item) => {
+        if (!acc[item.productId]) {
+          acc[item.productId] = {
+            productName: item.productName,
+            moq: item.moq || 1,
+            totalQty: 0,
+          };
+        }
+        acc[item.productId].totalQty += item.quantity;
+        return acc;
+      },
+      {} as Record<
+        string,
+        { productName: string; moq: number; totalQty: number }
+      >
+    );
+
+    // Check each product against MOQ
+    Object.entries(productQuantities).forEach(([productId, data]) => {
+      if (data.moq > 1 && data.totalQty < data.moq) {
+        warnings.push({
+          productId,
+          productName: data.productName,
+          moq: data.moq,
+          currentQty: data.totalQty,
+          needed: data.moq - data.totalQty,
+        });
+      }
+    });
+
+    return warnings;
+  };
+
+  const moqWarnings = getMOQWarnings();
 
   const handleCheckout = async () => {
     // Check if user is logged in
@@ -194,6 +246,23 @@ export default function CartPage() {
       if (result.isConfirmed) {
         router.push("/login");
       }
+      return;
+    }
+
+    if (hasOutOfStock) {
+      showErrorAlert(
+        undefined,
+        "there are items that are not available (out of stock)"
+      );
+      return;
+    }
+
+    // Check MOQ for resellers
+    if (moqWarnings.length > 0) {
+      showErrorAlert(
+        "MOQ Requirements Not Met",
+        "Please add more items to meet the minimum order quantity requirements shown below."
+      );
       return;
     }
 
@@ -213,6 +282,9 @@ export default function CartPage() {
       router.push(`/order-success/${data?._id}`);
 
       localStorage.removeItem("cartItem");
+
+      // Trigger event to update cart badge in header
+      window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
       console.error(error);
       showConfirmAlert(
@@ -225,9 +297,10 @@ export default function CartPage() {
   const shipping = totalAmount > 50 ? 0 : 9.99;
   const total = totalAmount + shipping;
 
-  // Helper function to calculate reseller discount
-  const calculateResellerDiscount = (
-    quantity: number,
+  // B2B: Calculate tier discount for a specific product based on total category quantities in cart
+  const calculateB2BDiscount = (
+    categoryId: string,
+    currentCartItems: any[], // Pass cart items as parameter instead of relying on formData
     resellerPricing?: {
       currency: string;
       tiers: Array<{
@@ -238,134 +311,233 @@ export default function CartPage() {
       }>;
     }
   ) => {
-    if (!resellerPricing || !resellerPricing.tiers) {
+    if (
+      !resellerPricing ||
+      !resellerPricing.tiers ||
+      !Array.isArray(resellerPricing.tiers)
+    ) {
       return { discountPercentage: 0, tierName: null };
     }
 
-    // Find the highest applicable tier based on quantity
-    let applicableTier = null;
-    for (const tier of resellerPricing.tiers) {
-      if (quantity >= tier.minimumQuantity) {
-        if (
-          !applicableTier ||
-          tier.minimumQuantity > applicableTier.minimumQuantity
-        ) {
-          applicableTier = tier;
+    // Find all tiers that include this product's category
+    const applicableTiers = resellerPricing.tiers.filter((tier) => {
+      const categories = Array.isArray(tier.categoryProduct)
+        ? tier.categoryProduct
+        : [tier.categoryProduct];
+      return categories.includes(categoryId);
+    });
+
+    if (applicableTiers.length === 0) {
+      return { discountPercentage: 0, tierName: null };
+    }
+
+    // For each applicable tier, calculate total quantity of all products in that tier's categories
+    let bestTier = null;
+    let highestDiscount = 0;
+
+    for (const tier of applicableTiers) {
+      const categories = Array.isArray(tier.categoryProduct)
+        ? tier.categoryProduct
+        : [tier.categoryProduct];
+
+      // Sum quantities of all products whose categoryId is in this tier's categories
+      const totalCategoryQty = currentCartItems.reduce((sum, item: any) => {
+        if (categories.includes(item.categoryId)) {
+          return sum + item.quantity;
         }
+        return sum;
+      }, 0);
+
+      console.log(
+        `[B2B Discount] Category ${categoryId} | Tier: ${tier.name} | Min: ${tier.minimumQuantity} | Total Category Qty: ${totalCategoryQty} | Discount: ${tier.discount}%`
+      );
+
+      // Check if this tier is qualified and has higher discount
+      if (
+        totalCategoryQty >= tier.minimumQuantity &&
+        tier.discount > highestDiscount
+      ) {
+        highestDiscount = tier.discount;
+        bestTier = tier;
       }
     }
 
-    if (applicableTier) {
+    if (bestTier) {
+      console.log(
+        `[B2B Discount] Category ${categoryId} => Selected Tier: ${bestTier.name} | Discount: ${bestTier.discount}%`
+      );
       return {
-        discountPercentage: applicableTier.discount,
-        tierName: applicableTier.name,
+        discountPercentage: bestTier.discount,
+        tierName: bestTier.name,
       };
     }
 
     return { discountPercentage: 0, tierName: null };
   };
 
+  // B2C: Calculate promo discount for retail customers (per variant)
+  const calculateB2CDiscount = (
+    basePrice: number,
+    productId: string,
+    variantId: string
+  ) => {
+    const promoResult = calculateFinalPrice(
+      basePrice,
+      currency,
+      productId,
+      variantId,
+      activePromos,
+      false
+    );
+
+    if (promoResult.hasDiscount) {
+      return {
+        discountPercentage: promoResult.discountPercentage,
+        finalPrice: promoResult.finalPrice,
+      };
+    }
+
+    return {
+      discountPercentage: 0,
+      finalPrice: basePrice,
+    };
+  };
+
+  // Universal Discount Calculator (B2C & B2B)
+  const getDiscountedPrice = (
+    basePrice: number,
+    quantity: number,
+    productId: string,
+    variantId: string,
+    categoryId: string,
+    currentCartItems: any[], // Pass current cart items for B2B calculation
+    resellerPricing?: any
+  ) => {
+    let discountPercentage = 0;
+    let finalPrice = basePrice;
+
+    if (session?.user.role === "reseller" && resellerPricing) {
+      // B2B: Use tier-based discount calculation based on total category quantities
+      const tierResult = calculateB2BDiscount(
+        categoryId,
+        currentCartItems,
+        resellerPricing
+      );
+
+      if (tierResult.discountPercentage > 0) {
+        discountPercentage = tierResult.discountPercentage;
+        finalPrice = Math.round(
+          basePrice - (basePrice * discountPercentage) / 100
+        );
+      }
+    } else {
+      // B2C: Use promo-based discount calculation per variant
+      const promoResult = calculateB2CDiscount(basePrice, productId, variantId);
+      discountPercentage = promoResult.discountPercentage;
+      finalPrice = promoResult.finalPrice;
+    }
+
+    return {
+      finalPrice,
+      discountPercentage,
+      discountedPrice:
+        discountPercentage > 0 ? { [currency]: finalPrice } : null,
+    };
+  };
+
   const fetchCartItem = async () => {
     setIsLoading(true);
     try {
-      let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+      const cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
 
-      const detailCartItem = await Promise.all(
+      // Debug log to verify promos are loaded
+      console.log("Fetching cart with activePromos:", activePromos.length);
+
+      // First pass: fetch all product data without calculating discounts
+      const cartItemsWithoutDiscount = await Promise.all(
         cartItem.map(async (el: any) => {
-          const { data: product } = await getById<ProductData>(
+          const { data } = await getById<ProductData>(
             "/api/public/products",
             el.productId
           );
 
-          let variant = product?.productVariantsData?.find(
-            (item) => item._id === el.variantId
+          const variant = data?.productVariantsData?.find(
+            (v) => v._id === el.variantId
           );
 
-          const basePrice = variant?.price[currency] || 0;
-
-          // Calculate discount (for both B2B reseller and B2C customer)
-          let discountInfo: {
-            discountPercentage: number;
-            tierName: string | null;
-          } = {
-            discountPercentage: 0,
-            tierName: null,
-          };
-          let finalPrice = basePrice;
-
-          // B2B: Calculate reseller discount if applicable
-          if (session?.user.role === "reseller" && product?.resellerPricing) {
-            discountInfo = calculateResellerDiscount(
-              el.quantity,
-              product.resellerPricing
-            );
-
-            if (discountInfo.discountPercentage > 0) {
-              const discountAmount =
-                (basePrice * discountInfo.discountPercentage) / 100;
-              finalPrice = Math.round(basePrice - discountAmount);
-            }
+          if (data && variant) {
+            return {
+              productId: data._id,
+              productName: data.productName,
+              categoryId: data.categoryId,
+              variantId: el.variantId,
+              variantName: variant.name,
+              originalPrice: variant.price,
+              quantity: el.quantity,
+              image:
+                variant.image ||
+                data.productMedia.find((m) => m.type === "image"),
+              stock: variant.stock,
+              preOrder: data.preOrder,
+              moq: data.moq,
+              resellerPricing: data.resellerPricing,
+            };
           }
-          // B2C: Use discountedPrice from variant if available
-          else if (
-            variant?.discountedPrice &&
-            variant.discountedPrice[currency]
-          ) {
-            finalPrice = variant.discountedPrice[currency];
-            // Calculate discount percentage
-            discountInfo.discountPercentage = Math.round(
-              ((basePrice - finalPrice) / basePrice) * 100
-            );
-          }
-
-          return {
-            productId: product?._id,
-            productName: product?.productName,
-            variantId: el.variantId,
-            variantName: variant?.name,
-            originalPrice: variant?.price, // Always set original price
-            discountedPrice:
-              discountInfo.discountPercentage > 0
-                ? { [currency]: finalPrice }
-                : null, // Only set if discount applied
-            quantity: el.quantity,
-            image:
-              variant?.image ||
-              product?.productMedia.find((el) => el.type === "image"),
-            stock: variant?.stock,
-            discountPercentage: discountInfo.discountPercentage,
-            subTotal: el.quantity * finalPrice,
-            preOrder: product?.preOrder,
-            moq: product?.moq,
-            resellerPricing: product?.resellerPricing,
-          };
+          return null;
         })
       );
+
+      // Filter out null values
+      const validCartItems = cartItemsWithoutDiscount.filter(
+        (item) => item !== null
+      );
+
+      // Second pass: calculate discounts with complete cart data
+      const detailCartItem = validCartItems.map((item: any) => {
+        const basePrice = item.originalPrice[currency];
+
+        const result = getDiscountedPrice(
+          basePrice,
+          item.quantity,
+          item.productId,
+          item.variantId,
+          item.categoryId,
+          validCartItems, // Pass complete cart items for B2B tier calculation
+          item.resellerPricing
+        );
+
+        return {
+          ...item,
+          discountedPrice: result.discountedPrice,
+          discountPercentage: result.discountPercentage,
+          subTotal: item.quantity * result.finalPrice,
+        };
+      });
 
       setFormData((prev) => ({
         ...prev,
         orderDetails: detailCartItem,
-        totalAmount: detailCartItem.reduce(
-          (sum: number, element: any) => sum + element.subTotal,
-          0
-        ),
-        currency,
+        totalAmount: detailCartItem.reduce((sum, el) => sum + el.subTotal, 0),
       }));
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    // Only fetch cart items when session status is not "loading"
-    if (status !== "loading") {
+    // Only fetch cart items when session is loaded AND promos are loaded
+    if (status !== "loading" && !promosLoading) {
       fetchCartItem();
+    } else {
+      // Keep loading state true while waiting for session or promos
+      setIsLoading(true);
     }
-  }, [currency, status]);
+  }, [currency, status, promosLoading, activePromos]);
 
-  if (isLoading) {
+  // Show loading while session or promos are loading
+  if (isLoading || promosLoading) {
     return <LoadingPage />;
   }
 
@@ -400,6 +572,77 @@ export default function CartPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+            {/* MOQ Warnings for Resellers */}
+            {moqWarnings.length > 0 && (
+              <div className="max-w-full  mx-auto">
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl overflow-hidden">
+                  <div className="p-3 md:p-4 lg:p-5">
+                    <div className="space-x-3">
+                      <div className="flex gap-3">
+                        <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-white text-sm font-bold">
+                            !
+                          </span>
+                        </div>
+                        <h3 className="text-base md:text-lg font-semibold text-amber-900 mb-2">
+                          Minimum Order Quantity (MOQ) Not Met
+                        </h3>
+                      </div>
+
+                      <p className="text-sm text-amber-800 mb-4 md:mb-5">
+                        The following products require minimum order quantities.
+                        Please add more items to proceed with checkout.
+                      </p>
+
+                      {/* List Item */}
+                      <div className="space-y-3">
+                        {moqWarnings.map((warning) => (
+                          <div
+                            key={warning.productId}
+                            className="bg-white border border-amber-200 rounded-lg p-4"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0 pr-3">
+                                <h4 className="font-semibold text-gray-900 text-base mb-1 truncate">
+                                  {warning.productName}
+                                </h4>
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">
+                                    Current quantity in cart:
+                                  </span>{" "}
+                                  {warning.currentQty} pcs
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">
+                                    Minimum required (MOQ):
+                                  </span>{" "}
+                                  {warning.moq} pcs
+                                </div>
+                              </div>
+
+                              <div className="ml-2 flex-shrink-0">
+                                <div className="bg-amber-100 border border-amber-300 rounded-lg px-3 py-3 text-center">
+                                  <div className="text-xs text-amber-700 font-medium leading-none mb-1">
+                                    Add More
+                                  </div>
+                                  <div className="text-xl font-bold text-amber-900 leading-none">
+                                    +{warning.needed}
+                                  </div>
+                                  <div className="text-xs text-amber-700 leading-none mt-1">
+                                    pcs needed
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Cart Items Section */}
             <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-primary/30 overflow-hidden">
               <div className="p-4 md:p-6">
@@ -415,11 +658,27 @@ export default function CartPage() {
                     <div key={item.variantId} className="py-4">
                       {/* Desktop Cart Item - Full size for >= 750px */}
                       <div className="hidden min-[750px]:flex items-start space-x-4">
-                        <img
-                          src={item.image?.imageUrl}
-                          alt={item.name}
-                          className="w-30 h-30 object-cover rounded-lg"
-                        />
+                        <div className="relative w-30 h-30">
+                          <img
+                            src={item.image?.imageUrl}
+                            alt={item.name}
+                            className={`w-30 h-30 object-cover rounded-lg ${
+                              item.quantity > item.stock &&
+                              !item.preOrder.enabled
+                                ? "opacity-50 grayscale"
+                                : ""
+                            }`}
+                          />
+
+                          {item.quantity > item.stock &&
+                            !item.preOrder.enabled && (
+                              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">
+                                  Out of Stock
+                                </span>
+                              </div>
+                            )}
+                        </div>
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-lg font-semibold text-gray-800 mb-1">
@@ -469,13 +728,25 @@ export default function CartPage() {
                                     )
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={item.quantity === item.moq}
+                                  disabled={item.quantity <= 1}
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
-                                <span className="px-4 py-2 font-medium">
-                                  {item.quantity}
-                                </span>
+                                <input
+                                  type="text"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+
+                                    if (isNaN(value) || value <= 0) {
+                                      updateQuantity(item.variantId, 1);
+                                    } else {
+                                      updateQuantity(item.variantId, value);
+                                    }
+                                  }}
+                                  className="w-16 px-2 py-2 text-center font-medium border-0 focus:outline-none focus:ring-0"
+                                  min={1}
+                                />
                                 <button
                                   onClick={() =>
                                     updateQuantity(
@@ -485,7 +756,7 @@ export default function CartPage() {
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity >= item.stock &&
+                                    item.quantity > item.stock &&
                                     !item.preOrder.enabled
                                   }
                                 >
@@ -514,11 +785,27 @@ export default function CartPage() {
 
                       {/* Compact Desktop Cart Item - For >= 490px && < 750px */}
                       <div className="hidden min-[490px]:max-[750px]:flex items-start space-x-3">
-                        <img
-                          src={item.image?.imageUrl}
-                          alt={item.name}
-                          className="w-25 h-25 object-cover rounded-lg"
-                        />
+                        <div className="relative w-25 h-25">
+                          <img
+                            src={item.image?.imageUrl}
+                            alt={item.name}
+                            className={`w-25 h-25 object-cover rounded-lg ${
+                              item.quantity > item.stock &&
+                              !item.preOrder.enabled
+                                ? "opacity-50 grayscale"
+                                : ""
+                            }`}
+                          />
+
+                          {item.quantity > item.stock &&
+                            !item.preOrder.enabled && (
+                              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">
+                                  Out of Stock
+                                </span>
+                              </div>
+                            )}
+                        </div>
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base font-semibold text-gray-800 mb-1">
@@ -568,13 +855,25 @@ export default function CartPage() {
                                     )
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={item.quantity === item.moq}
+                                  disabled={item.quantity <= 1}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
-                                <span className="px-2 py-1 font-medium text-sm">
-                                  {item.quantity}
-                                </span>
+                                <input
+                                  type="text"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+
+                                    if (isNaN(value) || value <= 0) {
+                                      updateQuantity(item.variantId, 1);
+                                    } else {
+                                      updateQuantity(item.variantId, value);
+                                    }
+                                  }}
+                                  className="w-14 px-2 py-1 text-center font-medium text-sm border-0 focus:outline-none focus:ring-0"
+                                  min={1}
+                                />
                                 <button
                                   onClick={() =>
                                     updateQuantity(
@@ -584,7 +883,7 @@ export default function CartPage() {
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity >= item.stock &&
+                                    item.quantity > item.stock &&
                                     !item.preOrder.enabled
                                   }
                                 >
@@ -616,12 +915,26 @@ export default function CartPage() {
                       <div className="block min-[490px]:hidden">
                         <div className="flex gap-3">
                           {/* Product Image */}
-                          <div className="w-25 h-25 flex-shrink-0">
+                          <div className="relative w-25 h-25 flex-shrink-0">
                             <img
                               src={item.image?.imageUrl}
                               alt={item.name}
-                              className="w-full h-full object-cover rounded-lg"
+                              className={`w-25 h-25 object-cover rounded-lg ${
+                                item.quantity > item.stock &&
+                                !item.preOrder.enabled
+                                  ? "opacity-50 grayscale"
+                                  : ""
+                              }`}
                             />
+
+                            {item.quantity > item.stock &&
+                              !item.preOrder.enabled && (
+                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                  <span className="text-white text-sm font-bold">
+                                    Out of Stock
+                                  </span>
+                                </div>
+                              )}
                           </div>
 
                           {/* Product Info */}
@@ -687,13 +1000,25 @@ export default function CartPage() {
                                     )
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={item.quantity === item.moq}
+                                  disabled={item.quantity <= 1}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
-                                <span className="px-2 py-1.5 font-medium text-sm min-w-[32px] text-center">
-                                  {item.quantity}
-                                </span>
+                                <input
+                                  type="text"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+
+                                    if (isNaN(value) || value <= 0) {
+                                      updateQuantity(item.variantId, 1);
+                                    } else {
+                                      updateQuantity(item.variantId, value);
+                                    }
+                                  }}
+                                  className="w-12 px-2 py-1.5 text-center font-medium text-sm border-0 focus:outline-none focus:ring-0"
+                                  min={1}
+                                />
                                 <button
                                   onClick={() =>
                                     updateQuantity(
@@ -703,7 +1028,7 @@ export default function CartPage() {
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity >= item.stock &&
+                                    item.quantity > item.stock &&
                                     !item.preOrder.enabled
                                   }
                                 >
@@ -897,20 +1222,26 @@ export default function CartPage() {
                 <div className="space-y-2">
                   <button
                     className={`w-full font-semibold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg ${
-                      formData.orderDetails.length === 0 || !isAddressValid()
+                      formData.orderDetails.length === 0 ||
+                      !isAddressValid() ||
+                      moqWarnings.length > 0
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-primary/90 hover:bg-primary text-white transform hover:scale-105 cursor-pointer"
                     }`}
                     disabled={
-                      formData.orderDetails.length === 0 || !isAddressValid()
+                      formData.orderDetails.length === 0 ||
+                      !isAddressValid() ||
+                      moqWarnings.length > 0
                     }
                     onClick={handleCheckout}
                   >
-                    {!isAddressValid()
-                      ? "Complete Address to Continue"
-                      : "Confirm Order via Whatsapp"}
+                    {moqWarnings.length > 0
+                      ? "MOQ Requirements Not Met"
+                      : !isAddressValid()
+                        ? "Complete Address to Continue"
+                        : "Confirm Order via Whatsapp"}
                   </button>
-                  {isAddressValid() && (
+                  {isAddressValid() && moqWarnings.length === 0 && (
                     <small>
                       <span className="text-red-500">* note:</span> you will be
                       directed to Whatsapp for secure and faster order

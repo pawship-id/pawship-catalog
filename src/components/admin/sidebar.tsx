@@ -18,6 +18,7 @@ import {
   SquareLibrary,
   GalleryThumbnails,
   Warehouse,
+  TicketPercent,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -52,6 +53,11 @@ const navigation = [
     name: "Stocks",
     href: "/dashboard/stocks",
     icon: Warehouse,
+  },
+  {
+    name: "Promotion",
+    href: "/dashboard/promos",
+    icon: TicketPercent,
   },
   { name: "Website", href: "/", icon: Globe },
 ];

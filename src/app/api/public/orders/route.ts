@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateInvoiceNumber } from "@/lib/helpers/invoice";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { calculateRevenueInIDR } from "@/lib/helpers/currency-helper";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
@@ -21,10 +22,18 @@ export async function POST(req: NextRequest) {
 
     const body: OrderForm = await req.json();
 
-    // Add userId from session
+    // Calculate revenue in IDR before saving to database
+    const revenue = calculateRevenueInIDR(
+      body.totalAmount,
+      body.shippingCost,
+      body.currency
+    );
+
+    // Add userId from session and revenue
     const orderData = {
       ...body,
       userId: session.user.id,
+      revenue,
     };
 
     // Generate unique invoice number based on shipping address country
@@ -33,9 +42,9 @@ export async function POST(req: NextRequest) {
     );
     orderData.invoiceNumber = invoiceNumber;
 
-    orderData.orderDetails.forEach((el: IOrderDetail) => {
-      delete el.stock;
-    });
+    // orderData.orderDetails.forEach((el: IOrderDetail) => {
+    //   delete el.stock;
+    // });
 
     const order = await Order.create(orderData);
 
