@@ -60,6 +60,7 @@ export interface OrderData {
   orderDetails: IOrderDetail[];
   shippingCost: number;
   currency: string;
+  revenue?: number; // Revenue in IDR
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;
