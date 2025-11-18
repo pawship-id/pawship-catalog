@@ -196,7 +196,8 @@ export default function PricingDisplay({
         )}
       </div>
 
-      {moq > 1 && (
+      {/* Show MOQ only for resellers */}
+      {session?.user.role === "reseller" && moq > 1 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <div className="text-sm text-blue-800">
             <strong>MOQ:</strong> {moq} pieces minimum order for this product.

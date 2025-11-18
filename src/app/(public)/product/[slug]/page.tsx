@@ -12,7 +12,7 @@ import { getById } from "@/lib/apiService";
 import { ProductData, VariantRow } from "@/lib/types/product";
 import { Download, ShoppingCart } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { enrichProduct, hasTag } from "@/lib/helpers/product";
+import { enrichProduct } from "@/lib/helpers/product";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useSession } from "next-auth/react";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
@@ -80,9 +80,9 @@ export default function ProductDetailPage() {
         isDisabled = true;
       }
 
-      if (quantity < product.moq) {
-        isDisabled = true;
-      }
+      // if (quantity < product.moq) {
+      //   isDisabled = true;
+      // }
     }
 
     setDisabledAddToCart(isDisabled);

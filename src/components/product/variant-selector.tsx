@@ -31,7 +31,7 @@ export default function VariantSelector({
   const [selectedVariantTypes, setSelectedVariantTypes] = useState<
     Record<string, string>
   >({});
-  const [inputValue, setInputValue] = useState(moq.toString());
+  const [inputValue, setInputValue] = useState("1");
 
   // handle select/unselect variant
   const handleVariantSelect = (attribute: string, value: string) => {

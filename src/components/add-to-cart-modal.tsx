@@ -68,9 +68,9 @@ export default function AddToCartModal({
         isDisabled = true;
       }
 
-      if (quantity < (product.moq || 1)) {
-        isDisabled = true;
-      }
+      // if (quantity < (product.moq || 1)) {
+      //   isDisabled = true;
+      // }
     }
 
     setDisabledAddToCart(isDisabled);
