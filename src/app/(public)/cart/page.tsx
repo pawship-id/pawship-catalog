@@ -82,25 +82,34 @@ export default function CartPage() {
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
 
-    const updated = formData.orderDetails.map((item: any) => {
+    // First, update the quantity for the specific item
+    const updatedWithNewQty = formData.orderDetails.map((item: any) => {
       if (item.variantId === id) {
-        const result = getDiscountedPrice(
-          item.originalPrice[currency],
-          newQuantity,
-          item.productId,
-          item.variantId,
-          item.resellerPricing
-        );
-
-        return {
-          ...item,
-          quantity: newQuantity,
-          discountPercentage: result.discountPercentage,
-          discountedPrice: result.discountedPrice,
-          subTotal: newQuantity * result.finalPrice,
-        };
+        return { ...item, quantity: newQuantity };
       }
       return item;
+    });
+
+    // For B2B (reseller), we need to recalculate ALL items' discounts
+    // because tier discounts depend on total category quantities
+    // For B2C (retail), we can just recalculate the changed item
+    const updated = updatedWithNewQty.map((item: any) => {
+      const result = getDiscountedPrice(
+        item.originalPrice[currency],
+        item.quantity,
+        item.productId,
+        item.variantId,
+        item.categoryId,
+        updatedWithNewQty, // Pass updated cart items for accurate B2B calculation
+        item.resellerPricing
+      );
+
+      return {
+        ...item,
+        discountPercentage: result.discountPercentage,
+        discountedPrice: result.discountedPrice,
+        subTotal: item.quantity * result.finalPrice,
+      };
     });
 
     setFormData((prev) => ({
@@ -123,11 +132,33 @@ export default function CartPage() {
   const removeItem = (id: string) => {
     let filter = formData.orderDetails.filter((item) => item.variantId !== id);
 
+    // For B2B (reseller), recalculate discounts for remaining items
+    // since tier discounts depend on total category quantities
+    // For B2C (retail), prices remain the same as they are per variant
+    const recalculatedFilter = filter.map((item: any) => {
+      const result = getDiscountedPrice(
+        item.originalPrice[currency],
+        item.quantity,
+        item.productId,
+        item.variantId,
+        item.categoryId,
+        filter, // Pass filtered cart items for accurate B2B calculation
+        item.resellerPricing
+      );
+
+      return {
+        ...item,
+        discountPercentage: result.discountPercentage,
+        discountedPrice: result.discountedPrice,
+        subTotal: item.quantity * result.finalPrice,
+      };
+    });
+
     // update state
     setFormData((prev) => ({
       ...prev,
-      orderDetails: filter,
-      totalAmount: filter.reduce(
+      orderDetails: recalculatedFilter,
+      totalAmount: recalculatedFilter.reduce(
         (sum: number, element: any) => sum + element.subTotal,
         0
       ),
@@ -257,9 +288,10 @@ export default function CartPage() {
   const shipping = totalAmount > 50 ? 0 : 9.99;
   const total = totalAmount + shipping;
 
-  // Helper function to calculate reseller discount
-  const calculateResellerDiscount = (
-    quantity: number,
+  // B2B: Calculate tier discount for a specific product based on total category quantities in cart
+  const calculateB2BDiscount = (
+    categoryId: string,
+    currentCartItems: any[], // Pass cart items as parameter instead of relying on formData
     resellerPricing?: {
       currency: string;
       tiers: Array<{
@@ -270,31 +302,96 @@ export default function CartPage() {
       }>;
     }
   ) => {
-    if (!resellerPricing || !resellerPricing.tiers) {
+    if (
+      !resellerPricing ||
+      !resellerPricing.tiers ||
+      !Array.isArray(resellerPricing.tiers)
+    ) {
       return { discountPercentage: 0, tierName: null };
     }
 
-    // Find the highest applicable tier based on quantity
-    let applicableTier = null;
-    for (const tier of resellerPricing.tiers) {
-      if (quantity >= tier.minimumQuantity) {
-        if (
-          !applicableTier ||
-          tier.minimumQuantity > applicableTier.minimumQuantity
-        ) {
-          applicableTier = tier;
+    // Find all tiers that include this product's category
+    const applicableTiers = resellerPricing.tiers.filter((tier) => {
+      const categories = Array.isArray(tier.categoryProduct)
+        ? tier.categoryProduct
+        : [tier.categoryProduct];
+      return categories.includes(categoryId);
+    });
+
+    if (applicableTiers.length === 0) {
+      return { discountPercentage: 0, tierName: null };
+    }
+
+    // For each applicable tier, calculate total quantity of all products in that tier's categories
+    let bestTier = null;
+    let highestDiscount = 0;
+
+    for (const tier of applicableTiers) {
+      const categories = Array.isArray(tier.categoryProduct)
+        ? tier.categoryProduct
+        : [tier.categoryProduct];
+
+      // Sum quantities of all products whose categoryId is in this tier's categories
+      const totalCategoryQty = currentCartItems.reduce((sum, item: any) => {
+        if (categories.includes(item.categoryId)) {
+          return sum + item.quantity;
         }
+        return sum;
+      }, 0);
+
+      console.log(
+        `[B2B Discount] Category ${categoryId} | Tier: ${tier.name} | Min: ${tier.minimumQuantity} | Total Category Qty: ${totalCategoryQty} | Discount: ${tier.discount}%`
+      );
+
+      // Check if this tier is qualified and has higher discount
+      if (
+        totalCategoryQty >= tier.minimumQuantity &&
+        tier.discount > highestDiscount
+      ) {
+        highestDiscount = tier.discount;
+        bestTier = tier;
       }
     }
 
-    if (applicableTier) {
+    if (bestTier) {
+      console.log(
+        `[B2B Discount] Category ${categoryId} => Selected Tier: ${bestTier.name} | Discount: ${bestTier.discount}%`
+      );
       return {
-        discountPercentage: applicableTier.discount,
-        tierName: applicableTier.name,
+        discountPercentage: bestTier.discount,
+        tierName: bestTier.name,
       };
     }
 
     return { discountPercentage: 0, tierName: null };
+  };
+
+  // B2C: Calculate promo discount for retail customers (per variant)
+  const calculateB2CDiscount = (
+    basePrice: number,
+    productId: string,
+    variantId: string
+  ) => {
+    const promoResult = calculateFinalPrice(
+      basePrice,
+      currency,
+      productId,
+      variantId,
+      activePromos,
+      false
+    );
+
+    if (promoResult.hasDiscount) {
+      return {
+        discountPercentage: promoResult.discountPercentage,
+        finalPrice: promoResult.finalPrice,
+      };
+    }
+
+    return {
+      discountPercentage: 0,
+      finalPrice: basePrice,
+    };
   };
 
   // Universal Discount Calculator (B2C & B2B)
@@ -303,37 +400,32 @@ export default function CartPage() {
     quantity: number,
     productId: string,
     variantId: string,
+    categoryId: string,
+    currentCartItems: any[], // Pass current cart items for B2B calculation
     resellerPricing?: any
   ) => {
     let discountPercentage = 0;
     let finalPrice = basePrice;
 
     if (session?.user.role === "reseller" && resellerPricing) {
-      const tiers = resellerPricing.tiers || [];
-      const selectedTier = tiers
-        .filter((t: any) => quantity >= t.minimumQuantity)
-        .sort((a: any, b: any) => b.minimumQuantity - a.minimumQuantity)[0];
+      // B2B: Use tier-based discount calculation based on total category quantities
+      const tierResult = calculateB2BDiscount(
+        categoryId,
+        currentCartItems,
+        resellerPricing
+      );
 
-      if (selectedTier) {
-        discountPercentage = selectedTier.discount;
+      if (tierResult.discountPercentage > 0) {
+        discountPercentage = tierResult.discountPercentage;
         finalPrice = Math.round(
           basePrice - (basePrice * discountPercentage) / 100
         );
       }
     } else {
-      const promoResult = calculateFinalPrice(
-        basePrice,
-        currency,
-        productId,
-        variantId,
-        activePromos,
-        false
-      );
-
-      if (promoResult.hasDiscount) {
-        discountPercentage = promoResult.discountPercentage;
-        finalPrice = promoResult.finalPrice;
-      }
+      // B2C: Use promo-based discount calculation per variant
+      const promoResult = calculateB2CDiscount(basePrice, productId, variantId);
+      discountPercentage = promoResult.discountPercentage;
+      finalPrice = promoResult.finalPrice;
     }
 
     return {
@@ -352,7 +444,8 @@ export default function CartPage() {
       // Debug log to verify promos are loaded
       console.log("Fetching cart with activePromos:", activePromos.length);
 
-      const detailCartItem = await Promise.all(
+      // First pass: fetch all product data without calculating discounts
+      const cartItemsWithoutDiscount = await Promise.all(
         cartItem.map(async (el: any) => {
           const { data } = await getById<ProductData>(
             "/api/public/products",
@@ -364,26 +457,14 @@ export default function CartPage() {
           );
 
           if (data && variant) {
-            const basePrice = variant.price[currency];
-
-            const result = getDiscountedPrice(
-              basePrice,
-              el.quantity,
-              data._id,
-              variant._id,
-              data.resellerPricing
-            );
-
             return {
               productId: data._id,
               productName: data.productName,
+              categoryId: data.categoryId,
               variantId: el.variantId,
               variantName: variant.name,
               originalPrice: variant.price,
-              discountedPrice: result.discountedPrice,
-              discountPercentage: result.discountPercentage,
               quantity: el.quantity,
-              subTotal: el.quantity * result.finalPrice,
               image:
                 variant.image ||
                 data.productMedia.find((m) => m.type === "image"),
@@ -393,8 +474,36 @@ export default function CartPage() {
               resellerPricing: data.resellerPricing,
             };
           }
+          return null;
         })
       );
+
+      // Filter out null values
+      const validCartItems = cartItemsWithoutDiscount.filter(
+        (item) => item !== null
+      );
+
+      // Second pass: calculate discounts with complete cart data
+      const detailCartItem = validCartItems.map((item: any) => {
+        const basePrice = item.originalPrice[currency];
+
+        const result = getDiscountedPrice(
+          basePrice,
+          item.quantity,
+          item.productId,
+          item.variantId,
+          item.categoryId,
+          validCartItems, // Pass complete cart items for B2B tier calculation
+          item.resellerPricing
+        );
+
+        return {
+          ...item,
+          discountedPrice: result.discountedPrice,
+          discountPercentage: result.discountPercentage,
+          subTotal: item.quantity * result.finalPrice,
+        };
+      });
 
       setFormData((prev) => ({
         ...prev,
