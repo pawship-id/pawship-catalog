@@ -12,6 +12,7 @@ export interface IOrder extends Document {
   shippingCost: number;
   orderType: "B2C" | "B2B";
   currency: string;
+  revenue?: number; // Revenue in IDR
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -129,6 +130,10 @@ const OrderSchema = new Schema<IOrder>(
       type: String,
       enum: ["B2C", "B2B"],
       default: "B2C",
+    },
+    revenue: {
+      type: Number,
+      min: 0,
     },
   },
   { timestamps: true }
