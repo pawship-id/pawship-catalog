@@ -84,6 +84,9 @@ export default function FormProduct({
   const [showSizeProductModal, setShowSizeProductModal] = useState(false);
   const [currentSizeImageIndex, setCurrentSizeImageIndex] = useState(0);
 
+  const [showProductMediaModal, setShowProductMediaModal] = useState(false);
+  const [currentProductMediaIndex, setCurrentProductMediaIndex] = useState(0);
+
   // State untuk existing size images dari database (untuk edit mode)
   const [existingSizeProduct, setExistingSizeProduct] = useState<
     { imageUrl: string; imagePublicId: string }[]
@@ -503,97 +506,107 @@ export default function FormProduct({
                 )}
               </div>
 
-              {/* Preview existing size images */}
-              {existingSizeProduct.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
-                  {existingSizeProduct.map((img, index) => (
-                    <div key={`existing-${index}`} className="relative group">
-                      <img
-                        src={img.imageUrl}
-                        alt={`Size ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-75 transition-opacity"
-                        onClick={() => {
-                          setCurrentSizeImageIndex(index);
-                          setShowSizeProductModal(true);
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDeleteSizeIds((prev) => [
-                            ...prev,
-                            img.imagePublicId,
-                          ]);
-                          setExistingSizeProduct((prev) =>
-                            prev.filter((_, i) => i !== index)
-                          );
-                        }}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
+              {/* Preview new size images */}
+              {previewSizeProduct.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    New Size Media ({previewSizeProduct.length})
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+                    {previewSizeProduct.map((url, index) => (
+                      <div key={`preview-${index}`} className="relative group">
+                        <img
+                          src={url}
+                          alt={`New size ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-75 transition-opacity"
+                          onClick={() => {
+                            setCurrentSizeImageIndex(
+                              existingSizeProduct.length + index
+                            );
+                            setShowSizeProductModal(true);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewSizeProduct((prev) =>
+                              prev.filter((_, i) => i !== index)
+                            );
+                            setFormData((prev) => ({
+                              ...prev,
+                              sizeProduct: (prev.sizeProduct || []).filter(
+                                (_, i) => i !== index
+                              ),
+                            }));
+                          }}
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 transition-opacity"
                         >
-                          <path
-                            fillRule="evenodd"
-                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Preview new size images */}
-              {previewSizeProduct.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
-                  {previewSizeProduct.map((url, index) => (
-                    <div key={`preview-${index}`} className="relative group">
-                      <img
-                        src={url}
-                        alt={`New size ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-75 transition-opacity"
-                        onClick={() => {
-                          setCurrentSizeImageIndex(
-                            existingSizeProduct.length + index
-                          );
-                          setShowSizeProductModal(true);
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPreviewSizeProduct((prev) =>
-                            prev.filter((_, i) => i !== index)
-                          );
-                          setFormData((prev) => ({
-                            ...prev,
-                            sizeProduct: (prev.sizeProduct || []).filter(
-                              (_, i) => i !== index
-                            ),
-                          }));
-                        }}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
+              {/* Preview existing size images */}
+              {isEditMode && existingSizeProduct.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Existing Size Media ({existingSizeProduct.length})
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+                    {existingSizeProduct.map((img, index) => (
+                      <div key={`existing-${index}`} className="relative group">
+                        <img
+                          src={img.imageUrl}
+                          alt={`Size ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-75 transition-opacity"
+                          onClick={() => {
+                            setCurrentSizeImageIndex(index);
+                            setShowSizeProductModal(true);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteSizeIds((prev) => [
+                              ...prev,
+                              img.imagePublicId,
+                            ]);
+                            setExistingSizeProduct((prev) =>
+                              prev.filter((_, i) => i !== index)
+                            );
+                          }}
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 transition-opacity"
                         >
-                          <path
-                            fillRule="evenodd"
-                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -669,29 +682,39 @@ export default function FormProduct({
                 htmlFor="productImageVideo"
                 className="text-base font-medium text-gray-700"
               >
-                Product Images & Videos
+                Product Images & Videos{" "}
+                <span className="text-xs">(Max 9 items)</span>
               </Label>
               <div className="relative py-1">
                 <input
                   id="productImageVideo"
                   type="file"
                   multiple
-                  disabled={formData.productMedia?.length === 9}
+                  disabled={
+                    [...(formData.productMedia || []), ...existingProductMedia]
+                      .length === 9
+                  }
                   accept="image/*,video/*"
-                  className={`absolute inset-0 w-full h-full opacity-0 z-10 ${formData.productMedia?.length === 9 ? "cursor-not-allowed" : "cursor-pointer"}`}
+                  className={`absolute inset-0 w-full h-full opacity-0 z-10 ${[...(formData.productMedia || []), ...existingProductMedia].length === 9 ? "cursor-not-allowed" : "cursor-pointer"}`}
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);
 
                     if (files.length) {
-                      // Limit to maximum 9 images
-                      const filesToProcess = files.slice(0, 9);
+                      // Calculate total existing media
+                      const totalExisting =
+                        (formData.productMedia || []).length +
+                        existingProductMedia.length;
+                      const remainingSlots = 9 - totalExisting;
+
+                      // Limit to remaining slots
+                      const filesToProcess = files.slice(0, remainingSlots);
 
                       setFormData((prev) => {
                         const existingMedia = prev.productMedia || [];
                         const combinedMedia = [
                           ...existingMedia,
                           ...filesToProcess,
-                        ].slice(0, 9);
+                        ];
                         return { ...prev, productMedia: combinedMedia };
                       });
 
@@ -705,32 +728,50 @@ export default function FormProduct({
                     Click to upload images / video or drag and drop
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    PNG, JPG, GIF, MP4, MOV, WEBM up to 5MB (Max 9 items)
+                    PNG, JPG, GIF, MP4, MOV, WEBM up to 5MB
                   </p>
                 </div>
               </div>
               {/* Display new product media yang baru di-upload */}
               {formData.productMedia && formData.productMedia.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.productMedia?.map((image, index) => (
-                    <Badge key={index} variant="secondary">
-                      Media {index + 1}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            productMedia: prev.productMedia?.filter(
-                              (_, i) => i !== index
-                            ),
-                          }))
-                        }
-                        className="ml-1 hover:text-destructive"
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    New Product Media ({formData.productMedia.length})
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+                    {formData.productMedia?.map((file, index) => (
+                      <div
+                        key={index}
+                        className="relative group w-20 h-20 md:w-24 md:h-24 rounded-lg border border-gray-200 overflow-hidden"
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`New media ${index + 1}`}
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-75 transition-opacity"
+                          onClick={() => {
+                            setCurrentProductMediaIndex(
+                              existingProductMedia.length + index
+                            );
+                            setShowProductMediaModal(true);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              productMedia: prev.productMedia?.filter(
+                                (_, i) => i !== index
+                              ),
+                            }))
+                          }
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 transition-opacity"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -740,7 +781,7 @@ export default function FormProduct({
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     Existing Product Media ({existingProductMedia.length})
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
                     {existingProductMedia.map((media, index) => (
                       <div
                         key={media.imagePublicId}
@@ -749,7 +790,11 @@ export default function FormProduct({
                         <img
                           src={media.imageUrl}
                           alt={`Product media ${index + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-75 transition-opacity"
+                          onClick={() => {
+                            setCurrentProductMediaIndex(index);
+                            setShowProductMediaModal(true);
+                          }}
                         />
                         <button
                           type="button"
@@ -766,12 +811,83 @@ export default function FormProduct({
                               )
                             );
                           }}
-                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 transition-opacity"
                         >
                           <X className="h-4 w-4" />
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Product Media Image Modal */}
+              {showProductMediaModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-white p-4 rounded-lg max-w-2xl w-full mx-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium">
+                        Product Media Preview ({currentProductMediaIndex + 1}/
+                        {existingProductMedia.length +
+                          (formData.productMedia?.length || 0)}
+                        )
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowProductMediaModal(false)}
+                        className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <img
+                      src={
+                        currentProductMediaIndex < existingProductMedia.length
+                          ? existingProductMedia[currentProductMediaIndex]
+                              .imageUrl
+                          : URL.createObjectURL(
+                              formData.productMedia![
+                                currentProductMediaIndex -
+                                  existingProductMedia.length
+                              ]
+                            )
+                      }
+                      alt="Product media preview"
+                      className="w-full h-auto object-contain rounded-lg border border-gray-300"
+                    />
+                    <div className="flex justify-between mt-4">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentProductMediaIndex((prev) =>
+                            prev > 0
+                              ? prev - 1
+                              : existingProductMedia.length +
+                                (formData.productMedia?.length || 0) -
+                                1
+                          )
+                        }
+                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentProductMediaIndex((prev) =>
+                            prev <
+                            existingProductMedia.length +
+                              (formData.productMedia?.length || 0) -
+                              1
+                              ? prev + 1
+                              : 0
+                          )
+                        }
+                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
