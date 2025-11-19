@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       moq: Number(formData.get("moq")),
       productDescription: formData.get("productDescription") as string,
       tags: tags,
-      sizeProduct: {},
+      sizeProduct: [] as { imageUrl: string; imagePublicId: string }[],
       productMedia: [] as { imageUrl: string; imagePublicId: string }[],
       variantTypes: JSON.parse(formData.get("variantTypes") as string),
       exclusive: JSON.parse(formData.get("exclusive") as string),
@@ -92,17 +92,17 @@ export async function POST(req: NextRequest) {
       slug: generateSlug(productName),
     };
 
-    const sizeProduct = formData.get("sizeProduct") as File | null;
-    if (sizeProduct) {
-      let uploadResult: UploadResult = await uploadFileToCloudinary(
-        sizeProduct,
+    const sizeProductFiles = formData.getAll("sizeProduct") as File[];
+    if (sizeProductFiles && sizeProductFiles.length > 0) {
+      let uploadResults: UploadResult[] = await bulkUploadFileToCloudinary(
+        sizeProductFiles,
         "products/size"
       );
 
-      data.sizeProduct = {
-        imageUrl: uploadResult.secureUrl,
-        imagePublicId: uploadResult.publicId,
-      };
+      data.sizeProduct = uploadResults.map((el) => ({
+        imageUrl: el.secureUrl,
+        imagePublicId: el.publicId,
+      }));
     }
 
     const productMedia = formData.getAll("productMedia") as File[];

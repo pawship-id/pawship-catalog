@@ -468,6 +468,7 @@ export default function CartPage() {
           if (data && variant) {
             return {
               productId: data._id,
+              slug: data.slug || data._id,
               productName: data.productName,
               categoryId: data.categoryId,
               variantId: el.variantId,
@@ -658,31 +659,38 @@ export default function CartPage() {
                     <div key={item.variantId} className="py-4">
                       {/* Desktop Cart Item - Full size for >= 750px */}
                       <div className="hidden min-[750px]:flex items-start space-x-4">
-                        <div className="relative w-30 h-30">
-                          <img
-                            src={item.image?.imageUrl}
-                            alt={item.name}
-                            className={`w-30 h-30 object-cover rounded-lg ${
-                              item.quantity > item.stock &&
-                              !item.preOrder.enabled
-                                ? "opacity-50 grayscale"
-                                : ""
-                            }`}
-                          />
+                        <Link href={`/product/${item.slug}`} className="block">
+                          <div className="relative w-30 h-30">
+                            <img
+                              src={item.image?.imageUrl}
+                              alt={item.name}
+                              className={`w-30 h-30 object-cover rounded-lg ${
+                                item.quantity > item.stock &&
+                                !item.preOrder.enabled
+                                  ? "opacity-50 grayscale"
+                                  : ""
+                              }`}
+                            />
 
-                          {item.quantity > item.stock &&
-                            !item.preOrder.enabled && (
-                              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                                <span className="text-white text-sm font-bold">
-                                  Out of Stock
-                                </span>
-                              </div>
-                            )}
-                        </div>
+                            {item.quantity > item.stock &&
+                              !item.preOrder.enabled && (
+                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                  <span className="text-white text-sm font-bold">
+                                    Out of Stock
+                                  </span>
+                                </div>
+                              )}
+                          </div>
+                        </Link>
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                            {item.productName}
+                            <Link
+                              href={`/product/${item.slug}`}
+                              className="hover:underline"
+                            >
+                              {item.productName}
+                            </Link>
                           </h3>
                           <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
                             Variant: {item.variantName}
@@ -785,31 +793,38 @@ export default function CartPage() {
 
                       {/* Compact Desktop Cart Item - For >= 490px && < 750px */}
                       <div className="hidden min-[490px]:max-[750px]:flex items-start space-x-3">
-                        <div className="relative w-25 h-25">
-                          <img
-                            src={item.image?.imageUrl}
-                            alt={item.name}
-                            className={`w-25 h-25 object-cover rounded-lg ${
-                              item.quantity > item.stock &&
-                              !item.preOrder.enabled
-                                ? "opacity-50 grayscale"
-                                : ""
-                            }`}
-                          />
+                        <Link href={`/product/${item.slug}`} className="block">
+                          <div className="relative w-25 h-25">
+                            <img
+                              src={item.image?.imageUrl}
+                              alt={item.name}
+                              className={`w-25 h-25 object-cover rounded-lg ${
+                                item.quantity > item.stock &&
+                                !item.preOrder.enabled
+                                  ? "opacity-50 grayscale"
+                                  : ""
+                              }`}
+                            />
 
-                          {item.quantity > item.stock &&
-                            !item.preOrder.enabled && (
-                              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                                <span className="text-white text-sm font-bold">
-                                  Out of Stock
-                                </span>
-                              </div>
-                            )}
-                        </div>
+                            {item.quantity > item.stock &&
+                              !item.preOrder.enabled && (
+                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                  <span className="text-white text-sm font-bold">
+                                    Out of Stock
+                                  </span>
+                                </div>
+                              )}
+                          </div>
+                        </Link>
 
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base font-semibold text-gray-800 mb-1">
-                            {item.productName}
+                            <Link
+                              href={`/product/${item.slug}`}
+                              className="hover:underline"
+                            >
+                              {item.productName}
+                            </Link>
                           </h3>
                           <div className="flex items-center space-x-3 text-xs text-gray-600 mb-2">
                             Variant: {item.variantName}
@@ -915,33 +930,43 @@ export default function CartPage() {
                       <div className="block min-[490px]:hidden">
                         <div className="flex gap-3">
                           {/* Product Image */}
-                          <div className="relative w-25 h-25 flex-shrink-0">
-                            <img
-                              src={item.image?.imageUrl}
-                              alt={item.name}
-                              className={`w-25 h-25 object-cover rounded-lg ${
-                                item.quantity > item.stock &&
-                                !item.preOrder.enabled
-                                  ? "opacity-50 grayscale"
-                                  : ""
-                              }`}
-                            />
+                          <Link
+                            href={`/product/${item.slug}`}
+                            className="flex-shrink-0"
+                          >
+                            <div className="relative w-25 h-25">
+                              <img
+                                src={item.image?.imageUrl}
+                                alt={item.name}
+                                className={`w-25 h-25 object-cover rounded-lg ${
+                                  item.quantity > item.stock &&
+                                  !item.preOrder.enabled
+                                    ? "opacity-50 grayscale"
+                                    : ""
+                                }`}
+                              />
 
-                            {item.quantity > item.stock &&
-                              !item.preOrder.enabled && (
-                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                                  <span className="text-white text-sm font-bold">
-                                    Out of Stock
-                                  </span>
-                                </div>
-                              )}
-                          </div>
+                              {item.quantity > item.stock &&
+                                !item.preOrder.enabled && (
+                                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                                    <span className="text-white text-sm font-bold">
+                                      Out of Stock
+                                    </span>
+                                  </div>
+                                )}
+                            </div>
+                          </Link>
 
                           {/* Product Info */}
                           <div className="flex-1 min-w-0 space-y-1">
                             {/* Product Name with overflow hidden */}
                             <h3 className="text-sm font-semibold text-gray-800 truncate">
-                              {item.productName}
+                              <Link
+                                href={`/product/${item.slug}`}
+                                className="hover:underline"
+                              >
+                                {item.productName}
+                              </Link>
                             </h3>
 
                             {/* Variant Name with overflow hidden and smaller text */}

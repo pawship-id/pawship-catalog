@@ -92,13 +92,9 @@ export function VariantEditor({
   const handleApply = () => {
     const hasSelectedRows = value.some((row) => row.selected);
 
-    if (!defaultStockPrice.stockDefault) {
-      showErrorAlert(undefined, "Please input a stock");
-      return;
-    }
-
-    if (!defaultStockPrice.priceDefault) {
-      showErrorAlert(undefined, "Please input a price IDR");
+    // Validate: at least one input must be filled
+    if (!defaultStockPrice.stockDefault && !defaultStockPrice.priceDefault) {
+      showErrorAlert(undefined, "Please input stock or price IDR");
       return;
     }
 
@@ -113,27 +109,35 @@ export function VariantEditor({
         return item;
       }
 
-      // change price
-      let tempPrice: Record<string, number> = {};
+      // Prepare update object
+      let updateData: Partial<VariantRowForm> = {
+        selected: false,
+      };
 
-      currencyList.forEach((el) => {
-        if (el.currency === "IDR") {
-          tempPrice[el.currency] =
-            Number(defaultStockPrice.priceDefault) || item.price?.IDR;
-        } else {
-          let price =
-            Number(defaultStockPrice.priceDefault) / el.rate ||
-            item.price[el.currency];
+      // Update stock if provided
+      if (defaultStockPrice.stockDefault) {
+        updateData.stock = defaultStockPrice.stockDefault;
+      }
 
-          tempPrice[el.currency] = Number(price.toFixed(1));
-        }
-      });
+      // Update price if provided
+      if (defaultStockPrice.priceDefault) {
+        let tempPrice: Record<string, number> = {};
+
+        currencyList.forEach((el) => {
+          if (el.currency === "IDR") {
+            tempPrice[el.currency] = Number(defaultStockPrice.priceDefault);
+          } else {
+            let price = Number(defaultStockPrice.priceDefault) / el.rate;
+            tempPrice[el.currency] = Number(price.toFixed(1));
+          }
+        });
+
+        updateData.price = tempPrice;
+      }
 
       return {
         ...item,
-        stock: defaultStockPrice.stockDefault || item.stock,
-        price: tempPrice,
-        selected: false,
+        ...updateData,
       };
     });
 

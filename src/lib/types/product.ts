@@ -48,7 +48,7 @@ export interface ProductForm {
   categoryId: string;
   moq: number;
   productDescription: string;
-  sizeProduct?: File | string | null;
+  sizeProduct?: File[];
   productMedia?: File[] | null;
   tags?: TagForm[];
   exclusive: { enabled: boolean; country: string[] | null };
@@ -75,7 +75,10 @@ export interface ProductData {
   }[];
   preOrder: { enabled: boolean; leadTime: string };
   moq: number;
-  sizeProduct?: File | string | null;
+  sizeProduct?: {
+    imageUrl: string;
+    imagePublicId: string;
+  }[];
   tags?: TagData[];
   exclusive?: { enabled: boolean; country: string[] | null };
   variantTypes?: VariantType[];

@@ -70,6 +70,8 @@ export default function Sidebar() {
     );
 
     if (result.isConfirmed) {
+      localStorage.removeItem("variantRows");
+      localStorage.removeItem("cartItem");
       await signOut({ callbackUrl: "/login" });
     }
   };

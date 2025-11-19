@@ -10,7 +10,7 @@ export interface IProduct extends Document {
   sizeProduct?: {
     imageUrl: string;
     imagePublicId: string;
-  };
+  }[];
   productMedia?: {
     imageUrl: string;
     imagePublicId: string;
@@ -61,9 +61,9 @@ const ProductSchema = new Schema<IProduct>(
       type: String,
       required: [true, "Please input a product description"],
     },
-    sizeProduct: {
-      _id: false,
-      type: {
+    sizeProduct: [
+      {
+        _id: false,
         imageUrl: {
           type: String,
         },
@@ -71,7 +71,7 @@ const ProductSchema = new Schema<IProduct>(
           type: String,
         },
       },
-    },
+    ],
     productMedia: [
       {
         _id: false,
