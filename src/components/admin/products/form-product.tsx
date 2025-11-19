@@ -57,7 +57,7 @@ const initialFormState: ProductForm = {
   categoryId: "",
   moq: 1,
   productDescription: "",
-  sizeProduct: null,
+  sizeProduct: [],
   productMedia: [],
   tags: [] as TagForm[],
   exclusive: { enabled: false, country: [] as string[] },
@@ -80,10 +80,15 @@ export default function FormProduct({
     { isNew: boolean; tagName: string }[]
   >([]);
 
-  const [previewSizeProduct, setPreviewSizeProduct] = useState<string | null>(
-    null
-  );
+  const [previewSizeProduct, setPreviewSizeProduct] = useState<string[]>([]);
   const [showSizeProductModal, setShowSizeProductModal] = useState(false);
+  const [currentSizeImageIndex, setCurrentSizeImageIndex] = useState(0);
+
+  // State untuk existing size images dari database (untuk edit mode)
+  const [existingSizeProduct, setExistingSizeProduct] = useState<
+    { imageUrl: string; imagePublicId: string }[]
+  >([]);
+  const [deleteSizeIds, setDeleteSizeIds] = useState<string[]>([]);
 
   // State untuk existing media dari database (untuk edit mode)
   const [existingProductMedia, setExistingProductMedia] = useState<
@@ -187,9 +192,11 @@ export default function FormProduct({
       formDataToSend.append("productDescription", formData.productDescription);
       formDataToSend.append("tags", JSON.stringify(formData.tags));
 
-      // add size product image if exists
-      if (formData.sizeProduct) {
-        formDataToSend.append("sizeProduct", formData.sizeProduct);
+      // add size product images if exists
+      if (formData.sizeProduct && formData.sizeProduct.length > 0) {
+        formData.sizeProduct.forEach((file) => {
+          formDataToSend.append("sizeProduct", file);
+        });
       }
 
       // add product media files
@@ -226,6 +233,11 @@ export default function FormProduct({
       // add delete media IDs for edit mode
       if (isEditMode && deleteMediaIds.length > 0) {
         formDataToSend.append("deleteMediaIds", JSON.stringify(deleteMediaIds));
+      }
+
+      // add delete size IDs for edit mode
+      if (isEditMode && deleteSizeIds.length > 0) {
+        formDataToSend.append("deleteSizeIds", JSON.stringify(deleteSizeIds));
       }
 
       let response: ApiResponse<ProductData>;
@@ -271,7 +283,7 @@ export default function FormProduct({
         categoryId: initialData.categoryId || "",
         moq: initialData.moq || 1,
         productDescription: initialData.productDescription || "",
-        sizeProduct: null, // Will be shown as preview
+        sizeProduct: [], // Will be shown as preview
         productMedia: [], // Will be shown as previews from existingProductMedia
         tags: (initialData.tags || []).map((tag: any) => ({
           isNew: false,
@@ -306,13 +318,13 @@ export default function FormProduct({
         );
       }
 
-      // Set size product preview
+      // Set size product previews
       if (
         initialData.sizeProduct &&
-        typeof initialData.sizeProduct === "object" &&
-        "imageUrl" in initialData.sizeProduct
+        Array.isArray(initialData.sizeProduct) &&
+        initialData.sizeProduct.length > 0
       ) {
-        setPreviewSizeProduct(initialData.sizeProduct.imageUrl as string);
+        setExistingSizeProduct(initialData.sizeProduct);
       }
 
       // Set existing product media
@@ -455,56 +467,145 @@ export default function FormProduct({
                 htmlFor="imageSizeProduct"
                 className="text-base font-medium text-gray-700"
               >
-                Upload Size Product
+                Upload Size Product Images
               </Label>
               <Input
                 id="imageSizeProduct"
                 type="file"
                 accept="image/*"
+                multiple
                 className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                 onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  let url: string | null = null;
+                  const files = Array.from(e.target.files || []);
 
-                  if (file) {
+                  if (files.length > 0) {
                     setFormData((prev) => ({
                       ...prev,
-                      sizeProduct: file,
+                      sizeProduct: [...(prev.sizeProduct || []), ...files],
                     }));
-                    url = URL.createObjectURL(file);
-                  } else {
-                    setFormData((prev) => ({
-                      ...prev,
-                      sizeProduct: null,
-                    }));
+
+                    const urls = files.map((file) => URL.createObjectURL(file));
+                    setPreviewSizeProduct((prev) => [...prev, ...urls]);
                   }
-
-                  setPreviewSizeProduct(url);
                 }}
               />
 
               <div className="flex justify-between items-center mt-2">
-                <small className="text-destructive text-sm">
-                  * Maximum input 1 image
+                <small className="text-muted-foreground text-sm">
+                  * You can upload multiple images
                 </small>
-                {previewSizeProduct && (
-                  <button
-                    type="button"
-                    onClick={() => setShowSizeProductModal(true)}
-                    className="text-blue-500 hover:text-blue-700 text-sm font-medium cursor-pointer"
-                  >
-                    Show image
-                  </button>
+                {(previewSizeProduct.length > 0 ||
+                  existingSizeProduct.length > 0) && (
+                  <small className="text-blue-500 text-sm font-medium">
+                    {previewSizeProduct.length + existingSizeProduct.length}{" "}
+                    image(s) selected
+                  </small>
                 )}
               </div>
 
+              {/* Preview existing size images */}
+              {existingSizeProduct.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+                  {existingSizeProduct.map((img, index) => (
+                    <div key={`existing-${index}`} className="relative group">
+                      <img
+                        src={img.imageUrl}
+                        alt={`Size ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-75 transition-opacity"
+                        onClick={() => {
+                          setCurrentSizeImageIndex(index);
+                          setShowSizeProductModal(true);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteSizeIds((prev) => [
+                            ...prev,
+                            img.imagePublicId,
+                          ]);
+                          setExistingSizeProduct((prev) =>
+                            prev.filter((_, i) => i !== index)
+                          );
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Preview new size images */}
+              {previewSizeProduct.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+                  {previewSizeProduct.map((url, index) => (
+                    <div key={`preview-${index}`} className="relative group">
+                      <img
+                        src={url}
+                        alt={`New size ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-75 transition-opacity"
+                        onClick={() => {
+                          setCurrentSizeImageIndex(
+                            existingSizeProduct.length + index
+                          );
+                          setShowSizeProductModal(true);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewSizeProduct((prev) =>
+                            prev.filter((_, i) => i !== index)
+                          );
+                          setFormData((prev) => ({
+                            ...prev,
+                            sizeProduct: (prev.sizeProduct || []).filter(
+                              (_, i) => i !== index
+                            ),
+                          }));
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Image Modal */}
-              {showSizeProductModal && previewSizeProduct && (
+              {showSizeProductModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                  <div className="bg-white p-4 rounded-lg max-w-md w-full mx-4">
+                  <div className="bg-white p-4 rounded-lg max-w-2xl w-full mx-4">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-medium">
-                        Size Product Image Preview
+                        Size Product Image Preview ({currentSizeImageIndex + 1}/
+                        {existingSizeProduct.length + previewSizeProduct.length}
+                        )
                       </h3>
                       <button
                         type="button"
@@ -515,10 +616,49 @@ export default function FormProduct({
                       </button>
                     </div>
                     <img
-                      src={previewSizeProduct}
-                      alt="Category preview"
-                      className="w-full h-auto object-cover rounded-lg border border-gray-300"
+                      src={
+                        currentSizeImageIndex < existingSizeProduct.length
+                          ? existingSizeProduct[currentSizeImageIndex].imageUrl
+                          : previewSizeProduct[
+                              currentSizeImageIndex - existingSizeProduct.length
+                            ]
+                      }
+                      alt="Size product preview"
+                      className="w-full h-auto object-contain rounded-lg border border-gray-300"
                     />
+                    <div className="flex justify-between mt-4">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentSizeImageIndex((prev) =>
+                            prev > 0
+                              ? prev - 1
+                              : existingSizeProduct.length +
+                                previewSizeProduct.length -
+                                1
+                          )
+                        }
+                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentSizeImageIndex((prev) =>
+                            prev <
+                            existingSizeProduct.length +
+                              previewSizeProduct.length -
+                              1
+                              ? prev + 1
+                              : 0
+                          )
+                        }
+                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

@@ -125,26 +125,45 @@ export async function PUT(req: NextRequest, { params }: Context) {
       slug: generateSlug(productName),
     };
 
-    // Handle size product image update
-    const sizeProduct = formData.get("sizeProduct") as File | null;
-    if (sizeProduct && sizeProduct.size > 0) {
-      // Delete old size product image if exists
-      if (existingProduct.sizeProduct?.imagePublicId) {
-        await deleteFileFromCloudinary(
-          existingProduct.sizeProduct.imagePublicId
-        );
-      }
+    // Handle size product images update
+    const deleteSizeIds = JSON.parse(
+      (formData.get("deleteSizeIds") as string) || "[]"
+    );
 
-      // Upload new size product image
-      let uploadResult: UploadResult = await uploadFileToCloudinary(
-        sizeProduct,
+    // Delete marked size images from Cloudinary
+    if (deleteSizeIds.length > 0) {
+      await Promise.all(
+        deleteSizeIds.map((publicId: string) =>
+          deleteFileFromCloudinary(publicId)
+        )
+      );
+
+      // Remove deleted size images from existing product
+      data.sizeProduct = (existingProduct.sizeProduct || []).filter(
+        (img: any) => !deleteSizeIds.includes(img.imagePublicId)
+      );
+    } else {
+      data.sizeProduct = existingProduct.sizeProduct || [];
+    }
+
+    // Upload new size product images if any
+    const sizeProductFiles = formData.getAll("sizeProduct") as File[];
+    if (
+      sizeProductFiles &&
+      sizeProductFiles.length > 0 &&
+      sizeProductFiles[0].size > 0
+    ) {
+      let uploadResults: UploadResult[] = await bulkUploadFileToCloudinary(
+        sizeProductFiles,
         "products/size"
       );
 
-      data.sizeProduct = {
-        imageUrl: uploadResult.secureUrl,
-        imagePublicId: uploadResult.publicId,
-      };
+      const newSizeImages = uploadResults.map((el) => ({
+        imageUrl: el.secureUrl,
+        imagePublicId: el.publicId,
+      }));
+
+      data.sizeProduct = [...(data.sizeProduct || []), ...newSizeImages];
     }
 
     // Handle product media update
