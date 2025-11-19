@@ -134,6 +134,9 @@ export default function NavigationHeader() {
     );
 
     if (result.isConfirmed) {
+      localStorage.removeItem("variantRows");
+      localStorage.removeItem("cartItem");
+
       await signOut({ callbackUrl: "/login" });
     }
   };
