@@ -394,11 +394,11 @@ export default function NavigationHeader() {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link
-                      href="/address"
+                      href="/profile"
                       className="flex items-center space-x-2"
                     >
-                      <MapPin className="h-4 w-4" />
-                      <span>Address</span>
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
