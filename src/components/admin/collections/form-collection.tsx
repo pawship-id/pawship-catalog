@@ -48,6 +48,10 @@ export default function FormCollection({
   const isEditMode = !!collectionId;
   const router = useRouter();
 
+  // Track original rule type and ruleIds for edit mode
+  const [originalRuleType, setOriginalRuleType] = useState<string>("");
+  const [originalRuleIds, setOriginalRuleIds] = useState<string[]>([]);
+
   // State for fetching options based on rule type
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [options, setOptions] = useState<Array<{ _id: string; name: string }>>(
@@ -198,7 +202,16 @@ export default function FormCollection({
       ...prev,
       ruleIds: selected,
     }));
+
+    // Update originalRuleIds if currently on the original rule type
+    // This ensures that when user modifies items on original rule type,
+    // the changes are preserved when switching to other rules and back
+    if (isEditMode && formData.rules === originalRuleType) {
+      setOriginalRuleIds(selected);
+    }
   };
+
+  console.log(formData);
 
   const getRuleLabel = () => {
     switch (formData.rules) {
@@ -261,6 +274,10 @@ export default function FormCollection({
         mobileImage: initialData.mobileImageUrl || null,
       });
 
+      // Save original rule type and ruleIds for comparison
+      setOriginalRuleType(initialData.rules || "");
+      setOriginalRuleIds(initialData.ruleIds || []);
+
       // Set image previews for edit mode
       if (initialData.desktopImageUrl) {
         setDesktopPreview(initialData.desktopImageUrl);
@@ -270,6 +287,16 @@ export default function FormCollection({
       }
     }
   }, [initialData]);
+
+  useEffect(() => {
+    if (initialData && !formData.rules) {
+      setFormData((prev) => ({
+        ...prev,
+        rules: initialData.rules,
+        ruleIds: initialData.ruleIds,
+      }));
+    }
+  }, [options]);
 
   return (
     <form
@@ -305,9 +332,18 @@ export default function FormCollection({
           </Label>
           <Select
             value={formData.rules}
-            onValueChange={(value) =>
-              setFormData({ ...formData, rules: value as any, ruleIds: [] })
-            }
+            onValueChange={(value) => {
+              // Always clear ruleIds when changing rule type
+              // Exception: In edit mode, restore original ruleIds when switching back to original rule type
+              const ruleIds =
+                isEditMode && value === originalRuleType ? originalRuleIds : [];
+
+              setFormData({
+                ...formData,
+                rules: value as any,
+                ruleIds,
+              });
+            }}
           >
             <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
               <SelectValue placeholder="Select rule type" />
@@ -345,6 +381,7 @@ export default function FormCollection({
               <span className="text-red-500">*</span>
             </Label>
             <MultiSelectDropdown
+              key={`${formData.rules}-${formData.rules === originalRuleType ? "original" : "new"}`}
               options={options}
               selectedIds={formData.ruleIds}
               onChange={handleRuleIdsDropdownChange}
