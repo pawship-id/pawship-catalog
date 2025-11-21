@@ -11,6 +11,7 @@ import {
   Calendar,
   CheckCircle,
   Clock,
+  CreditCard,
   DollarSign,
   Edit,
   FileText,
@@ -51,22 +52,27 @@ export default function DetailProduct() {
       { color: string; icon: React.ReactNode; label: string }
     > = {
       "pending confirmation": {
-        color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+        color: "bg-orange-100 text-orange-800 border-orange-200",
         icon: <Clock className="w-4 h-4" />,
         label: "Pending Confirmation",
       },
-      paid: {
+      "awaiting payment": {
         color: "bg-green-100 text-green-800 border-green-200",
+        icon: <CreditCard className="w-4 h-4" />,
+        label: "Awaiting Payment",
+      },
+      "payment confirmed": {
+        color: "bg-blue-100 text-blue-800 border-blue-200",
         icon: <CheckCircle className="w-4 h-4" />,
-        label: "Paid",
+        label: "Payment Confirmed",
       },
       processing: {
-        color: "bg-blue-100 text-blue-800 border-blue-200",
+        color: "bg-purple-100 text-purple-800 border-purple-200",
         icon: <Package className="w-4 h-4" />,
         label: "Processing",
       },
       shipped: {
-        color: "bg-purple-100 text-purple-800 border-purple-200",
+        color: "bg-green-100 text-green-800 border-green-200",
         icon: <Truck className="w-4 h-4" />,
         label: "Shipped",
       },

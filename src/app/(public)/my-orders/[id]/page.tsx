@@ -25,7 +25,12 @@ interface OrderDetail {
   orderDate: string;
   totalAmount: number;
   shippingCost: number;
-  status: "pending confirmation" | "paid" | "processing" | "shipped";
+  status:
+    | "pending confirmation"
+    | "awaiting payment"
+    | "payment confirmed"
+    | "processing"
+    | "shipped";
   currency: string;
   orderType: "B2C" | "B2B";
   shippingAddress: {
@@ -59,26 +64,34 @@ const statusConfig = {
   "pending confirmation": {
     label: "Pending Confirmation",
     icon: Clock,
-    color: "text-yellow-600 bg-yellow-50",
-    description: "We are waiting for your payment confirmation",
+    color: "text-orange-600 bg-orange-50",
+    description:
+      "We're reviewing your order and calculating shipping.\nOur team will message you on WhatsApp shortly with your final total.",
   },
-  paid: {
-    label: "Payment Confirmed",
+  "awaiting payment": {
+    label: "Awaiting Payment",
     icon: CheckCircle,
     color: "text-green-600 bg-green-50",
-    description: "Your payment has been confirmed",
+    description:
+      "Your total has been confirmed. Please complete your payment and upload your proof here.",
+  },
+  "payment confirmed": {
+    label: "Payment Confirmed",
+    icon: CheckCircle,
+    color: "text-blue-600 bg-blue-50",
+    description: "Thank you! Your payment has been verified.",
   },
   processing: {
     label: "Processing",
     icon: Package,
-    color: "text-blue-600 bg-blue-50",
-    description: "We are preparing your order",
+    color: "text-purple-600 bg-purple-50",
+    description: "Your order is being packed with love 💛",
   },
   shipped: {
     label: "Shipped",
     icon: Truck,
-    color: "text-purple-600 bg-purple-50",
-    description: "Your order is on the way",
+    color: "text-green-600 bg-green-50",
+    description: "Your order is on the way! Tracking number: XXXX",
   },
 };
 
@@ -238,25 +251,30 @@ export default function OrderDetailPage() {
                     width:
                       order.status === "pending confirmation"
                         ? "0%"
-                        : order.status === "paid"
-                          ? "33%"
-                          : order.status === "processing"
-                            ? "66%"
-                            : "100%",
+                        : order.status === "awaiting payment"
+                          ? "25%"
+                          : order.status === "payment confirmed"
+                            ? "50%"
+                            : order.status === "processing"
+                              ? "75%"
+                              : "100%",
                   }}
                 ></div>
               </div>
 
               {/* Timeline Steps */}
               {Object.entries(statusConfig).map(([key, config], index) => {
-                const isCompleted =
-                  (key === "pending confirmation" &&
-                    order.status !== "pending confirmation") ||
-                  (key === "paid" &&
-                    ["paid", "processing", "shipped"].includes(order.status)) ||
-                  (key === "processing" &&
-                    ["processing", "shipped"].includes(order.status)) ||
-                  (key === "shipped" && order.status === "shipped");
+                const statusOrder = [
+                  "pending confirmation",
+                  "awaiting payment",
+                  "payment confirmed",
+                  "processing",
+                  "shipped",
+                ];
+                const currentIndex = statusOrder.indexOf(order.status);
+                const stepIndex = statusOrder.indexOf(key);
+
+                const isCompleted = stepIndex < currentIndex;
                 const isCurrent = key === order.status;
 
                 return (

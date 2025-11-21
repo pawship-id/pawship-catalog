@@ -15,7 +15,12 @@ interface OrderItem {
   invoiceNumber: string;
   orderDate: string;
   totalAmount: number;
-  status: "pending confirmation" | "paid" | "processing" | "shipped";
+  status:
+    | "pending confirmation"
+    | "awaiting payment"
+    | "payment confirmed"
+    | "processing"
+    | "shipped";
   orderDetails: Array<{
     productName: string;
     quantity: number;
@@ -28,24 +33,36 @@ interface OrderItem {
 
 const statusConfig = {
   "pending confirmation": {
-    label: "Pending",
+    label: "Pending Confirmation",
     icon: Clock,
-    color: "text-yellow-600 bg-yellow-50",
+    color: "text-orange-600 bg-orange-50",
+    description:
+      "We're reviewing your order and calculating shipping.\nOur team will message you on WhatsApp shortly with your final total.",
   },
-  paid: {
-    label: "Paid",
+  "awaiting payment": {
+    label: "Awaiting Payment",
     icon: CheckCircle,
     color: "text-green-600 bg-green-50",
+    description:
+      "Your total has been confirmed. Please complete your payment and upload your proof here.",
+  },
+  "payment confirmed": {
+    label: "Payment Confirmed",
+    icon: CheckCircle,
+    color: "text-blue-600 bg-blue-50",
+    description: "Thank you! Your payment has been verified.",
   },
   processing: {
     label: "Processing",
     icon: Package,
-    color: "text-blue-600 bg-blue-50",
+    color: "text-purple-600 bg-purple-50",
+    description: "Your order is being packed with love 💛",
   },
   shipped: {
     label: "Shipped",
     icon: Truck,
-    color: "text-purple-600 bg-purple-50",
+    color: "text-green-600 bg-green-50",
+    description: "Your order is on the way! Tracking number: XXXX",
   },
 };
 
@@ -124,10 +141,11 @@ export default function MyOrdersPage() {
       <h1 className="text-3xl font-bold mb-6">My Orders</h1>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 mb-6">
+        <TabsList className="grid w-full grid-cols-6 mb-6">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="pending confirmation">Pending</TabsTrigger>
-          <TabsTrigger value="paid">Paid</TabsTrigger>
+          <TabsTrigger value="awaiting payment">Awaiting Payment</TabsTrigger>
+          <TabsTrigger value="payment confirmed">Payment Confirmed</TabsTrigger>
           <TabsTrigger value="processing">Processing</TabsTrigger>
           <TabsTrigger value="shipped">Shipped</TabsTrigger>
         </TabsList>

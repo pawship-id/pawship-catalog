@@ -6,7 +6,12 @@ export interface IOrder extends Document {
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
-  status: "pending confirmation" | "paid" | "processing" | "shipped";
+  status:
+    | "pending confirmation"
+    | "awaiting payment"
+    | "payment confirmed"
+    | "processing"
+    | "shipped";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
@@ -108,7 +113,13 @@ const OrderSchema = new Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: ["pending confirmation", "paid", "processing", "shipped"],
+      enum: [
+        "pending confirmation",
+        "awaiting payment",
+        "payment confirmed",
+        "processing",
+        "shipped",
+      ],
       default: "pending confirmation",
     },
     shippingAddress: {

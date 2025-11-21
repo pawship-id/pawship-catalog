@@ -42,7 +42,8 @@ export default function CartPage() {
     totalAmount: 0,
     status: "pending confirmation" as
       | "pending confirmation"
-      | "paid"
+      | "awaiting payment"
+      | "payment confirmed"
       | "processing"
       | "shipped",
     shippingAddress: {

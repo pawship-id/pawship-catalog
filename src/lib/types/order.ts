@@ -41,7 +41,12 @@ export interface OrderForm {
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
-  status: "pending confirmation" | "paid" | "processing" | "shipped";
+  status:
+    | "pending confirmation"
+    | "awaiting payment"
+    | "payment confirmed"
+    | "processing"
+    | "shipped";
   orderType: "B2C" | "B2B";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
@@ -54,7 +59,12 @@ export interface OrderData {
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
-  status: "pending confirmation" | "paid" | "processing" | "shipped";
+  status:
+    | "pending confirmation"
+    | "awaiting payment"
+    | "payment confirmed"
+    | "processing"
+    | "shipped";
   orderType: "B2C" | "B2B";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
