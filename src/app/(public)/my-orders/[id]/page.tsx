@@ -91,7 +91,7 @@ const statusConfig = {
     label: "Shipped",
     icon: Truck,
     color: "text-green-600 bg-green-50",
-    description: "Your order is on the way! Tracking number: XXXX",
+    description: "Your order is on the way!",
   },
 };
 
