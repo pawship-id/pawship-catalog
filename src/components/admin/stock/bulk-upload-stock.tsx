@@ -73,8 +73,8 @@ export default function BulkUploadStock() {
     }
 
     const confirm = await showConfirmAlert(
-      "Upload CSV",
-      `Are you sure you want to upload "${selectedFile.name}"? This will update stock for all matching SKUs.`
+      `Are you sure you want to upload "${selectedFile.name}"? This will update stock for all matching SKUs.`,
+      "Upload CSV"
     );
 
     if (!confirm.isConfirmed) return;
