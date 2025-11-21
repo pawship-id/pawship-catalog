@@ -32,7 +32,7 @@ export default function StockManagementPage() {
             Stock Management
           </h1>
           <p className="text-muted-foreground text-lg">
-            Bulk update product stock via CSV upload
+            Bulk update product stock via XLXS upload
           </p>
         </div>
         <Button
@@ -64,7 +64,7 @@ export default function StockManagementPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-semibold text-blue-900">
                 <FileText className="h-5 w-5" />
-                CSV Guidelines
+                Upload Stock Guidelines
               </CardTitle>
               <CardDescription className=" text-blue-800 ">
                 Follow these guidelines for successful stock updates
@@ -75,11 +75,45 @@ export default function StockManagementPage() {
                 <h4 className="font-medium text-blue-900 mb-2">
                   📋 Required Format
                 </h4>
-                <div className="bg-gray-200 p-3 rounded-md font-mono text-sm">
-                  <div>sku,stock</div>
-                  <div>SKU-COLLAR-001,150</div>
-                  <div>SKU-HARNESS-002,200</div>
-                  <div>SKU-LEASH-003,75</div>
+                <div className="bg-white p-3 rounded-md border border-gray-300 inline-block">
+                  <table className="text-sm">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="px-3 py-1.5 text-left font-semibold text-gray-700 border border-gray-300">
+                          SKU
+                        </th>
+                        <th className="px-3 py-1.5 text-left font-semibold text-gray-700 border border-gray-300">
+                          Stock
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="px-3 py-1.5 border border-gray-300 font-mono text-xs">
+                          SKU-COLLAR-001
+                        </td>
+                        <td className="px-3 py-1.5 border border-gray-300 font-mono text-xs">
+                          150
+                        </td>
+                      </tr>
+                      <tr className="bg-gray-50">
+                        <td className="px-3 py-1.5 border border-gray-300 font-mono text-xs">
+                          SKU-HARNESS-002
+                        </td>
+                        <td className="px-3 py-1.5 border border-gray-300 font-mono text-xs">
+                          200
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-1.5 border border-gray-300 font-mono text-xs">
+                          SKU-LEASH-003
+                        </td>
+                        <td className="px-3 py-1.5 border border-gray-300 font-mono text-xs">
+                          75
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -96,7 +130,7 @@ export default function StockManagementPage() {
                     (case-sensitive)
                   </li>
                   <li>Stock must be a valid positive number</li>
-                  <li>File must be in CSV format (.csv extension)</li>
+                  <li>File must be in XLSX format (.xlsx extension)</li>
                   <li>Maximum file size: 5MB</li>
                   <li>UTF-8 encoding recommended</li>
                 </ul>
@@ -122,7 +156,7 @@ export default function StockManagementPage() {
                   <li>Download and use the template for correct format</li>
                   <li>Test with a small batch first (5-10 rows)</li>
                   <li>Verify SKUs before uploading</li>
-                  <li>Keep a backup of your CSV file</li>
+                  <li>Keep a backup of your XLSX (excel) file</li>
                   <li>Check the logs after upload to verify updates</li>
                 </ul>
               </div>

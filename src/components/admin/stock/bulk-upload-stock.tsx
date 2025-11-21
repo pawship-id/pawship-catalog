@@ -38,8 +38,12 @@ export default function BulkUploadStock() {
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type
-      if (!file.name.endsWith(".csv")) {
-        showErrorAlert("Invalid File", "Please select a CSV file");
+      const fileName = file.name.toLowerCase();
+      if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
+        showErrorAlert(
+          "Invalid File",
+          "Please select an Excel file (.xlsx or .xls)"
+        );
         return;
       }
 
@@ -64,7 +68,7 @@ export default function BulkUploadStock() {
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      showErrorAlert("No File", "Please select a CSV file first");
+      showErrorAlert("No File", "Please select an Excel file first");
       return;
     }
 
@@ -116,10 +120,10 @@ export default function BulkUploadStock() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Upload CSV File
+            Upload Excel File
           </CardTitle>
           <CardDescription>
-            Upload a CSV file to bulk update product stock
+            Upload an Excel file to bulk update product stock
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -132,7 +136,7 @@ export default function BulkUploadStock() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-2">
-                    Click to select a CSV file or drag and drop
+                    Click to select an Excel file or drag and drop
                   </p>
                   <p className="text-xs text-gray-500">
                     Maximum file size: 5MB
@@ -141,10 +145,10 @@ export default function BulkUploadStock() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv"
+                  accept=".xlsx,.xls"
                   onChange={handleFileSelect}
                   className="hidden"
-                  id="csv-upload"
+                  id="excel-upload"
                 />
                 <Button
                   type="button"
