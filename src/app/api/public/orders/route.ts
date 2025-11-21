@@ -42,6 +42,18 @@ export async function POST(req: NextRequest) {
     );
     orderData.invoiceNumber = invoiceNumber;
 
+    // Initialize status log with first entry
+    (orderData as any).statusLog = [
+      {
+        status: body.status || "pending confirmation",
+        date: new Date(),
+        username: session.user.name || session.user.email || "User",
+      },
+    ];
+
+    // Initialize empty payment proofs array
+    (orderData as any).paymentProofs = [];
+
     // orderData.orderDetails.forEach((el: IOrderDetail) => {
     //   delete el.stock;
     // });

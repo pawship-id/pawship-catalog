@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getById } from "@/lib/apiService";
 import { currencyFormat } from "@/lib/helpers";
 import { OrderData } from "@/lib/types/order";
+import { UploadPaymentProofModal } from "@/components/orders/upload-payment-proof-modal";
 import {
   ArrowLeft,
   Calendar,
@@ -14,6 +15,7 @@ import {
   CreditCard,
   DollarSign,
   Edit,
+  Upload,
   FileText,
   Mail,
   MapPin,
@@ -21,6 +23,8 @@ import {
   Phone,
   Truck,
   User,
+  Trash2,
+  FileImage,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -33,6 +37,7 @@ export default function DetailProduct() {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const getOrderTypeBadge = (type: string) => {
     return type === "B2B" ? (
@@ -131,6 +136,15 @@ export default function DetailProduct() {
             <Button
               size="sm"
               className="cursor-pointer"
+              onClick={() => setShowUploadModal(true)}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Proof
+            </Button>
+
+            <Button
+              size="sm"
+              className="cursor-pointer"
               onClick={() => router.push(`/dashboard/orders/${order._id}/edit`)}
             >
               <Edit className="h-4 w-4 mr-2" />
@@ -139,6 +153,16 @@ export default function DetailProduct() {
           </div>
         )}
       </div>
+
+      {/* Upload Modal */}
+      {id && (
+        <UploadPaymentProofModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          orderId={id}
+          onSuccess={fetchOrder}
+        />
+      )}
 
       {loading ? (
         <div className="mt-20">
@@ -324,6 +348,114 @@ export default function DetailProduct() {
                 </div>
               </div>
             </div>
+
+            {/* Payment Proofs Section */}
+            {order.paymentProofs && order.paymentProofs.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-2">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      Payment Proofs ({order.paymentProofs.length})
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {order.paymentProofs.map((proof, index) => (
+                    <div
+                      key={index}
+                      className="group border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200"
+                    >
+                      {/* Image */}
+                      <div className="relative w-full h-48 bg-gray-100 cursor-pointer overflow-hidden">
+                        <img
+                          src={proof.imageUrl}
+                          alt={`Payment proof ${index + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          onClick={() => window.open(proof.imageUrl, "_blank")}
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
+                          <FileImage className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+
+                      {/* Details */}
+                      <div className="p-4 space-y-3">
+                        {proof.note && (
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium mb-1">
+                              Note
+                            </p>
+                            <p className="text-sm text-gray-900 line-clamp-2">
+                              {proof.note}
+                            </p>
+                          </div>
+                        )}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>
+                              {new Date(proof.uploadedAt).toLocaleDateString(
+                                "en-US",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <User className="h-3.5 w-3.5" />
+                            <span className="font-medium text-gray-700">
+                              {proof.uploadedBy}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Delete Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
+                          onClick={async () => {
+                            if (
+                              !confirm(
+                                "Are you sure you want to delete this payment proof?"
+                              )
+                            )
+                              return;
+                            try {
+                              const res = await fetch(
+                                `/api/orders/payment-proof/${id}?imagePublicId=${encodeURIComponent(
+                                  proof.imagePublicId
+                                )}`,
+                                { method: "DELETE" }
+                              );
+                              const result = await res.json();
+                              if (result.success) {
+                                fetchOrder();
+                              } else {
+                                alert(result.message || "Failed to delete");
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              alert("Delete failed");
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-6 border-b border-gray-200">

@@ -26,6 +26,20 @@ export interface IOrderDetail {
   };
 }
 
+export interface IStatusLog {
+  status: string;
+  date: Date;
+  username: string;
+}
+
+export interface IPaymentProof {
+  imageUrl: string;
+  imagePublicId: string;
+  note?: string;
+  uploadedAt: Date;
+  uploadedBy: string;
+}
+
 export interface IShippingAddress {
   fullName: string;
   email: string;
@@ -71,6 +85,8 @@ export interface OrderData {
   shippingCost: number;
   currency: string;
   revenue?: number; // Revenue in IDR
+  statusLog: IStatusLog[];
+  paymentProofs: IPaymentProof[];
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;
