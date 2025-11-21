@@ -24,6 +24,7 @@ interface CollectionFormProps {
 interface CollectionForm {
   name: string;
   displayOnHomepage: boolean;
+  displayOnNavbar: boolean;
   rules: "tag" | "category" | "custom" | "";
   ruleIds: string[];
   desktopImage: File | string | null;
@@ -33,6 +34,7 @@ interface CollectionForm {
 const initialFormState: CollectionForm = {
   name: "",
   displayOnHomepage: false,
+  displayOnNavbar: false,
   rules: "",
   ruleIds: [],
   desktopImage: null,
@@ -146,6 +148,10 @@ export default function FormCollection({
       formDataToSend.append(
         "displayOnHomepage",
         formData.displayOnHomepage.toString()
+      );
+      formDataToSend.append(
+        "displayOnNavbar",
+        formData.displayOnNavbar.toString()
       );
       formDataToSend.append("rules", formData.rules);
       formDataToSend.append("ruleIds", JSON.stringify(formData.ruleIds));
@@ -268,6 +274,7 @@ export default function FormCollection({
       setFormData({
         name: initialData.name || "",
         displayOnHomepage: initialData.displayOnHomepage || false,
+        displayOnNavbar: initialData.displayOnNavbar || false,
         rules: initialData.rules || "",
         ruleIds: initialData.ruleIds || [],
         desktopImage: initialData.desktopImageUrl || null,
@@ -505,6 +512,52 @@ export default function FormCollection({
               className="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary"
             />
             <Label htmlFor="displayed-yes" className="text-sm font-normal">
+              Yes
+            </Label>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-base font-medium text-gray-700">
+          Display on Navbar
+        </Label>
+        <div className="flex gap-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="radio"
+              id="navbar-no"
+              name="displayOnNavbar"
+              value="false"
+              checked={formData.displayOnNavbar === false}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  displayOnNavbar: e.target.value === "true",
+                })
+              }
+              className="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary"
+            />
+            <Label htmlFor="navbar-no" className="text-sm font-normal">
+              No
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="radio"
+              id="navbar-yes"
+              name="displayOnNavbar"
+              value="true"
+              checked={formData.displayOnNavbar === true}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  displayOnNavbar: e.target.value === "true",
+                })
+              }
+              className="w-4 h-4 text-primary bg-gray-100 border-gray-300 focus:ring-primary"
+            />
+            <Label htmlFor="navbar-yes" className="text-sm font-normal">
               Yes
             </Label>
           </div>

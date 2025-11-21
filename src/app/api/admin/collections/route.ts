@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const name = formData.get("name") as string;
     const displayOnHomepage = formData.get("displayOnHomepage") === "true";
+    const displayOnNavbar = formData.get("displayOnNavbar") === "true";
     const rules = formData.get("rules") as string;
     const ruleIds = JSON.parse(formData.get("ruleIds") as string);
     const desktopImage = formData.get("desktopImage") as File | null;
@@ -132,6 +133,7 @@ export async function POST(req: NextRequest) {
       name,
       slug,
       displayOnHomepage,
+      displayOnNavbar,
       rules,
       ruleIds,
       desktopImageUrl: desktopUploadResult.secureUrl,
