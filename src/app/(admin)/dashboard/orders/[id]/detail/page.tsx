@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function DetailProduct() {
   const params = useParams();
@@ -120,13 +121,11 @@ export default function DetailProduct() {
   return (
     <div>
       <div className="flex flex-wrap gap-2 items-center justify-between">
-        <Button
-          variant="ghost"
-          className="cursor-pointer"
-          onClick={() => router.back()}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Orders
+        <Button variant="ghost" className="cursor-pointer" asChild>
+          <Link href={"/dashboard/orders"}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Orders
+          </Link>
         </Button>
 
         {order && (
@@ -334,13 +333,25 @@ export default function DetailProduct() {
                     </span>
                   </div>
 
+                  {order.discountShipping > 0 && (
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                      <span className="text-gray-600">Discount Shipping</span>
+                      <span className="font-semibold text-red-600">
+                        -{" "}
+                        {currencyFormat(order.discountShipping, order.currency)}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center pt-2">
                     <span className="text-lg font-semibold text-gray-900">
                       Total
                     </span>
                     <span className="text-lg font-bold text-primary">
                       {currencyFormat(
-                        order.totalAmount + order.shippingCost,
+                        order.totalAmount +
+                          order.shippingCost -
+                          (order.discountShipping || 0),
                         order.currency
                       )}
                     </span>

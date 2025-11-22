@@ -29,6 +29,7 @@ export interface IOrder extends Document {
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
+  discountShipping: number;
   orderType: "B2C" | "B2B";
   currency: string;
   revenue?: number; // Revenue in IDR
@@ -144,6 +145,10 @@ const OrderSchema = new Schema<IOrder>(
       min: 0,
     },
     shippingCost: {
+      type: Number,
+      default: 0,
+    },
+    discountShipping: {
       type: Number,
       default: 0,
     },

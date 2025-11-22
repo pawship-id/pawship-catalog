@@ -65,6 +65,7 @@ export interface OrderForm {
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
+  discountShipping: number;
   currency: string;
 }
 
@@ -83,6 +84,7 @@ export interface OrderData {
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
+  discountShipping: number;
   currency: string;
   revenue?: number; // Revenue in IDR
   statusLog: IStatusLog[];

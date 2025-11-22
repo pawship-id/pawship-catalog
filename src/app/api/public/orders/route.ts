@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       ...body,
       userId: session.user.id,
       revenue,
+      discountShipping: body.discountShipping || 0, // Set default 0 if not provided
     };
 
     // Generate unique invoice number based on shipping address country

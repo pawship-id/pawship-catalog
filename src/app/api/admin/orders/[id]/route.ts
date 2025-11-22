@@ -51,6 +51,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
       {
         status: body.status,
         shippingCost: body.shippingCost,
+        discountShipping: body.discountShipping,
         shippingAddress: body.shippingAddress,
         orderDetails: body.orderDetails,
         totalAmount: body.totalAmount,
