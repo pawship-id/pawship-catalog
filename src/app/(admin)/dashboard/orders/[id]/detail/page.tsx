@@ -361,7 +361,7 @@ export default function DetailProduct() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {order.paymentProofs.map((proof, index) => (
                     <div
                       key={index}
@@ -375,9 +375,6 @@ export default function DetailProduct() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                           onClick={() => window.open(proof.imageUrl, "_blank")}
                         />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
-                          <FileImage className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
                       </div>
 
                       {/* Details */}

@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload } from "lucide-react";
+import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 
 interface UploadPaymentProofModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export function UploadPaymentProofModal({
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      alert("Please choose a file to upload");
+      showErrorAlert(undefined, "Please choose a file to upload");
       return;
     }
 
@@ -57,16 +58,23 @@ export function UploadPaymentProofModal({
       const result = await res.json();
 
       if (result.success) {
+        showSuccessAlert(
+          undefined,
+          "Payment receipt received. We'll update your order status soon"
+        );
         setNote("");
         setSelectedFile(null);
         onSuccess();
         onClose();
       } else {
-        alert(result.message || "Failed to upload payment proof");
+        showErrorAlert(
+          undefined,
+          result.message || "Failed to upload payment proof"
+        );
       }
     } catch (err) {
       console.error(err);
-      alert("Upload failed");
+      showErrorAlert(undefined, "Upload failed");
     } finally {
       setUploading(false);
     }

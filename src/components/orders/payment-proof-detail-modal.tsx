@@ -55,7 +55,8 @@ export function PaymentProofDetailModal({
               <img
                 src={proof.imageUrl}
                 alt="Payment proof"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain cursor-pointer"
+                onClick={() => window.open(proof.imageUrl, "_blank")}
               />
             </div>
           </div>

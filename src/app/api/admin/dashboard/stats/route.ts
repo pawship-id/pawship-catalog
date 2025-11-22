@@ -69,18 +69,18 @@ export async function GET(request: NextRequest) {
     const totalProducts = await Product.countDocuments({ status: "active" });
 
     // Get orders data
-    const orders = await Order.find(orderQuery).select("status totalAmount");
+    const orders = await Order.find(orderQuery).select("status revenue");
 
     // Calculate total revenue (from awaiting payment, payment confirmed, processing, and shipped orders)
     const totalRevenue = orders
       .filter(
         (order) =>
-          order.status === "awaiting payment" ||
+          // order.status === "awaiting payment" ||
           order.status === "payment confirmed" ||
           order.status === "processing" ||
           order.status === "shipped"
       )
-      .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+      .reduce((sum, order) => sum + (order.revenue || 0), 0);
 
     // Count orders by status
     const ordersByStatus = {

@@ -290,7 +290,7 @@ export default function EditOrderPage() {
                   </div>
                   <Input
                     className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    required
+                    disabled
                     onChange={(e) =>
                       setOrder((prev) =>
                         prev ? { ...prev, invoiceNumber: e.target.value } : prev

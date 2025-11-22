@@ -16,8 +16,6 @@ import {
   Clock,
   Truck,
   Upload,
-  Trash2,
-  FileImage,
   Hourglass,
   ImageIcon,
 } from "lucide-react";
