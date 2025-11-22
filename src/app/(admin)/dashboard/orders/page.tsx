@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAll } from "@/lib/apiService";
 import { OrderData } from "@/lib/types/order";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -23,6 +23,7 @@ export default function OrderPage() {
   const [filteredDataOrder, setFilteredDataOrder] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedFilter, setSelectedFilter] = useState({
     orderType: "all",
@@ -51,31 +52,64 @@ export default function OrderPage() {
 
       // Filter response data by orderType and status if selectedFilter is not "all"
       if (response.data?.length) {
-        // Combine filtering by status and orderType (tab)
-        let filteredOrder = response.data;
-
-        // Filter by status if not "all"
-        if (selectedFilter.status !== "all") {
-          filteredOrder = filteredOrder.filter(
-            (order: OrderData) => order.status === selectedFilter.status
-          );
-        }
-
-        // Filter by orderType if not "all"
-        if (selectedFilter.orderType !== "all") {
-          filteredOrder = filteredOrder.filter(
-            (order: OrderData) => order.orderType === selectedFilter.orderType
-          );
-        }
-        setFilteredDataOrder(filteredOrder);
-
         setOrders(response.data);
+        applyFilters(response.data, selectedFilter, searchQuery);
       }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyFilters = (
+    data: OrderData[],
+    filters: typeof selectedFilter,
+    search: string
+  ) => {
+    let filtered = [...data];
+
+    // Filter by status
+    if (filters.status !== "all") {
+      filtered = filtered.filter((order) => order.status === filters.status);
+    }
+
+    // Filter by orderType (tab)
+    if (filters.orderType !== "all") {
+      filtered = filtered.filter(
+        (order) => order.orderType === filters.orderType
+      );
+    }
+
+    // Filter by search query
+    if (search.trim()) {
+      const query = search.toLowerCase().trim();
+      filtered = filtered.filter((order) => {
+        // Search by order ID (invoice number)
+        const matchOrderId = order.invoiceNumber?.toLowerCase().includes(query);
+
+        // Search by customer name
+        const matchName = order.shippingAddress?.fullName
+          ?.toLowerCase()
+          .includes(query);
+
+        // Search by phone number
+        const matchPhone = order.shippingAddress?.phone
+          ?.toLowerCase()
+          .includes(query);
+
+        // Search by product name or variant name in order details
+        const matchProduct = order.orderDetails?.some(
+          (detail) =>
+            detail.productName?.toLowerCase().includes(query) ||
+            detail.variantName?.toLowerCase().includes(query)
+        );
+
+        return matchOrderId || matchName || matchPhone || matchProduct;
+      });
+    }
+
+    setFilteredDataOrder(filtered);
   };
 
   const handleUpdateStatus = async (
@@ -126,6 +160,13 @@ export default function OrderPage() {
   useEffect(() => {
     fetchOrders();
   }, [selectedFilter]);
+
+  // Apply filters when search query changes
+  useEffect(() => {
+    if (orders.length > 0) {
+      applyFilters(orders, selectedFilter, searchQuery);
+    }
+  }, [searchQuery]);
 
   if (error) {
     return <ErrorPage errorMessage={error} url="/dashboard" />;
@@ -183,37 +224,55 @@ export default function OrderPage() {
 
           <div className="mb-4 mt-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-              <Select
-                value={selectedFilter.status}
-                onValueChange={(value) =>
-                  setSelectedFilter((prev) => ({ ...prev, status: value }))
-                }
-              >
-                <SelectTrigger className="w-48 border-1 border-border focus:border-primary">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending confirmation">
-                    Pending Confirmation
-                  </SelectItem>
-                  <SelectItem value="awaiting payment">
-                    Awaiting Payment
-                  </SelectItem>
-                  <SelectItem value="payment confirmed">
-                    Payment Confirmed
-                  </SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="shipped">Shipped</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-4">
+                <Select
+                  value={selectedFilter.status}
+                  onValueChange={(value) =>
+                    setSelectedFilter((prev) => ({ ...prev, status: value }))
+                  }
+                >
+                  <SelectTrigger className="w-48 border-1 border-border focus:border-primary">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending confirmation">
+                      Pending Confirmation
+                    </SelectItem>
+                    <SelectItem value="awaiting payment">
+                      Awaiting Payment
+                    </SelectItem>
+                    <SelectItem value="payment confirmed">
+                      Payment Confirmed
+                    </SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="shipped">Shipped</SelectItem>
+                  </SelectContent>
+                </Select>
+                {searchQuery && (
+                  <p className="text-sm text-muted-foreground">
+                    Found {filteredDataOrder.length} result
+                    {filteredDataOrder.length !== 1 ? "s" : ""}
+                  </p>
+                )}
+              </div>
               <div className="flex items-center space-x-2 w-full sm:w-auto">
                 <div className="relative w-full max-w-sm">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search order..."
-                    className="pl-10 border-1 border-border focus:border-primary w-full"
+                    placeholder="Search by name, phone, order ID, or product..."
+                    className="pl-10 pr-10 border-1 border-border focus:border-primary w-full"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

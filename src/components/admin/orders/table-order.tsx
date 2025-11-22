@@ -54,6 +54,7 @@ export default function TableOrder({
           <TableRow>
             <TableHead>Invoice</TableHead>
             <TableHead>Customer</TableHead>
+            <TableHead>Phone Number</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Total</TableHead>
             <TableHead>Status</TableHead>
@@ -78,6 +79,7 @@ export default function TableOrder({
                   {item.invoiceNumber}
                 </TableCell>
                 <TableCell>{item.shippingAddress.fullName}</TableCell>
+                <TableCell>{item.shippingAddress.phone}</TableCell>
                 <TableCell className="text-muted-foreground">
                   <Badge variant="outline">{item.orderType}</Badge>
                 </TableCell>
