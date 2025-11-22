@@ -12,6 +12,13 @@ import {
   Phone,
 } from "lucide-react";
 import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createData, getById } from "@/lib/apiService";
 import { ProductData } from "@/lib/types/product";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -35,6 +42,25 @@ export default function CartPage() {
   const { activePromos, loading: promosLoading } = usePromo();
 
   const { currency, format } = useCurrency();
+  console.log(currency);
+
+  const countries = [
+    { country: "Indonesia", code: "ID" },
+    { country: "Singapore", code: "SG" },
+    { country: "Malaysia", code: "MY" },
+    { country: "Thailand", code: "TH" },
+    { country: "Philippines", code: "PH" },
+    { country: "Vietnam", code: "VN" },
+    { country: "Hong Kong", code: "HK" },
+    { country: "China", code: "CN" },
+    { country: "Japan", code: "JP" },
+    { country: "South Korea", code: "KR" },
+    { country: "Australia", code: "AU" },
+    { country: "New Zealand", code: "NZ" },
+    { country: "United States", code: "US" },
+    { country: "United Kingdom", code: "UK" },
+    { country: "Canada", code: "CA" },
+  ];
 
   const [formData, setFormData] = useState<OrderForm>({
     orderDate: new Date(),
@@ -537,6 +563,50 @@ export default function CartPage() {
       setIsLoading(true);
     }
   }, [currency, status, promosLoading, activePromos]);
+
+  // Sync currency with formData when currency changes
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      currency,
+    }));
+  }, [currency]);
+
+  // Fetch user profile to populate shipping address
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (status === "authenticated" && session?.user) {
+        setIsLoading(true);
+        try {
+          const response = await fetch("/api/public/profile");
+          if (response.ok) {
+            const { data } = await response.json();
+            // Populate shipping address from user profile
+            setFormData((prev) => ({
+              ...prev,
+              shippingAddress: {
+                fullName: data.name || "",
+                email: data.email || "",
+                phone: data.phone || "",
+                country: data.address?.country || "",
+                city: data.address?.city || "",
+                district: data.address?.district || "",
+                zipCode: data.address?.zipCode || "",
+                address: data.address?.address || "",
+              },
+            }));
+          }
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
+          // Silently fail - user can still fill in the form manually
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [status, session]);
 
   // Show loading while session or promos are loading
   if (isLoading || promosLoading) {
@@ -1143,15 +1213,23 @@ export default function CartPage() {
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                       <span>Country</span>
                     </label>
-                    <input
-                      type="text"
+                    <Select
                       value={formData.shippingAddress.country}
-                      onChange={(e) =>
-                        handleAddressChange("country", e.target.value)
+                      onValueChange={(value) =>
+                        handleAddressChange("country", value)
                       }
-                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
-                      placeholder="Enter your country"
-                    />
+                    >
+                      <SelectTrigger className="w-full p-3 py-6 h-auto border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80">
+                        <SelectValue placeholder="Select your country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map((c) => (
+                          <SelectItem key={c.code} value={c.country}>
+                            {c.country}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>

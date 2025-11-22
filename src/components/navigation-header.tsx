@@ -401,15 +401,6 @@ export default function NavigationHeader() {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link
-                      href="/settings"
-                      className="flex items-center space-x-2"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Setting</span>
-                    </Link>
-                  </DropdownMenuItem>
                   <div className=" border-t my-1"></div>
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <button
