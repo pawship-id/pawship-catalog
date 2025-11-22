@@ -35,8 +35,6 @@ export interface IRetailProfile {
 }
 
 export interface IAddress {
-  fullName: string;
-  phone: string;
   address: string;
   city: string;
   district: string;
@@ -132,8 +130,6 @@ const UserSchema = new Schema<IUser>(
     },
     addresses: [
       {
-        fullName: { type: String, required: true },
-        phone: { type: String, required: true },
         address: { type: String, required: true },
         city: { type: String, required: true },
         district: { type: String, required: true },

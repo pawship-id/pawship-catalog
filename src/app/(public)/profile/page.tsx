@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   User,
-  MapPin,
   ChevronDown,
   Save,
   Lock,
@@ -32,6 +31,9 @@ import {
   Building2,
   Globe,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import Link from "next/link";
 
 interface UserProfile {
   _id: string;
@@ -68,6 +70,41 @@ export default function ProfilePage() {
     newPassword: "",
     confirmPassword: "",
   });
+
+  // Helper function to update profile fields
+  const updateProfile = (field: keyof UserProfile, value: any) => {
+    if (profile) {
+      setProfile({ ...profile, [field]: value });
+    }
+  };
+
+  // Helper function to update address fields
+  const updateAddress = (field: string, value: string) => {
+    if (profile) {
+      setProfile({
+        ...profile,
+        address: {
+          fullName: profile.address?.fullName || "",
+          phone: profile.address?.phone || "",
+          address: profile.address?.address || "",
+          city: profile.address?.city || "",
+          district: profile.address?.district || "",
+          zipCode: profile.address?.zipCode || "",
+          country: profile.address?.country || "Indonesia",
+          ...profile.address,
+          [field]: value,
+        },
+      });
+    }
+  };
+
+  // Helper function to update password data
+  const updatePasswordData = (
+    field: keyof typeof passwordData,
+    value: string
+  ) => {
+    setPasswordData({ ...passwordData, [field]: value });
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -106,13 +143,13 @@ export default function ProfilePage() {
       const result = await response.json();
 
       if (result.success) {
-        alert("Profile updated successfully!");
+        showSuccessAlert(undefined, "Profile updated successfully!");
       } else {
-        alert(result.message || "Failed to update profile");
+        showErrorAlert(undefined, result.message || "Failed to update profile");
       }
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert("An error occurred while updating profile");
+      showErrorAlert(undefined, "An error occurred while updating profile");
     } finally {
       setSaving(false);
     }
@@ -227,12 +264,24 @@ export default function ProfilePage() {
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="name"
-                      value={profile.name}
-                      onChange={(e) =>
-                        setProfile({ ...profile, name: e.target.value })
-                      }
-                      className="pl-10"
+                      value={profile.name || ""}
+                      onChange={(e) => updateProfile("name", e.target.value)}
+                      className="pl-10 border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                       required
+                    />
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      value={profile.phone || ""}
+                      onChange={(e) => updateProfile("phone", e.target.value)}
+                      className="pl-10 border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                     />
                   </div>
                 </div>
@@ -246,29 +295,13 @@ export default function ProfilePage() {
                       id="email"
                       type="email"
                       value={profile.email}
-                      className="pl-10 bg-muted"
+                      className="pl-10 bg-muted border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                       disabled
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Email cannot be changed
+                    Contact admin to change email
                   </p>
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="phone"
-                      value={profile.phone || ""}
-                      onChange={(e) =>
-                        setProfile({ ...profile, phone: e.target.value })
-                      }
-                      className="pl-10"
-                    />
-                  </div>
                 </div>
 
                 {/* Account Type */}
@@ -276,7 +309,7 @@ export default function ProfilePage() {
                   <Label>Account Type</Label>
                   <Input
                     value={profile.accountType}
-                    className="bg-muted"
+                    className="bg-muted border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                     disabled
                   />
                   <p className="text-xs text-muted-foreground">
@@ -301,12 +334,9 @@ export default function ProfilePage() {
                           id="businessName"
                           value={profile.businessName || ""}
                           onChange={(e) =>
-                            setProfile({
-                              ...profile,
-                              businessName: e.target.value,
-                            })
+                            updateProfile("businessName", e.target.value)
                           }
-                          className="pl-10"
+                          className="pl-10 border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                         />
                       </div>
                     </div>
@@ -316,10 +346,10 @@ export default function ProfilePage() {
                       <Select
                         value={profile.businessType || ""}
                         onValueChange={(value) =>
-                          setProfile({ ...profile, businessType: value })
+                          updateProfile("businessType", value)
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 w-full">
                           <SelectValue placeholder="Select business type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -347,9 +377,9 @@ export default function ProfilePage() {
                           id="taxId"
                           value={profile.taxId || ""}
                           onChange={(e) =>
-                            setProfile({ ...profile, taxId: e.target.value })
+                            updateProfile("taxId", e.target.value)
                           }
-                          className="pl-10"
+                          className="pl-10 border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                           placeholder="Optional"
                         />
                       </div>
@@ -365,88 +395,15 @@ export default function ProfilePage() {
             <div>
               <h3 className="text-lg font-semibold mb-4">Shipping Address</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Full Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="addressFullName">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="addressFullName"
-                      value={profile.address?.fullName || ""}
-                      onChange={(e) =>
-                        setProfile({
-                          ...profile,
-                          address: {
-                            ...profile.address,
-                            fullName: e.target.value,
-                            phone: profile.address?.phone || "",
-                            address: profile.address?.address || "",
-                            city: profile.address?.city || "",
-                            district: profile.address?.district || "",
-                            zipCode: profile.address?.zipCode || "",
-                            country: profile.address?.country || "Indonesia",
-                          },
-                        })
-                      }
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-2">
-                  <Label htmlFor="addressPhone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="addressPhone"
-                      value={profile.address?.phone || ""}
-                      onChange={(e) =>
-                        setProfile({
-                          ...profile,
-                          address: {
-                            ...profile.address,
-                            fullName: profile.address?.fullName || "",
-                            phone: e.target.value,
-                            address: profile.address?.address || "",
-                            city: profile.address?.city || "",
-                            district: profile.address?.district || "",
-                            zipCode: profile.address?.zipCode || "",
-                            country: profile.address?.country || "Indonesia",
-                          },
-                        })
-                      }
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
                 {/* Address */}
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="addressStreet">Street Address</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="addressStreet"
-                      value={profile.address?.address || ""}
-                      onChange={(e) =>
-                        setProfile({
-                          ...profile,
-                          address: {
-                            ...profile.address,
-                            fullName: profile.address?.fullName || "",
-                            phone: profile.address?.phone || "",
-                            address: e.target.value,
-                            city: profile.address?.city || "",
-                            district: profile.address?.district || "",
-                            zipCode: profile.address?.zipCode || "",
-                            country: profile.address?.country || "Indonesia",
-                          },
-                        })
-                      }
-                      className="pl-10"
-                    />
-                  </div>
+                  <Textarea
+                    id="addressStreet"
+                    value={profile.address?.address || ""}
+                    onChange={(e) => updateAddress("address", e.target.value)}
+                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 rounded-md p-2 w-full"
+                  />
                 </div>
 
                 {/* District */}
@@ -455,21 +412,8 @@ export default function ProfilePage() {
                   <Input
                     id="addressDistrict"
                     value={profile.address?.district || ""}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        address: {
-                          ...profile.address,
-                          fullName: profile.address?.fullName || "",
-                          phone: profile.address?.phone || "",
-                          address: profile.address?.address || "",
-                          city: profile.address?.city || "",
-                          district: e.target.value,
-                          zipCode: profile.address?.zipCode || "",
-                          country: profile.address?.country || "Indonesia",
-                        },
-                      })
-                    }
+                    onChange={(e) => updateAddress("district", e.target.value)}
+                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                   />
                 </div>
 
@@ -479,21 +423,8 @@ export default function ProfilePage() {
                   <Input
                     id="addressCity"
                     value={profile.address?.city || ""}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        address: {
-                          ...profile.address,
-                          fullName: profile.address?.fullName || "",
-                          phone: profile.address?.phone || "",
-                          address: profile.address?.address || "",
-                          city: e.target.value,
-                          district: profile.address?.district || "",
-                          zipCode: profile.address?.zipCode || "",
-                          country: profile.address?.country || "Indonesia",
-                        },
-                      })
-                    }
+                    onChange={(e) => updateAddress("city", e.target.value)}
+                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                   />
                 </div>
 
@@ -503,21 +434,8 @@ export default function ProfilePage() {
                   <Input
                     id="addressZipCode"
                     value={profile.address?.zipCode || ""}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        address: {
-                          ...profile.address,
-                          fullName: profile.address?.fullName || "",
-                          phone: profile.address?.phone || "",
-                          address: profile.address?.address || "",
-                          city: profile.address?.city || "",
-                          district: profile.address?.district || "",
-                          zipCode: e.target.value,
-                          country: profile.address?.country || "Indonesia",
-                        },
-                      })
-                    }
+                    onChange={(e) => updateAddress("zipCode", e.target.value)}
+                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                   />
                 </div>
 
@@ -529,30 +447,28 @@ export default function ProfilePage() {
                     <Input
                       id="addressCountry"
                       value={profile.address?.country || "Indonesia"}
-                      onChange={(e) =>
-                        setProfile({
-                          ...profile,
-                          address: {
-                            ...profile.address,
-                            fullName: profile.address?.fullName || "",
-                            phone: profile.address?.phone || "",
-                            address: profile.address?.address || "",
-                            city: profile.address?.city || "",
-                            district: profile.address?.district || "",
-                            zipCode: profile.address?.zipCode || "",
-                            country: e.target.value,
-                          },
-                        })
-                      }
-                      className="pl-10"
+                      onChange={(e) => updateAddress("country", e.target.value)}
+                      className="pl-10 border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end pt-4">
-              <Button type="submit" disabled={saving} className="gap-2">
+            <div className="flex justify-between pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="px-6 w-full sm:w-auto"
+                asChild
+              >
+                <Link href="/">Cancel</Link>
+              </Button>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="gap-2 cursor-pointer"
+              >
                 <Save className="h-4 w-4" />
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
@@ -577,10 +493,7 @@ export default function ProfilePage() {
                     type="password"
                     value={passwordData.currentPassword}
                     onChange={(e) =>
-                      setPasswordData({
-                        ...passwordData,
-                        currentPassword: e.target.value,
-                      })
+                      updatePasswordData("currentPassword", e.target.value)
                     }
                     required
                   />
@@ -593,10 +506,7 @@ export default function ProfilePage() {
                     type="password"
                     value={passwordData.newPassword}
                     onChange={(e) =>
-                      setPasswordData({
-                        ...passwordData,
-                        newPassword: e.target.value,
-                      })
+                      updatePasswordData("newPassword", e.target.value)
                     }
                     required
                   />
@@ -609,10 +519,7 @@ export default function ProfilePage() {
                     type="password"
                     value={passwordData.confirmPassword}
                     onChange={(e) =>
-                      setPasswordData({
-                        ...passwordData,
-                        confirmPassword: e.target.value,
-                      })
+                      updatePasswordData("confirmPassword", e.target.value)
                     }
                     required
                   />
