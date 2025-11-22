@@ -64,10 +64,10 @@ export default function NavigationHeader() {
 
   const [cartItemCount, setCartItemCount] = useState(0);
 
-  const [categories, setCategories] = useState<
+  const [collections, setCollections] = useState<
     { name: string; href: string }[] | null
   >(null);
-  const [loadingFetchCategory, setLoadingFetchCategory] = useState(true);
+  const [loadingFetchCollections, setLoadingFetchCollections] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const navigation = [
@@ -78,7 +78,7 @@ export default function NavigationHeader() {
       subItems: [
         {
           name: "Collections",
-          subItems: categories,
+          subItems: collections,
         },
         {
           name: "New Arrivals",
@@ -148,7 +148,7 @@ export default function NavigationHeader() {
 
   const fetchCategory = async () => {
     try {
-      setLoadingFetchCategory(true);
+      setLoadingFetchCollections(true);
       setError(null);
 
       const response = await getAll<CollectionData>("/api/public/collections");
@@ -159,17 +159,19 @@ export default function NavigationHeader() {
           (el: CollectionData) => el.displayOnNavbar === true
         );
 
-        let mappingCategory = filteredCollections.map((el: CollectionData) => ({
-          name: el.name,
-          href: `/catalog?collection=${el.slug}`,
-        }));
+        let mappingCollections = filteredCollections.map(
+          (el: CollectionData) => ({
+            name: el.name,
+            href: `/catalog?collection=${el.slug}`,
+          })
+        );
 
-        setCategories(mappingCategory);
+        setCollections(mappingCollections);
       }
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoadingFetchCategory(false);
+      setLoadingFetchCollections(false);
     }
   };
 
