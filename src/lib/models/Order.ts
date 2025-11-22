@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 import { IOrderDetail, IShippingAddress } from "../types/order";
 
 export interface IOrder extends Document {
+  userId: string;
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
@@ -11,25 +12,33 @@ export interface IOrder extends Document {
   shippingCost: number;
   orderType: "B2C" | "B2B";
   currency: string;
+  revenue?: number; // Revenue in IDR
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 const OrderDetailSchema = new Schema<IOrderDetail>(
   {
+    productId: { type: String, required: true },
     productName: { type: String, required: true },
     quantity: { type: Number, required: true },
     variantId: { type: String, required: true },
     variantName: { type: String, required: true },
-    price: {
+    originalPrice: {
       type: Object,
       required: true,
+    },
+    discountedPrice: {
+      type: Object,
     },
     image: {
       imagePublicId: { type: String, required: true },
       imageUrl: { type: String, required: true },
     },
     subTotal: { type: Number, required: true },
+    discountPercentage: {
+      type: Number,
+    },
   },
   { _id: false }
 );
@@ -74,6 +83,11 @@ const ShippingAddressSchema = new Schema<IShippingAddress>(
 
 const OrderSchema = new Schema<IOrder>(
   {
+    userId: {
+      type: String,
+      required: [true, "User ID is required"],
+      index: true,
+    },
     orderDate: {
       type: Date,
       default: Date.now,
@@ -116,6 +130,10 @@ const OrderSchema = new Schema<IOrder>(
       type: String,
       enum: ["B2C", "B2B"],
       default: "B2C",
+    },
+    revenue: {
+      type: Number,
+      min: 0,
     },
   },
   { timestamps: true }

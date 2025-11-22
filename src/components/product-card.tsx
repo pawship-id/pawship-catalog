@@ -5,8 +5,12 @@ import { Button } from "./ui/button";
 import { ProductData, VariantRow } from "@/lib/types/product";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/context/CurrencyContext";
+import { usePromo } from "@/context/PromoContext";
+import { getProductMinPrice } from "@/lib/helpers/promo-helper";
 import { TagData } from "@/lib/types/tag";
 import { isNewArrival } from "@/lib/helpers/product";
+import { useSession } from "next-auth/react";
+import AddToCartModal from "./add-to-cart-modal";
 
 interface ProductCardProps {
   product: ProductData;
@@ -15,14 +19,16 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { currency, format } = useCurrency();
+  const { data: session } = useSession();
+  const { activePromos } = usePromo();
 
   const router = useRouter();
 
-  const handleAddToCart = () => {
-    setIsAddingToCart(true);
-    setTimeout(() => setIsAddingToCart(false), 1500);
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsModalOpen(true);
   };
 
   const productMedia =
@@ -30,9 +36,20 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const variants: VariantRow[] | undefined = product.productVariantsData;
 
-  const minPrice = Math.min(
-    ...(variants || []).map((v: VariantRow) => v.price[currency] ?? Infinity)
+  const isReseller = session?.user.role === "reseller";
+
+  // Calculate prices using promo helper
+  const priceInfo = getProductMinPrice(
+    variants || [],
+    product._id,
+    currency,
+    activePromos,
+    isReseller
   );
+
+  const minPrice = priceInfo.minPrice;
+  const hasDiscount = priceInfo.hasDiscount;
+  const minOriginalPrice = priceInfo.minOriginalPrice;
 
   // const discount =
   //   product.originalPrice && product.originalPrice[currency]
@@ -132,11 +149,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Bottom: Price + Button */}
         <div className="mt-auto">
           <div className="mb-3">
-            {/* {product.originalPrice && (
-              <p className="text-base text-gray-400 line-through">
-                {format(product.originalPrice[currency])}
+            {/* Only show strikethrough price for non-reseller users */}
+            {minOriginalPrice && (
+              <p className="text-sm text-gray-400 line-through">
+                {format(minOriginalPrice)}
               </p>
-            )} */}
+            )}
             <p className="text-lg font-bold text-gray-900">
               {format(minPrice)}
             </p>
@@ -145,14 +163,20 @@ export default function ProductCard({ product }: ProductCardProps) {
           <Button
             variant="outline"
             onClick={handleAddToCart}
-            disabled={isAddingToCart}
-            className="w-full py-1 bg-primary/85 text-white border-primary rounded-lg font-semibold transition-all duration-200 hover:bg-primary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-1 bg-primary/85 text-white border-primary rounded-lg font-semibold transition-all duration-200 hover:bg-primary hover:text-white flex items-center justify-center gap-2 cursor-pointer"
           >
             <ShoppingCart className="w-4 h-4" />
-            {isAddingToCart ? "Adding to Cart..." : "Add to Cart"}
+            Add to Cart
           </Button>
         </div>
       </div>
+
+      {/* Add to Cart Modal */}
+      <AddToCartModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        product={product}
+      />
     </div>
   );
 }

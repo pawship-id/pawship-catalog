@@ -10,9 +10,16 @@ import {
 import { CategoryData } from "@/lib/types/category";
 import { getAll } from "@/lib/apiService";
 
-export default function FilterCategory() {
+interface FilterCategoryProps {
+  selectedCategory: string;
+  onCategoryChange: (value: string) => void;
+}
+
+export default function FilterCategory({
+  selectedCategory,
+  onCategoryChange,
+}: FilterCategoryProps) {
   const [categories, setCategories] = useState<CategoryData[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("all");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,8 +44,9 @@ export default function FilterCategory() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
   return (
-    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+    <Select value={selectedCategory} onValueChange={onCategoryChange}>
       <SelectTrigger className="w-48 border-1 border-border focus:border-primary">
         <SelectValue placeholder="Filter by category" />
       </SelectTrigger>

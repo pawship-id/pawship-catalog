@@ -15,6 +15,10 @@ import {
   Globe,
   Store,
   ReceiptText,
+  SquareLibrary,
+  GalleryThumbnails,
+  Warehouse,
+  TicketPercent,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -35,6 +39,26 @@ const navigation = [
     href: "/dashboard/orders",
     icon: ReceiptText,
   },
+  {
+    name: "Collections",
+    href: "/dashboard/collections",
+    icon: SquareLibrary,
+  },
+  {
+    name: "Banners",
+    href: "/dashboard/banners",
+    icon: GalleryThumbnails,
+  },
+  {
+    name: "Stocks",
+    href: "/dashboard/stocks",
+    icon: Warehouse,
+  },
+  {
+    name: "Promotion",
+    href: "/dashboard/promos",
+    icon: TicketPercent,
+  },
   { name: "Website", href: "/", icon: Globe },
 ];
 
@@ -46,6 +70,8 @@ export default function Sidebar() {
     );
 
     if (result.isConfirmed) {
+      localStorage.removeItem("variantRows");
+      localStorage.removeItem("cartItem");
       await signOut({ callbackUrl: "/login" });
     }
   };

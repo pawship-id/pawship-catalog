@@ -2,15 +2,28 @@ export interface IOrderDetail {
   productId: string;
   productName: string;
   quantity: number;
-  stock?: number;
+  stock: number;
+  preOrder: { enabled: boolean; leadTime: string };
   variantId: string;
   variantName: string;
-  price: any;
+  originalPrice: any; // Original price before any discount (for both B2B and B2C)
+  discountedPrice?: any; // Price after discount (if discount applied)
   image: {
     imagePublicId: string;
     imageUrl: string;
   };
   subTotal: number;
+  discountPercentage?: number; // Discount percentage applied (if any)
+  moq?: number; // Minimum Order Quantity per product (for resellers)
+  resellerPricing?: {
+    currency: string;
+    tiers: Array<{
+      name: string;
+      minimumQuantity: number;
+      discount: number;
+      categoryProduct: string | string[];
+    }>;
+  };
 }
 
 export interface IShippingAddress {
@@ -47,6 +60,7 @@ export interface OrderData {
   orderDetails: IOrderDetail[];
   shippingCost: number;
   currency: string;
+  revenue?: number; // Revenue in IDR
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;

@@ -1,3 +1,4 @@
+import SingleBanner from "@/components/common/single-banner";
 import {
   Accordion,
   AccordionContent,
@@ -41,22 +42,23 @@ export default function AboutUsPage() {
           paymentName: "IDR",
           bankName: "Bank Central Asia",
           accountHolderName: "Yosefina Angelita",
-          accountNumber: "1520675597"
+          accountNumber: "1520675597",
         },
         {
           paymentName: "SGD/HKD via Wise",
           bankName: "Bank Central Asia",
           accountHolderName: "Yosefina Angelita",
           accountNumber: "1520675597",
-          Address: "Klampis Jaya A6 , Klampis, Keputih, Surabaya, East Java 60111",
-          email: "pawship.id@gmail.com"
-        }, 
+          Address:
+            "Klampis Jaya A6 , Klampis, Keputih, Surabaya, East Java 60111",
+          email: "pawship.id@gmail.com",
+        },
         {
           paymentName: "USD via Paypal",
           accountHolderName: "Yosefina Angelita",
-          email: "pawship.id@gmail.com"
-        }
-      ]
+          email: "pawship.id@gmail.com",
+        },
+      ],
     },
     {
       title: "Upload proof via Website/Chat",
@@ -71,13 +73,7 @@ export default function AboutUsPage() {
   return (
     <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* Hero Section */}
-      <section
-        className="relative h-[60vh] overflow-hidden bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('https://i.pinimg.com/1200x/a6/4d/de/a64dde838a18d8e6714aea7616122fa8.jpg')",
-        }}
-      >
+      <SingleBanner page="payment">
         <div className="absolute inset-0 bg-black opacity-50"></div>
         {/* Overlay hitam */}
         <div className="relative z-10 flex items-center justify-center h-full text-white">
@@ -93,7 +89,7 @@ export default function AboutUsPage() {
             </p>
           </div>
         </div>
-      </section>
+      </SingleBanner>
 
       <section className="py-16">
         <div className="container mx-auto px-4">
@@ -142,25 +138,64 @@ export default function AboutUsPage() {
                       ))}
                     </ul>
 
-                    {step.bankAccount &&
-                    <div className="mt-2 mx-6 md:ml-16 md:mr-0">
-                      <p className="md:text-base text-muted-foreground leading-relaxed">We only receive payments sent to the following bank account</p>
-                      {step.bankAccount.map((bank, item) => (
-                        <ol key={item} className="md:text-base text-muted-foreground leading-relaxed">
-                          <li className="mt-4 ">
-                            <span className="font-bold">{item + 1}. {bank.paymentName}</span>
-                            <ul className="ml-4 mt-1 space-y-1">
-                              {bank.accountNumber && <li><span className="font-semibold">Bank Name</span>: {bank.bankName}</li>}
-                              <li><span className="font-semibold">Account Holder</span>: {bank.accountHolderName}</li>
-                              {bank.accountNumber && <li><span className="font-semibold">Account Number</span>: {bank.accountNumber}</li>}
-                              {bank.Address && <li><span className="font-semibold">Address</span>: {bank.Address}</li>}
-                              {bank.email && <li><span className="font-semibold">Email</span>: {bank.email}</li>}
-                            </ul>
-                          </li>
-                        </ol>
-                      ))}
-                    </div>
-                    }
+                    {step.bankAccount && (
+                      <div className="mt-2 mx-6 md:ml-16 md:mr-0">
+                        <p className="md:text-base text-muted-foreground leading-relaxed">
+                          We only receive payments sent to the following bank
+                          account
+                        </p>
+                        {step.bankAccount.map((bank, item) => (
+                          <ol
+                            key={item}
+                            className="md:text-base text-muted-foreground leading-relaxed"
+                          >
+                            <li className="mt-4 ">
+                              <span className="font-bold">
+                                {item + 1}. {bank.paymentName}
+                              </span>
+                              <ul className="ml-4 mt-1 space-y-1">
+                                {bank.accountNumber && (
+                                  <li>
+                                    <span className="font-semibold">
+                                      Bank Name
+                                    </span>
+                                    : {bank.bankName}
+                                  </li>
+                                )}
+                                <li>
+                                  <span className="font-semibold">
+                                    Account Holder
+                                  </span>
+                                  : {bank.accountHolderName}
+                                </li>
+                                {bank.accountNumber && (
+                                  <li>
+                                    <span className="font-semibold">
+                                      Account Number
+                                    </span>
+                                    : {bank.accountNumber}
+                                  </li>
+                                )}
+                                {bank.Address && (
+                                  <li>
+                                    <span className="font-semibold">
+                                      Address
+                                    </span>
+                                    : {bank.Address}
+                                  </li>
+                                )}
+                                {bank.email && (
+                                  <li>
+                                    <span className="font-semibold">Email</span>
+                                    : {bank.email}
+                                  </li>
+                                )}
+                              </ul>
+                            </li>
+                          </ol>
+                        ))}
+                      </div>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               ))}

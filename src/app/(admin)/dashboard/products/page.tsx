@@ -1,12 +1,17 @@
+"use client";
+
 import FilterCategory from "@/components/admin/products/filter-category";
 import TableProduct from "@/components/admin/products/table-product";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 
 export default function ProductPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+
   return (
     <div>
       <div className="mb-6 space-y-2">
@@ -26,7 +31,10 @@ export default function ProductPage() {
                 Add Product
               </Link>
             </Button>
-            <FilterCategory />
+            <FilterCategory
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+            />
           </div>
           <div className="flex items-center space-x-2 w-full sm:w-auto">
             <div className="relative w-full max-w-sm">
@@ -34,12 +42,26 @@ export default function ProductPage() {
               <Input
                 placeholder="Search products..."
                 className="pl-10 border-1 border-border focus:border-primary w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                onClick={() => setSearchQuery("")}
+                className="cursor-pointer"
+              >
+                Clear
+              </Button>
+            )}
           </div>
         </div>
       </div>
-      <TableProduct />
+      <TableProduct
+        searchQuery={searchQuery}
+        selectedCategory={selectedCategory}
+      />
     </div>
   );
 }

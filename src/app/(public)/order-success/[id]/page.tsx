@@ -3,11 +3,11 @@ import ErrorPublicPage from "@/components/error-public-page";
 import LoadingPage from "@/components/loading";
 import { Button } from "@/components/ui/button";
 import { getById } from "@/lib/apiService";
+import { currencyFormat } from "@/lib/helpers";
 import { OrderData } from "@/lib/types/order";
-import { CheckCircle, PartyPopper, ShoppingCart, Zap } from "lucide-react";
+import { CheckCircle, ShoppingCart, Zap } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { join } from "path";
 import React, { useEffect, useState } from "react";
 
 export default function OrderSuccess() {
@@ -17,10 +17,14 @@ export default function OrderSuccess() {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  console.log(order?.orderDetails);
 
   const handleConfirmViaWA = () => {
     const items = order?.orderDetails
-      .map((el) => `• ${el.quantity}x ${el.productName} (${el.variantName})`)
+      .map(
+        (el) =>
+          `• ${el.quantity}x ${el.productName} (${el.variantName}) : ${currencyFormat(el.subTotal, order.currency)}`
+      )
       .join("\n");
 
     const msg = `
@@ -158,7 +162,7 @@ Thank you!
             </Button>
           </div>
           <a
-            href="#"
+            href={`/my-orders/${order._id}`}
             className="text-sm font-medium text-gray-500 hover:text-green-500 transition duration-200"
           >
             View Order Details

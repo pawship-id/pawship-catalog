@@ -3,6 +3,37 @@ import bcrypt from "bcryptjs";
 import softDelete from "mongoose-delete";
 import crypto from "crypto";
 
+// Profile interfaces based on role
+export interface IResellerProfile {
+  businessName?: string;
+  businessType?: "offline shop" | "online store" | "groomer" | "reseller";
+  socialMedia?: {
+    instagram?: string;
+    youtube?: string;
+    tiktok?: string;
+  };
+  shippingAddress?: {
+    address?: string;
+    country?: string;
+    city?: string;
+    district?: string;
+    zipCode?: string;
+  };
+  taxLegalInfo?: string; // Optional, hidden for now
+  remarks?: string; // For internal use
+}
+
+export interface IRetailProfile {
+  address?: {
+    address?: string;
+    country?: string;
+    city?: string;
+    district?: string;
+    zipCode?: string;
+  };
+  remarks?: string; // For internal use
+}
+
 export interface IUser extends Document {
   fullName: string;
   phoneNumber: string;
@@ -11,6 +42,8 @@ export interface IUser extends Document {
   confirmPassword?: string;
   role: "admin" | "reseller" | "retail";
   resellerCategoryId?: Types.ObjectId;
+  resellerProfile?: IResellerProfile;
+  retailProfile?: IRetailProfile;
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: Types.ObjectId;
@@ -53,6 +86,37 @@ const UserSchema = new Schema<IUser>(
       type: Schema.Types.ObjectId,
       ref: "ResellerCategory",
       required: false,
+    },
+    resellerProfile: {
+      businessName: { type: String },
+      businessType: {
+        type: String,
+        enum: ["offline shop", "online store", "groomer", "reseller"],
+      },
+      socialMedia: {
+        instagram: { type: String },
+        youtube: { type: String },
+        tiktok: { type: String },
+      },
+      shippingAddress: {
+        address: { type: String },
+        country: { type: String },
+        city: { type: String },
+        district: { type: String },
+        zipCode: { type: String },
+      },
+      taxLegalInfo: { type: String },
+      remarks: { type: String },
+    },
+    retailProfile: {
+      address: {
+        address: { type: String },
+        country: { type: String },
+        city: { type: String },
+        district: { type: String },
+        zipCode: { type: String },
+      },
+      remarks: { type: String },
     },
     passwordResetToken: {
       type: String,

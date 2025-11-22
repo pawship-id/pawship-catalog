@@ -3,17 +3,50 @@ import ProductVariant from "@/lib/models/ProductVariant";
 import dbConnect from "@/lib/mongodb";
 import { IOrderDetail, OrderForm } from "@/lib/types/order";
 import { NextRequest, NextResponse } from "next/server";
+import { generateInvoiceNumber } from "@/lib/helpers/invoice";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { calculateRevenueInIDR } from "@/lib/helpers/currency-helper";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
   try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized. Please log in." },
+        { status: 401 }
+      );
+    }
+
     const body: OrderForm = await req.json();
 
-    body.orderDetails.forEach((el: IOrderDetail) => {
-      delete el.stock;
-    });
+    // Calculate revenue in IDR before saving to database
+    const revenue = calculateRevenueInIDR(
+      body.totalAmount,
+      body.shippingCost,
+      body.currency
+    );
 
-    const order = await Order.create(body);
+    // Add userId from session and revenue
+    const orderData = {
+      ...body,
+      userId: session.user.id,
+      revenue,
+    };
+
+    // Generate unique invoice number based on shipping address country
+    const invoiceNumber = await generateInvoiceNumber(
+      body.shippingAddress.country
+    );
+    orderData.invoiceNumber = invoiceNumber;
+
+    // orderData.orderDetails.forEach((el: IOrderDetail) => {
+    //   delete el.stock;
+    // });
+
+    const order = await Order.create(orderData);
 
     for (const detail of order.orderDetails) {
       const variantProduct = await ProductVariant.findById(detail.variantId);

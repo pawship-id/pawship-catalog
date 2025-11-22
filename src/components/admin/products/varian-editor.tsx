@@ -2,12 +2,21 @@
 
 import type * as React from "react";
 import { useMemo, useRef, useState } from "react";
-import { GripVertical, ImagePlus, X, Plus, ChevronDown } from "lucide-react";
+import {
+  GripVertical,
+  ImagePlus,
+  X,
+  Plus,
+  ChevronDown,
+  Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
 import { VariantRowForm, VariantType } from "@/lib/types/product";
+import ImageGalleryModal from "./image-gallery-modal";
+import VariantPriceModal from "./variant-price-modal";
 
 type VariantEditorProps = {
   value: VariantRowForm[];
@@ -38,6 +47,13 @@ export function VariantEditor({
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [currentEditingRowId, setCurrentEditingRowId] = useState<string | null>(
+    null
+  );
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+  const [currentPriceEditingRow, setCurrentPriceEditingRow] =
+    useState<VariantRowForm | null>(null);
 
   const typeNames = useMemo(
     () => variantTypes.map((t) => t.name),
@@ -76,13 +92,9 @@ export function VariantEditor({
   const handleApply = () => {
     const hasSelectedRows = value.some((row) => row.selected);
 
-    if (!defaultStockPrice.stockDefault) {
-      showErrorAlert(undefined, "Please input a stock");
-      return;
-    }
-
-    if (!defaultStockPrice.priceDefault) {
-      showErrorAlert(undefined, "Please input a price IDR");
+    // Validate: at least one input must be filled
+    if (!defaultStockPrice.stockDefault && !defaultStockPrice.priceDefault) {
+      showErrorAlert(undefined, "Please input stock or price IDR");
       return;
     }
 
@@ -97,27 +109,35 @@ export function VariantEditor({
         return item;
       }
 
-      // change price
-      let tempPrice: Record<string, number> = {};
+      // Prepare update object
+      let updateData: Partial<VariantRowForm> = {
+        selected: false,
+      };
 
-      currencyList.forEach((el) => {
-        if (el.currency === "IDR") {
-          tempPrice[el.currency] =
-            Number(defaultStockPrice.priceDefault) || item.price?.IDR;
-        } else {
-          let price =
-            Number(defaultStockPrice.priceDefault) / el.rate ||
-            item.price[el.currency];
+      // Update stock if provided
+      if (defaultStockPrice.stockDefault) {
+        updateData.stock = defaultStockPrice.stockDefault;
+      }
 
-          tempPrice[el.currency] = Number(price.toFixed(1));
-        }
-      });
+      // Update price if provided
+      if (defaultStockPrice.priceDefault) {
+        let tempPrice: Record<string, number> = {};
+
+        currencyList.forEach((el) => {
+          if (el.currency === "IDR") {
+            tempPrice[el.currency] = Number(defaultStockPrice.priceDefault);
+          } else {
+            let price = Number(defaultStockPrice.priceDefault) / el.rate;
+            tempPrice[el.currency] = Number(price.toFixed(1));
+          }
+        });
+
+        updateData.price = tempPrice;
+      }
 
       return {
         ...item,
-        stock: defaultStockPrice.stockDefault || item.stock,
-        price: tempPrice,
-        selected: false,
+        ...updateData,
       };
     });
 
@@ -157,7 +177,10 @@ export function VariantEditor({
     const existing = variantTypes.find(
       (t) => t.name.toLowerCase() === trimmedName.toLowerCase()
     );
-    if (existing) return;
+    if (existing) {
+      showErrorAlert(undefined, `Variant type "${trimmedName}" already exists`);
+      return;
+    }
 
     const next: VariantType = {
       id: makeId(),
@@ -267,9 +290,124 @@ export function VariantEditor({
   }
 
   function handleFilePick(id: string) {
-    const el = fileInputs.current[id];
-    if (!el) return;
-    el.click();
+    // Open gallery modal instead of file picker
+    setCurrentEditingRowId(id);
+    setIsGalleryOpen(true);
+  }
+
+  async function handleSelectImageFromGallery(image: {
+    imageUrl: string;
+    imagePublicId: string;
+  }) {
+    if (!currentEditingRowId) return;
+
+    // Find row
+    const findRow = value.find((el) => el.codeRow === currentEditingRowId);
+
+    // Confirm update image if image already exists
+    if (findRow?.image) {
+      const result = await showConfirmAlert(
+        "This variant image already exists. Are you sure you want to replace it?",
+        "Yes, replace it"
+      );
+
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      // Delete old image from Cloudinary
+      try {
+        const response = await fetch("/api/delete-file", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ publicId: findRow.image.imagePublicId }),
+        });
+
+        if (!response.ok) {
+          console.error("Failed to delete old image");
+        }
+      } catch (error) {
+        console.error("Error deleting old image:", error);
+      }
+    }
+
+    // Update row with selected image
+    updateRow(currentEditingRowId, {
+      image: {
+        imageUrl: image.imageUrl,
+        imagePublicId: image.imagePublicId,
+      },
+    });
+
+    setCurrentEditingRowId(null);
+  }
+
+  async function handleUploadNewImage(file: File) {
+    if (!currentEditingRowId) return;
+
+    try {
+      // Find row
+      const findRow = value.find((el) => el.codeRow === currentEditingRowId);
+
+      // Confirm update image if image already exists
+      if (findRow?.image) {
+        const result = await showConfirmAlert(
+          "This variant image already exists. Are you sure you want to replace it with a new image?",
+          "Yes, replace it"
+        );
+
+        if (!result.isConfirmed) {
+          throw new Error("Upload cancelled by user");
+        }
+      }
+
+      // Upload new image
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("folder", "products");
+
+      const response = await fetch("/api/upload-file", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(errorBody.message || "Internal server error");
+      }
+
+      const { data } = await response.json();
+
+      // Delete old image if exists
+      if (findRow?.image) {
+        const deleteResponse = await fetch("/api/delete-file", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ publicId: findRow.image.imagePublicId }),
+        });
+
+        if (!deleteResponse.ok) {
+          console.error("Failed to delete old image");
+        }
+      }
+
+      // Update row with new image
+      updateRow(currentEditingRowId, {
+        image: {
+          imageUrl: data.secureUrl,
+          imagePublicId: data.publicId,
+        },
+      });
+
+      setCurrentEditingRowId(null);
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      throw error;
+    }
   }
 
   async function handleFileChange(
@@ -344,13 +482,24 @@ export function VariantEditor({
     }
   }
 
+  function handleOpenPriceModal(row: VariantRowForm) {
+    setCurrentPriceEditingRow(row);
+    setIsPriceModalOpen(true);
+  }
+
+  function handleSavePrices(prices: Record<string, number>) {
+    if (currentPriceEditingRow) {
+      updateRow(currentPriceEditingRow.codeRow, { price: prices });
+    }
+  }
+
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between">
         <div className="flex flex-wrap gap-2">
-          {variantTypes.map((t) => (
+          {variantTypes.map((t, idx) => (
             <div
-              key={t.id}
+              key={idx}
               className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1"
             >
               <Input
@@ -360,6 +509,7 @@ export function VariantEditor({
                 aria-label="Nama tipe variasi"
               />
               <button
+                type="button"
                 aria-label={`Hapus tipe ${t.name}`}
                 onClick={() => removeType(t.name)}
                 className="text-muted-foreground hover:text-foreground"
@@ -400,6 +550,7 @@ export function VariantEditor({
                   />
                   {inputValue.trim() && (
                     <button
+                      type="button"
                       onClick={handleInputSubmit}
                       className="w-full mt-1 p-2 text-left text-sm hover:bg-gray-100 rounded flex items-center"
                     >
@@ -416,6 +567,7 @@ export function VariantEditor({
                       {availableOptions.map((option) => (
                         <button
                           key={option}
+                          type="button"
                           onClick={() => handleSelectOption(option)}
                           className="w-full p-2 text-left text-sm hover:bg-gray-100 rounded"
                         >
@@ -524,13 +676,7 @@ export function VariantEditor({
                   ))}
                   <th className="w-56 px-2 text-left">Variation Name</th>
                   <th className="w-40 px-2 text-left">Stock</th>
-                  {value.length && currencyList.length
-                    ? currencyList.map((el, idx) => (
-                        <th key={idx} className="w-40 px-2 text-left">
-                          Price ({el.currency})
-                        </th>
-                      ))
-                    : ""}
+                  <th className="w-40 px-2 text-left">Price</th>
                 </tr>
               </thead>
               <tbody>
@@ -632,35 +778,24 @@ export function VariantEditor({
                         placeholder="0"
                       />
                     </td>
-                    {value.length > 0 &&
-                      currencyList.length &&
-                      currencyList.map((item, idx) => (
-                        <td key={idx} className="px-2">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            value={row.price?.[item.currency] ?? ""}
-                            onChange={(e) =>
-                              updateRow(row.codeRow, {
-                                price: {
-                                  ...row.price,
-                                  [item.currency]: e.target.value
-                                    ? Number(e.target.value)
-                                    : "",
-                                },
-                              })
-                            }
-                            placeholder="0"
-                            className="h-8 text-xs border-gray-300"
-                          />
-                        </td>
-                      ))}
+                    <td className="px-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenPriceModal(row)}
+                        className="cursor-pointer w-full"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Set Prices
+                      </Button>
+                    </td>
                   </tr>
                 ))}
                 {value.length === 0 && (
                   <tr>
                     <td
-                      colSpan={10 + typeNames.length}
+                      colSpan={7 + typeNames.length}
                       className="px-4 py-8 text-center text-muted-foreground"
                     >
                       There are no variations yet.
@@ -672,6 +807,32 @@ export function VariantEditor({
           </div>
         </div>
       </div>
+
+      {/* Image Gallery Modal */}
+      <ImageGalleryModal
+        isOpen={isGalleryOpen}
+        onClose={() => {
+          setIsGalleryOpen(false);
+          setCurrentEditingRowId(null);
+        }}
+        onSelectImage={handleSelectImageFromGallery}
+        onUploadNew={handleUploadNewImage}
+      />
+
+      {/* Price Setting Modal */}
+      {currentPriceEditingRow && (
+        <VariantPriceModal
+          isOpen={isPriceModalOpen}
+          onClose={() => {
+            setIsPriceModalOpen(false);
+            setCurrentPriceEditingRow(null);
+          }}
+          variantName={currentPriceEditingRow.name || "Variant"}
+          currentPrices={currentPriceEditingRow.price || {}}
+          currencies={currencyList}
+          onSave={handleSavePrices}
+        />
+      )}
     </div>
   );
 }

@@ -8,9 +8,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import {
   Search,
   ShoppingCart,
@@ -24,6 +27,7 @@ import {
   MapPin,
   LogOut,
   Home,
+  ReceiptText,
 } from "lucide-react";
 import SearchBar from "@/components/search-bar";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -53,6 +57,8 @@ export default function NavigationHeader() {
   const { currency, setCurrency, loading } = useCurrency();
   const { data: session, status } = useSession();
 
+  const [cartItemCount, setCartItemCount] = useState(0);
+
   const [categories, setCategories] = useState<
     { name: string; href: string }[] | null
   >(null);
@@ -71,19 +77,19 @@ export default function NavigationHeader() {
         },
         {
           name: "New Arrivals",
-          href: "/catalog/new-arrivals",
+          href: "/catalog?filter=new-arrivals",
         },
         {
           name: "Limited Stocks",
-          href: "/catalog/limited-stocks",
+          href: "#",
         },
         {
           name: "Best Sellers",
-          href: "/catalog/best-sellers",
+          href: "#",
         },
         {
           name: "Sale",
-          href: "/catalog/sale",
+          href: "#",
         },
       ],
     },
@@ -101,7 +107,6 @@ export default function NavigationHeader() {
       subItems: [
         { name: "About Us", href: "/about-us" },
         { name: "Contact Us", href: "/contact-us" },
-        { name: "FAQ", href: "/faq" },
         { name: "Stores", href: "/stores" },
         { name: "Payments", href: "/payments" },
       ],
@@ -129,6 +134,9 @@ export default function NavigationHeader() {
     );
 
     if (result.isConfirmed) {
+      localStorage.removeItem("variantRows");
+      localStorage.removeItem("cartItem");
+
       await signOut({ callbackUrl: "/login" });
     }
   };
@@ -143,7 +151,7 @@ export default function NavigationHeader() {
       if (response.data) {
         let mappingCategory = response.data.map((el: CategoryData) => ({
           name: el.name,
-          href: `/catalog/${el.slug}`,
+          href: `/catalog?category=${el.slug}`,
         }));
         setCategories(mappingCategory);
       }
@@ -154,9 +162,51 @@ export default function NavigationHeader() {
     }
   };
 
+  const updateCartItemCount = () => {
+    try {
+      const cartItem = localStorage.getItem("cartItem");
+      if (cartItem) {
+        const items = JSON.parse(cartItem);
+        // Count unique items (length) instead of total quantity
+        const totalItems = Array.isArray(items) ? items.length : 0;
+        setCartItemCount(totalItems);
+      } else {
+        setCartItemCount(0);
+      }
+    } catch (error) {
+      console.error("Error reading cart items:", error);
+      setCartItemCount(0);
+    }
+  };
+
   useEffect(() => {
     fetchCategory();
-  }, []);
+
+    // Update cart count on mount
+    if (session && status === "authenticated") {
+      updateCartItemCount();
+    }
+
+    // Listen for storage changes (when cart is updated from other tabs/windows)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "cartItem") {
+        updateCartItemCount();
+      }
+    };
+
+    // Listen for custom cart update event (when cart is updated in same tab)
+    const handleCartUpdate = () => {
+      updateCartItemCount();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("cartUpdated", handleCartUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("cartUpdated", handleCartUpdate);
+    };
+  }, [session, status]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -204,25 +254,22 @@ export default function NavigationHeader() {
                       {item.subItems.map((subItem, idx) => (
                         <Fragment key={idx}>
                           {subItem.subItems ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger className="flex items-center justify-between w-full px-2 py-1.5 text-sm hover:bg-accent rounded-sm">
-                                <span>{subItem.name}</span>
-                                <ChevronDown className="h-4 w-4" />
-                              </DropdownMenuTrigger>
-
-                              <DropdownMenuContent
-                                className="w-full"
-                                side="right"
-                              >
-                                {subItem.subItems.map((subItem, idx) => (
-                                  <DropdownMenuItem asChild key={idx}>
-                                    <Link href={subItem.href}>
-                                      {subItem.name}
-                                    </Link>
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                {subItem.name}
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                  {subItem.subItems.map((subItem, idx) => (
+                                    <DropdownMenuItem asChild key={idx}>
+                                      <Link href={subItem.href}>
+                                        {subItem.name}
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuPortal>
+                            </DropdownMenuSub>
                           ) : (
                             <DropdownMenuItem asChild key={idx}>
                               <Link href={subItem.href ?? "/"}>
@@ -284,6 +331,26 @@ export default function NavigationHeader() {
               <Search className="h-4 w-4" />
             </Button>
 
+            {/* nav item favorite and cart  */}
+            {/* Favorite */}
+            <Button variant="ghost" size="sm" className="relative" asChild>
+              <Link href="/wishlist">
+                <Heart className="h-4 w-4" />
+              </Link>
+            </Button>
+
+            {/* Cart */}
+            <Button variant="ghost" size="sm" className="relative" asChild>
+              <Link href="/cart">
+                <ShoppingCart className="h-4 w-4" />
+                {session && status === "authenticated" && cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                    {cartItemCount > 99 ? "99+" : cartItemCount}
+                  </span>
+                )}
+              </Link>
+            </Button>
+
             {/* User */}
             {session && status === "authenticated" ? (
               <DropdownMenu>
@@ -318,17 +385,11 @@ export default function NavigationHeader() {
                   )}
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link
-                      href="/wishlist"
+                      href="/my-orders"
                       className="flex items-center space-x-2"
                     >
-                      <Heart className="h-4 w-4" />
-                      <span>Favorite</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/cart" className="flex items-center space-x-2">
-                      <ShoppingCart className="h-4 w-4" />
-                      <span>Shopping Cart</span>
+                      <ReceiptText className="h-4 w-4" />
+                      <span>My Orders</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
@@ -372,28 +433,6 @@ export default function NavigationHeader() {
                   <User className="h-4 w-4" />
                 </Link>
               </Button>
-            )}
-
-            {/* nav item favorite and cart before login */}
-            {!session && status === "unauthenticated" && (
-              <>
-                {/* Favorite */}
-                <Button variant="ghost" size="sm" className="relative" asChild>
-                  <Link href="/wishlist">
-                    <Heart className="h-4 w-4" />
-                  </Link>
-                </Button>
-
-                {/* Cart */}
-                <Button variant="ghost" size="sm" className="relative" asChild>
-                  <Link href="/cart">
-                    <ShoppingCart className="h-4 w-4" />
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                      3
-                    </Badge>
-                  </Link>
-                </Button>
-              </>
             )}
 
             {/* Mobile Menu Toggle */}

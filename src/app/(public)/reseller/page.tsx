@@ -9,20 +9,14 @@ import WhyTrustUs from "@/components/reseller/why-trust-us";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
+import SingleBanner from "@/components/common/single-banner";
 
 export default function ResellerPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* Hero Section */}
-      <section
-        className="relative h-[60vh] overflow-hidden bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('https://i.pinimg.com/1200x/03/39/9c/03399c4203de344d134f0d78c1a35840.jpg')",
-        }}
-      >
+      <SingleBanner page="reseller-program">
         <div className="absolute inset-0 bg-black opacity-50"></div>
-        {/* Overlay hitam */}
         <div className="relative z-10 flex items-center justify-center h-full text-white">
           <div className="max-w-4xl mx-auto text-center space-y-6">
             <Badge className="bg-primary text-primary-foreground">
@@ -46,7 +40,8 @@ export default function ResellerPage() {
             </Button>
           </div>
         </div>
-      </section>
+      </SingleBanner>
+
       {/* Why Trust Us? */}
       <WhyTrustUs />
 

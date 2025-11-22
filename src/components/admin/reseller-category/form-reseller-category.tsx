@@ -20,6 +20,8 @@ import {
 import { useRouter } from "next/navigation";
 import { createData, updateData } from "@/lib/apiService";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import { CategoryData } from "@/lib/types/category";
+import MultiSelectDropdown from "./multi-select-dropdown";
 
 interface ResellerCategoryFormProps {
   initialData?: any;
@@ -30,7 +32,17 @@ export default function FormResellerCategory({
   initialData,
   resellerCategoryId,
 }: ResellerCategoryFormProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    resellerCategoryName: string;
+    currency: string;
+    tierDiscount: Array<{
+      name: string;
+      minimumQuantity: string | number;
+      discount: string | number;
+      categoryProduct: string | string[];
+    }>;
+    isActive: boolean;
+  }>({
     resellerCategoryName: "",
     currency: "",
     tierDiscount: [
@@ -38,11 +50,13 @@ export default function FormResellerCategory({
         name: "Tier 1",
         minimumQuantity: "",
         discount: "",
-        categoryProduct: "",
+        categoryProduct: [],
       },
     ],
     isActive: true,
   });
+
+  const currencyList = ["IDR", "USD", "SGD", "HKD"];
 
   const [loading, setLoading] = useState(false);
   const isEditMode = !!resellerCategoryId;
@@ -51,13 +65,17 @@ export default function FormResellerCategory({
   const updateTierPricing = (
     tierIndex: number,
     field: "discount" | "minimumQuantity" | "categoryProduct",
-    value: string
+    value: string | string[]
   ) => {
     setFormData((prev) => {
       const newTiers = [...prev.tierDiscount];
       const tier = { ...newTiers[tierIndex] };
 
-      tier[field] = value;
+      if (field === "categoryProduct") {
+        tier.categoryProduct = value;
+      } else {
+        tier[field] = value as string;
+      }
 
       newTiers[tierIndex] = tier;
       return {
@@ -72,6 +90,23 @@ export default function FormResellerCategory({
     setLoading(true);
 
     try {
+      // Validasi: Setiap tier harus memiliki minimal 1 kategori yang dipilih
+      const tierWithoutCategory = formData.tierDiscount.find(
+        (tier) =>
+          !tier.categoryProduct ||
+          (Array.isArray(tier.categoryProduct) &&
+            tier.categoryProduct.length === 0)
+      );
+
+      if (tierWithoutCategory) {
+        showErrorAlert(
+          "Validation Error",
+          `${tierWithoutCategory.name} must have at least 1 category selected`
+        );
+        setLoading(false);
+        return;
+      }
+
       let response: ApiResponse<ResellerCategoryData>;
 
       if (!isEditMode) {
@@ -81,8 +116,14 @@ export default function FormResellerCategory({
             ...formData,
             tierDiscount: formData.tierDiscount.map((item) => ({
               ...item,
-              minimumQuantity: Number.parseFloat(item.minimumQuantity),
-              discount: Number.parseFloat(item.discount),
+              minimumQuantity:
+                typeof item.minimumQuantity === "string"
+                  ? Number.parseFloat(item.minimumQuantity)
+                  : item.minimumQuantity,
+              discount:
+                typeof item.discount === "string"
+                  ? Number.parseFloat(item.discount)
+                  : item.discount,
             })),
           }
         );
@@ -94,8 +135,14 @@ export default function FormResellerCategory({
             ...formData,
             tierDiscount: formData.tierDiscount.map((item) => ({
               ...item,
-              minimumQuantity: Number.parseFloat(item.minimumQuantity),
-              discount: Number.parseFloat(item.discount),
+              minimumQuantity:
+                typeof item.minimumQuantity === "string"
+                  ? Number.parseFloat(item.minimumQuantity)
+                  : item.minimumQuantity,
+              discount:
+                typeof item.discount === "string"
+                  ? Number.parseFloat(item.discount)
+                  : item.discount,
             })),
           }
         );
@@ -111,23 +158,68 @@ export default function FormResellerCategory({
     }
   };
 
+  const [loadingFetchCategory, setLoadingFetchCategory] = useState(false);
+  const [errorFetchCategory, setErrorFetchCategory] = useState<string | null>(
+    null
+  );
+  const [categories, setCategories] = useState<CategoryData[]>([]);
+
+  const fetchCategory = async () => {
+    try {
+      setLoadingFetchCategory(true);
+      setErrorFetchCategory(null);
+
+      const response = await fetch("/api/admin/categories");
+      if (!response.ok) {
+        throw new Error("Failed to fetch categories");
+      }
+
+      const result: ApiResponse<CategoryData[]> = await response.json();
+      if (result.success && result.data) {
+        setCategories(result.data.filter((cat) => !cat.deleted));
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setErrorFetchCategory(
+        error instanceof Error ? error.message : "Failed to fetch categories"
+      );
+    } finally {
+      setLoadingFetchCategory(false);
+    }
+  };
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    fetchCategory();
+  }, []);
+
   useEffect(() => {
     if (initialData) {
       setFormData({
         resellerCategoryName: initialData.resellerCategoryName || "",
-        currency: initialData.currency || "aa",
-        tierDiscount: initialData.tierDiscount || [
+        currency: initialData.currency || "USD",
+        tierDiscount: initialData.tierDiscount?.map((tier: any) => ({
+          name: tier.name,
+          minimumQuantity: tier.minimumQuantity,
+          discount: tier.discount,
+          // Convert string to array if needed for backward compatibility
+          categoryProduct: Array.isArray(tier.categoryProduct)
+            ? tier.categoryProduct
+            : tier.categoryProduct
+              ? [tier.categoryProduct]
+              : [],
+        })) || [
           {
             name: "Tier 1",
             minimumQuantity: "",
             discount: "",
-            categoryProduct: "",
+            categoryProduct: [],
           },
         ],
         isActive: initialData.isActive ?? true,
       });
     }
-  }, [initialData]);
+  }, [initialData, categories]);
 
   return (
     <form
@@ -183,9 +275,9 @@ export default function FormResellerCategory({
               <SelectValue placeholder="Select currency" />
             </SelectTrigger>
             <SelectContent>
-              {["IDR", "USD", "SGD", "HKD"].map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
+              {currencyList.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -245,9 +337,9 @@ export default function FormResellerCategory({
           Tier Discount *
         </Label>
         {formData.tierDiscount.length ? (
-          <div className="border rounded-lg p-6 mb-4">
+          <div className="border rounded-lg px-6 mb-4">
             {formData.tierDiscount.map((tier, index) => (
-              <div key={index} className="space-y-3">
+              <div key={index} className="space-y-3 my-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-base font-medium">Tier {index + 1}</h4>
                   <Button
@@ -270,7 +362,7 @@ export default function FormResellerCategory({
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid sm:grid-cols-3 gap-4">
                   <div className="space-y-3">
                     <Label>Minimum Quantity</Label>
                     <Input
@@ -305,24 +397,17 @@ export default function FormResellerCategory({
                   </div>
                   <div className="space-y-3">
                     <Label>Category Product</Label>
-                    <Select
-                      value={tier.categoryProduct}
-                      onValueChange={(value) =>
-                        updateTierPricing(index, "categoryProduct", value)
+                    <MultiSelectDropdown
+                      categories={categories}
+                      selectedCategories={
+                        Array.isArray(tier.categoryProduct)
+                          ? tier.categoryProduct
+                          : []
                       }
-                      required
-                    >
-                      <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 w-full">
-                        <SelectValue placeholder="Select category product" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {["All", "Essentials"].map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(selected) =>
+                        updateTierPricing(index, "categoryProduct", selected)
+                      }
+                    />
                   </div>
                 </div>
               </div>
@@ -345,7 +430,7 @@ export default function FormResellerCategory({
                   name: `Tier ${newTierNumber}`,
                   minimumQuantity: "",
                   discount: "",
-                  categoryProduct: "",
+                  categoryProduct: categories.map((cat) => cat._id), // Default: all categories selected
                 },
               ],
             }));
