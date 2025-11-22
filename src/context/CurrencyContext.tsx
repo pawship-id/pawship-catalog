@@ -1,5 +1,6 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 type Currency = "USD" | "IDR" | "SGD";
 
@@ -19,6 +20,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [currency, setCurrency] = useState<Currency>("USD");
   const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
 
   // Fungsi mapping country → currency
   const getCurrencyByCountry = (countryCode: string): Currency => {
@@ -27,8 +29,34 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({
     return "USD";
   };
 
-  useEffect(() => {
-    // pakai Geolocation API (lat/lon → country)
+  // Fetch reseller currency
+  const fetchResellerCurrency = async () => {
+    try {
+      const response = await fetch("/api/public/profile");
+      if (response.ok) {
+        const { data } = await response.json();
+        if (data.resellerCategory && data.resellerCategory.currency) {
+          const resellerCurrency = data.resellerCategory.currency.toUpperCase();
+          if (
+            resellerCurrency === "IDR" ||
+            resellerCurrency === "SGD" ||
+            resellerCurrency === "USD"
+          ) {
+            setCurrency(resellerCurrency as Currency);
+            setLoading(false);
+            return true;
+          }
+        }
+      }
+      return false;
+    } catch (err) {
+      console.error("Failed to fetch reseller currency:", err);
+      return false;
+    }
+  };
+
+  // Geolocation-based currency detection
+  const detectCurrencyByGeolocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
@@ -58,7 +86,29 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({
       setCurrency("USD");
       setLoading(false);
     }
-  }, []);
+  };
+
+  useEffect(() => {
+    const initializeCurrency = async () => {
+      // Wait for session to load
+      if (status === "loading") {
+        return;
+      }
+
+      // If user is logged in as reseller, fetch currency from reseller category
+      if (status === "authenticated" && session?.user?.role === "reseller") {
+        const success = await fetchResellerCurrency();
+        if (success) {
+          return; // Currency set from reseller category
+        }
+      }
+
+      // For retail users or if reseller currency fetch failed, use geolocation
+      detectCurrencyByGeolocation();
+    };
+
+    initializeCurrency();
+  }, [status, session]);
 
   const format = (amount: number) => {
     const locale =

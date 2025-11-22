@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
+import ResellerCategory from "@/lib/models/ResellerCategory";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,7 +18,9 @@ export async function GET(req: NextRequest) {
 
     await dbConnect();
 
-    const user = await User.findById(session.user.id).select("-password");
+    const user = await User.findById(session.user.id)
+      .select("-password")
+      .populate("resellerCategoryId");
 
     if (!user) {
       return NextResponse.json(
@@ -29,6 +32,16 @@ export async function GET(req: NextRequest) {
     // Get first address if exists
     const address =
       user.addresses && user.addresses.length > 0 ? user.addresses[0] : null;
+
+    // Get reseller category info if user is reseller
+    let resellerCategory = null;
+    if (user.role === "reseller" && user.resellerCategoryId) {
+      resellerCategory = {
+        _id: (user.resellerCategoryId as any)._id,
+        name: (user.resellerCategoryId as any).resellerCategoryName,
+        currency: (user.resellerCategoryId as any).currency,
+      };
+    }
 
     return NextResponse.json({
       success: true,
@@ -43,6 +56,7 @@ export async function GET(req: NextRequest) {
         businessType: user.resellerProfile?.businessType,
         taxId: user.resellerProfile?.taxLegalInfo,
         address: address,
+        resellerCategory: resellerCategory,
       },
     });
   } catch (error) {
