@@ -35,6 +35,7 @@ interface Collection {
   name: string;
   slug: string;
   displayOnHomepage: boolean;
+  displayOnNavbar: boolean;
   rules: "tag" | "category" | "custom";
   ruleIds: string[];
   createdAt: string;
@@ -116,6 +117,7 @@ export default function TableCollection() {
             <TableHead>Rule Type</TableHead>
             <TableHead>Items Count</TableHead>
             <TableHead>Display on Homepage</TableHead>
+            <TableHead>Display on Navbar</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -152,6 +154,17 @@ export default function TableCollection() {
                     }`}
                   >
                     {item.displayOnHomepage ? "Yes" : "No"}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                      item.displayOnNavbar
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {item.displayOnNavbar ? "Yes" : "No"}
                   </span>
                 </TableCell>
                 <TableCell>

@@ -23,8 +23,6 @@ import {
   X,
   ChevronRight,
   Heart,
-  Settings,
-  MapPin,
   LogOut,
   Home,
   ReceiptText,
@@ -42,6 +40,13 @@ import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
 import { CategoryData } from "@/lib/types/category";
 import { getAll } from "@/lib/apiService";
+
+interface CollectionData {
+  _id: string;
+  name: string;
+  slug: string;
+  displayOnNavbar: boolean;
+}
 
 export default function NavigationHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -146,13 +151,19 @@ export default function NavigationHeader() {
       setLoadingFetchCategory(true);
       setError(null);
 
-      const response = await getAll<CategoryData>("/api/admin/categories");
+      const response = await getAll<CollectionData>("/api/public/collections");
 
       if (response.data) {
-        let mappingCategory = response.data.map((el: CategoryData) => ({
+        // Filter only collections with displayOnNavbar: true
+        const filteredCollections = response.data.filter(
+          (el: CollectionData) => el.displayOnNavbar === true
+        );
+
+        let mappingCategory = filteredCollections.map((el: CollectionData) => ({
           name: el.name,
-          href: `/catalog?category=${el.slug}`,
+          href: `/catalog?collection=${el.slug}`,
         }));
+
         setCategories(mappingCategory);
       }
     } catch (err: any) {
