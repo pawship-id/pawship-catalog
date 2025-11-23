@@ -23,8 +23,6 @@ import {
   X,
   ChevronRight,
   Heart,
-  Settings,
-  MapPin,
   LogOut,
   Home,
   ReceiptText,
@@ -43,6 +41,13 @@ import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
 import { CategoryData } from "@/lib/types/category";
 import { getAll } from "@/lib/apiService";
 
+interface CollectionData {
+  _id: string;
+  name: string;
+  slug: string;
+  displayOnNavbar: boolean;
+}
+
 export default function NavigationHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -59,10 +64,10 @@ export default function NavigationHeader() {
 
   const [cartItemCount, setCartItemCount] = useState(0);
 
-  const [categories, setCategories] = useState<
+  const [collections, setCollections] = useState<
     { name: string; href: string }[] | null
   >(null);
-  const [loadingFetchCategory, setLoadingFetchCategory] = useState(true);
+  const [loadingFetchCollections, setLoadingFetchCollections] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const navigation = [
@@ -73,7 +78,7 @@ export default function NavigationHeader() {
       subItems: [
         {
           name: "Collections",
-          subItems: categories,
+          subItems: collections,
         },
         {
           name: "New Arrivals",
@@ -143,22 +148,30 @@ export default function NavigationHeader() {
 
   const fetchCategory = async () => {
     try {
-      setLoadingFetchCategory(true);
+      setLoadingFetchCollections(true);
       setError(null);
 
-      const response = await getAll<CategoryData>("/api/admin/categories");
+      const response = await getAll<CollectionData>("/api/public/collections");
 
       if (response.data) {
-        let mappingCategory = response.data.map((el: CategoryData) => ({
-          name: el.name,
-          href: `/catalog?category=${el.slug}`,
-        }));
-        setCategories(mappingCategory);
+        // Filter only collections with displayOnNavbar: true
+        const filteredCollections = response.data.filter(
+          (el: CollectionData) => el.displayOnNavbar === true
+        );
+
+        let mappingCollections = filteredCollections.map(
+          (el: CollectionData) => ({
+            name: el.name,
+            href: `/catalog?collection=${el.slug}`,
+          })
+        );
+
+        setCollections(mappingCollections);
       }
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoadingFetchCategory(false);
+      setLoadingFetchCollections(false);
     }
   };
 
@@ -394,20 +407,11 @@ export default function NavigationHeader() {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link
-                      href="/address"
+                      href="/profile"
                       className="flex items-center space-x-2"
                     >
-                      <MapPin className="h-4 w-4" />
-                      <span>Address</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link
-                      href="/settings"
-                      className="flex items-center space-x-2"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Setting</span>
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
                   <div className=" border-t my-1"></div>

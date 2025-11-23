@@ -26,6 +26,20 @@ export interface IOrderDetail {
   };
 }
 
+export interface IStatusLog {
+  status: string;
+  date: Date;
+  username: string;
+}
+
+export interface IPaymentProof {
+  imageUrl: string;
+  imagePublicId: string;
+  note?: string;
+  uploadedAt: Date;
+  uploadedBy: string;
+}
+
 export interface IShippingAddress {
   fullName: string;
   email: string;
@@ -41,11 +55,17 @@ export interface OrderForm {
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
-  status: "pending confirmation" | "paid" | "processing" | "shipped";
+  status:
+    | "pending confirmation"
+    | "awaiting payment"
+    | "payment confirmed"
+    | "processing"
+    | "shipped";
   orderType: "B2C" | "B2B";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
+  discountShipping: number;
   currency: string;
 }
 
@@ -54,13 +74,21 @@ export interface OrderData {
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
-  status: "pending confirmation" | "paid" | "processing" | "shipped";
+  status:
+    | "pending confirmation"
+    | "awaiting payment"
+    | "payment confirmed"
+    | "processing"
+    | "shipped";
   orderType: "B2C" | "B2B";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
+  discountShipping: number;
   currency: string;
   revenue?: number; // Revenue in IDR
+  statusLog: IStatusLog[];
+  paymentProofs: IPaymentProof[];
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;

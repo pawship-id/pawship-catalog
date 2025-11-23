@@ -34,6 +34,15 @@ export interface IRetailProfile {
   remarks?: string; // For internal use
 }
 
+export interface IAddress {
+  address: string;
+  city: string;
+  district: string;
+  zipCode: string;
+  country: string;
+  isDefault: boolean;
+}
+
 export interface IUser extends Document {
   fullName: string;
   phoneNumber: string;
@@ -44,6 +53,7 @@ export interface IUser extends Document {
   resellerCategoryId?: Types.ObjectId;
   resellerProfile?: IResellerProfile;
   retailProfile?: IRetailProfile;
+  addresses?: IAddress[];
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: Types.ObjectId;
@@ -118,6 +128,16 @@ const UserSchema = new Schema<IUser>(
       },
       remarks: { type: String },
     },
+    addresses: [
+      {
+        address: { type: String, required: true },
+        city: { type: String, required: true },
+        district: { type: String, required: true },
+        zipCode: { type: String, required: true },
+        country: { type: String, required: true, default: "Indonesia" },
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
     passwordResetToken: {
       type: String,
       select: false,

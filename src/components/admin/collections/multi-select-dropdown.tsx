@@ -81,17 +81,22 @@ export default function MultiSelectDropdown({
   };
 
   const getDisplayText = () => {
-    if (selectedIds.length === 0) {
+    // Filter selectedIds to only include IDs that exist in current options
+    const validSelectedIds = selectedIds.filter((id) =>
+      options.some((opt) => opt._id === id)
+    );
+
+    if (validSelectedIds.length === 0) {
       return placeholder;
     }
-    if (selectedIds.length === options.length) {
+    if (validSelectedIds.length === options.length) {
       return `All ${label || "items"} selected`;
     }
-    if (selectedIds.length === 1) {
-      const option = options.find((opt) => opt._id === selectedIds[0]);
+    if (validSelectedIds.length === 1) {
+      const option = options.find((opt) => opt._id === validSelectedIds[0]);
       return option?.name || `1 ${label || "item"} selected`;
     }
-    return `${selectedIds.length} ${label || "items"} selected`;
+    return `${validSelectedIds.length} ${label || "items"} selected`;
   };
 
   return (

@@ -20,7 +20,7 @@ export default function GuidelinesCard() {
               <FileText className="h-5 w-5 text-blue-900 mt-0.5" />
               <div>
                 <h3 className="font-semibold text-blue-900 text-lg">
-                  CSV Guidelines
+                  Excel Guidelines
                 </h3>
                 <p className="text-sm text-blue-800 font-normal">
                   Follow these guidelines for successful stock updates
@@ -34,11 +34,29 @@ export default function GuidelinesCard() {
                 <h4 className="font-medium text-blue-900 mb-2">
                   📋 Required Format
                 </h4>
-                <div className="bg-gray-200 p-3 rounded-md font-mono text-sm">
-                  <div>sku,stock</div>
-                  <div>SKU-COLLAR-001,150</div>
-                  <div>SKU-HARNESS-002,200</div>
-                  <div>SKU-LEASH-003,75</div>
+                <div className="bg-white border border-gray-300 p-3 rounded-md text-sm">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 font-semibold">SKU</th>
+                        <th className="text-left p-2 font-semibold">Stock</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-mono text-xs">
+                      <tr>
+                        <td className="p-2">SKU-COLLAR-001</td>
+                        <td className="p-2">150</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2">SKU-HARNESS-002</td>
+                        <td className="p-2">200</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2">SKU-LEASH-003</td>
+                        <td className="p-2">75</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -48,16 +66,18 @@ export default function GuidelinesCard() {
                 </h4>
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   <li>
-                    Header row must be exactly: <code>sku,stock</code>
+                    First row must contain headers: <code>sku</code> and{" "}
+                    <code>stock</code>
                   </li>
                   <li>
                     SKU must match exactly with products in database
                     (case-sensitive)
                   </li>
                   <li>Stock must be a valid number (0 or positive)</li>
-                  <li>File must be in CSV format (.csv extension)</li>
+                  <li>
+                    File must be in Excel format (.xlsx or .xls extension)
+                  </li>
                   <li>Maximum file size: 5MB</li>
-                  <li>UTF-8 encoding recommended</li>
                 </ul>
               </div>
 
@@ -81,7 +101,7 @@ export default function GuidelinesCard() {
                   <li>Download and use the template for correct format</li>
                   <li>Test with a small batch first (5-10 rows)</li>
                   <li>Verify SKUs before uploading</li>
-                  <li>Keep a backup of your CSV file</li>
+                  <li>Keep a backup of your Excel file</li>
                   <li>Check the logs after upload to verify updates</li>
                 </ul>
               </div>

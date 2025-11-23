@@ -1,18 +1,40 @@
 import mongoose, { Document, Schema } from "mongoose";
 import { IOrderDetail, IShippingAddress } from "../types/order";
 
+export interface IStatusLog {
+  status: string;
+  date: Date;
+  username: string;
+}
+
+export interface IPaymentProof {
+  imageUrl: string;
+  imagePublicId: string;
+  note?: string;
+  uploadedAt: Date;
+  uploadedBy: string;
+}
+
 export interface IOrder extends Document {
   userId: string;
   orderDate: Date;
   invoiceNumber: string;
   totalAmount: number;
-  status: "pending confirmation" | "paid" | "processing" | "shipped";
+  status:
+    | "pending confirmation"
+    | "awaiting payment"
+    | "payment confirmed"
+    | "processing"
+    | "shipped";
   shippingAddress: IShippingAddress;
   orderDetails: IOrderDetail[];
   shippingCost: number;
+  discountShipping: number;
   orderType: "B2C" | "B2B";
   currency: string;
   revenue?: number; // Revenue in IDR
+  statusLog: IStatusLog[];
+  paymentProofs: IPaymentProof[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -81,6 +103,26 @@ const ShippingAddressSchema = new Schema<IShippingAddress>(
   { _id: false }
 );
 
+const StatusLogSchema = new Schema<IStatusLog>(
+  {
+    status: { type: String, required: true },
+    date: { type: Date, default: Date.now },
+    username: { type: String, required: true },
+  },
+  { _id: false }
+);
+
+const PaymentProofSchema = new Schema<IPaymentProof>(
+  {
+    imageUrl: { type: String, required: true },
+    imagePublicId: { type: String, required: true },
+    note: { type: String },
+    uploadedAt: { type: Date, default: Date.now },
+    uploadedBy: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const OrderSchema = new Schema<IOrder>(
   {
     userId: {
@@ -106,9 +148,19 @@ const OrderSchema = new Schema<IOrder>(
       type: Number,
       default: 0,
     },
+    discountShipping: {
+      type: Number,
+      default: 0,
+    },
     status: {
       type: String,
-      enum: ["pending confirmation", "paid", "processing", "shipped"],
+      enum: [
+        "pending confirmation",
+        "awaiting payment",
+        "payment confirmed",
+        "processing",
+        "shipped",
+      ],
       default: "pending confirmation",
     },
     shippingAddress: {
@@ -134,6 +186,14 @@ const OrderSchema = new Schema<IOrder>(
     revenue: {
       type: Number,
       min: 0,
+    },
+    statusLog: {
+      type: [StatusLogSchema],
+      default: [],
+    },
+    paymentProofs: {
+      type: [PaymentProofSchema],
+      default: [],
     },
   },
   { timestamps: true }

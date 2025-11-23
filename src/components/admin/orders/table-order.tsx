@@ -22,6 +22,7 @@ import {
   Eye,
   Loader,
   MoreVertical,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 import { OrderData } from "@/lib/types/order";
@@ -53,6 +54,7 @@ export default function TableOrder({
           <TableRow>
             <TableHead>Invoice</TableHead>
             <TableHead>Customer</TableHead>
+            <TableHead>Phone Number</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Total</TableHead>
             <TableHead>Status</TableHead>
@@ -77,6 +79,7 @@ export default function TableOrder({
                   {item.invoiceNumber}
                 </TableCell>
                 <TableCell>{item.shippingAddress.fullName}</TableCell>
+                <TableCell>{item.shippingAddress.phone}</TableCell>
                 <TableCell className="text-muted-foreground">
                   <Badge variant="outline">{item.orderType}</Badge>
                 </TableCell>
@@ -110,17 +113,26 @@ export default function TableOrder({
                         </div>
                       </SelectItem>
                       <SelectItem
-                        value="paid"
-                        className="text-yellow-600 focus:bg-indigo-50 dark:focus:bg-yellow-900/20"
+                        value="awaiting payment"
+                        className="text-green-600 focus:bg-green-50 dark:focus:bg-green-900/20"
                       >
                         <div className="flex items-center gap-2">
                           <CreditCard />
-                          Paid
+                          Awaiting Payment
+                        </div>
+                      </SelectItem>
+                      <SelectItem
+                        value="payment confirmed"
+                        className="text-blue-600 focus:bg-blue-50 dark:focus:bg-blue-900/20"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CircleCheckBig />
+                          Payment Confirmed
                         </div>
                       </SelectItem>
                       <SelectItem
                         value="processing"
-                        className="text-cyan-600 focus:bg-cyan-50 dark:focus:bg-cyan-900/20"
+                        className="text-purple-600 focus:bg-purple-50 dark:focus:bg-purple-900/20"
                       >
                         <div className="flex items-center gap-2">
                           <Loader />
@@ -133,7 +145,7 @@ export default function TableOrder({
                         className="text-green-600 focus:bg-green-50 dark:focus:bg-green-900/20"
                       >
                         <div className="flex items-center gap-2">
-                          <CircleCheckBig />
+                          <Truck />
                           Shipped
                         </div>
                       </SelectItem>
