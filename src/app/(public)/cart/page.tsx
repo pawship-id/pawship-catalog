@@ -86,6 +86,7 @@ export default function CartPage() {
     orderDetails: [] as IOrderDetail[],
     currency,
     orderType: session?.user.role === "reseller" ? "B2B" : "B2C",
+    discountShipping: 0,
   });
 
   const router = useRouter();
