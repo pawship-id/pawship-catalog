@@ -32,7 +32,11 @@ import {
   OrderData,
   OrderForm,
 } from "@/lib/types/order";
-import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
+import {
+  showConfirmAlert,
+  showErrorAlert,
+  showWarningAlert,
+} from "@/lib/helpers/sweetalert2";
 import { useRouter } from "next/navigation";
 
 export default function CartPage() {
@@ -736,22 +740,8 @@ export default function CartPage() {
                             <img
                               src={item.image?.imageUrl}
                               alt={item.name}
-                              className={`w-30 h-30 object-cover rounded-lg ${
-                                item.quantity > item.stock &&
-                                !item.preOrder.enabled
-                                  ? "opacity-50 grayscale"
-                                  : ""
-                              }`}
+                              className="w-30 h-30 object-cover rounded-lg"
                             />
-
-                            {item.quantity > item.stock &&
-                              !item.preOrder.enabled && (
-                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                                  <span className="text-white text-sm font-bold">
-                                    Out of Stock
-                                  </span>
-                                </div>
-                              )}
                           </div>
                         </Link>
 
@@ -820,6 +810,18 @@ export default function CartPage() {
 
                                     if (isNaN(value) || value <= 0) {
                                       updateQuantity(item.variantId, 1);
+                                    } else if (
+                                      !item.preOrder.enabled &&
+                                      value > item.stock
+                                    ) {
+                                      showWarningAlert(
+                                        "Quantity exceeds available stock",
+                                        `Maximum available stock is ${item.stock} pcs`
+                                      );
+                                      updateQuantity(
+                                        item.variantId,
+                                        item.stock
+                                      );
                                     } else {
                                       updateQuantity(item.variantId, value);
                                     }
@@ -836,8 +838,8 @@ export default function CartPage() {
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity > item.stock &&
-                                    !item.preOrder.enabled
+                                    !item.preOrder.enabled &&
+                                    item.quantity >= item.stock
                                   }
                                 >
                                   <Plus className="h-4 w-4" />
@@ -870,22 +872,8 @@ export default function CartPage() {
                             <img
                               src={item.image?.imageUrl}
                               alt={item.name}
-                              className={`w-25 h-25 object-cover rounded-lg ${
-                                item.quantity > item.stock &&
-                                !item.preOrder.enabled
-                                  ? "opacity-50 grayscale"
-                                  : ""
-                              }`}
+                              className="w-25 h-25 object-cover rounded-lg"
                             />
-
-                            {item.quantity > item.stock &&
-                              !item.preOrder.enabled && (
-                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                                  <span className="text-white text-sm font-bold">
-                                    Out of Stock
-                                  </span>
-                                </div>
-                              )}
                           </div>
                         </Link>
 
@@ -954,6 +942,18 @@ export default function CartPage() {
 
                                     if (isNaN(value) || value <= 0) {
                                       updateQuantity(item.variantId, 1);
+                                    } else if (
+                                      !item.preOrder.enabled &&
+                                      value > item.stock
+                                    ) {
+                                      showWarningAlert(
+                                        "Quantity exceeds available stock",
+                                        `Maximum available stock is ${item.stock} pcs`
+                                      );
+                                      updateQuantity(
+                                        item.variantId,
+                                        item.stock
+                                      );
                                     } else {
                                       updateQuantity(item.variantId, value);
                                     }
@@ -970,8 +970,8 @@ export default function CartPage() {
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity > item.stock &&
-                                    !item.preOrder.enabled
+                                    !item.preOrder.enabled &&
+                                    item.quantity >= item.stock
                                   }
                                 >
                                   <Plus className="h-3 w-3" />
@@ -1010,22 +1010,8 @@ export default function CartPage() {
                               <img
                                 src={item.image?.imageUrl}
                                 alt={item.name}
-                                className={`w-25 h-25 object-cover rounded-lg ${
-                                  item.quantity > item.stock &&
-                                  !item.preOrder.enabled
-                                    ? "opacity-50 grayscale"
-                                    : ""
-                                }`}
+                                className="w-25 h-25 object-cover rounded-lg"
                               />
-
-                              {item.quantity > item.stock &&
-                                !item.preOrder.enabled && (
-                                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                                    <span className="text-white text-sm font-bold">
-                                      Out of Stock
-                                    </span>
-                                  </div>
-                                )}
                             </div>
                           </Link>
 
@@ -1109,6 +1095,18 @@ export default function CartPage() {
 
                                     if (isNaN(value) || value <= 0) {
                                       updateQuantity(item.variantId, 1);
+                                    } else if (
+                                      !item.preOrder.enabled &&
+                                      value > item.stock
+                                    ) {
+                                      showWarningAlert(
+                                        "Quantity exceeds available stock",
+                                        `Maximum available stock is ${item.stock} pcs`
+                                      );
+                                      updateQuantity(
+                                        item.variantId,
+                                        item.stock
+                                      );
                                     } else {
                                       updateQuantity(item.variantId, value);
                                     }
@@ -1125,8 +1123,8 @@ export default function CartPage() {
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity > item.stock &&
-                                    !item.preOrder.enabled
+                                    !item.preOrder.enabled &&
+                                    item.quantity >= item.stock
                                   }
                                 >
                                   <Plus className="h-3 w-3" />
