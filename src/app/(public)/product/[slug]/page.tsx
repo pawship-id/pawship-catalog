@@ -295,7 +295,7 @@ export default function ProductDetailPage() {
           <ProductTabs product={product} />
         </div>
 
-        <RelatedProduct />
+        <RelatedProduct selectedProduct={product} />
       </div>
     </div>
   );

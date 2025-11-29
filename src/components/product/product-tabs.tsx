@@ -420,7 +420,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                   captions to promote this item to your customers.
                 </p>
                 <a
-                  href=""
+                  href="https://drive.google.com/file/d/1K8rGfSZRVUb-MG5kf8VEzIlb8ljzbKZK/view?usp=drive_link"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
