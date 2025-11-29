@@ -1,3 +1,4 @@
+import { calculateRevenueInIDR } from "@/lib/helpers/currency-helper";
 import Order from "@/lib/models/Order";
 import dbConnect from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
@@ -46,6 +47,12 @@ export async function PUT(req: NextRequest, { params }: Context) {
     const { id } = await params;
     const body = await req.json();
 
+    const revenue = calculateRevenueInIDR(
+      body.totalAmount,
+      body.shippingCost - body.discountShipping,
+      body.currency
+    );
+
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
       {
@@ -55,6 +62,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
         shippingAddress: body.shippingAddress,
         orderDetails: body.orderDetails,
         totalAmount: body.totalAmount,
+        revenue,
       },
       { new: true, runValidators: true }
     );

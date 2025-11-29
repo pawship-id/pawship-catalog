@@ -10,19 +10,27 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, MoreVertical } from "lucide-react";
+import { Check, Copy, Edit, Eye, Link2, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 import { getAll } from "@/lib/apiService";
 import { ProductData } from "@/lib/types/product";
 import LoadingTable from "@/components/admin/loading-table";
 import ErrorTable from "@/components/admin/error-table";
 import DeleteButton from "@/components/admin/delete-button";
+import { Input } from "@/components/ui/input";
 
 interface TableProductProps {
   searchQuery: string;
@@ -37,6 +45,26 @@ export default function TableProduct({
   const [filteredProducts, setFilteredProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(
+    null
+  );
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyUrl = () => {
+    if (selectedProduct) {
+      const url = `${window.location.origin}/product/${selectedProduct.slug}`;
+      navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleShowUrl = (product: ProductData) => {
+    setSelectedProduct(product);
+    setShowUrlModal(true);
+    setCopied(false);
+  };
 
   const fetchProducts = async () => {
     try {
@@ -187,6 +215,12 @@ export default function TableProduct({
                             <Edit className="mr-2 h-4 w-4" /> Edit
                           </Link>
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => handleShowUrl(item)}
+                        >
+                          <Link2 className="mr-2 h-4 w-4" /> Show URL
+                        </DropdownMenuItem>
                         <DropdownMenuItem className="p-0">
                           <DeleteButton
                             id={item._id}
@@ -202,6 +236,50 @@ export default function TableProduct({
             )}
           </TableBody>
         </Table>
+
+        {/* URL Modal */}
+        <Dialog open={showUrlModal} onOpenChange={setShowUrlModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Collection URL</DialogTitle>
+              <DialogDescription>
+                Copy the public URL for "{selectedProduct?.productName}"
+                collection
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center space-x-2">
+              <div className="grid flex-1 gap-2">
+                <Input
+                  readOnly
+                  value={
+                    selectedProduct
+                      ? `${typeof window !== "undefined" ? window.location.origin : ""}/product/${selectedProduct.slug}`
+                      : ""
+                  }
+                  className="bg-gray-50"
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="px-3"
+                onClick={handleCopyUrl}
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 mr-1" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-1" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

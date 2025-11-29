@@ -326,7 +326,8 @@ export default function CartPage() {
     }
   };
 
-  const shipping = totalAmount > 50 ? 0 : 9.99;
+  // const shipping = totalAmount > 50 ? 0 : 9.99;
+  const shipping = 0;
   const total = totalAmount + shipping;
 
   // B2B: Calculate tier discount for a specific product based on total category quantities in cart
