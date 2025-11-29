@@ -2,12 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getAll, getById, updateData } from "@/lib/apiService";
-import {
-  OrderData,
-  IOrderDetail,
-  IShippingAddress,
-  OrderForm,
-} from "@/lib/types/order";
+import { OrderData, IOrderDetail } from "@/lib/types/order";
 import LoadingPage from "@/components/loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +39,7 @@ import {
   Save,
   Plus,
   Search,
+  BanknoteArrowDown,
 } from "lucide-react";
 import { currencyFormat } from "@/lib/helpers";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
@@ -203,6 +199,54 @@ export default function EditOrderPage() {
   );
 
   // Update item field
+  // const updateItemField = (
+  //   index: number,
+  //   field: keyof IOrderDetail,
+  //   value: any
+  // ) => {
+  //   if (!canEditOrder()) return;
+
+  //   const newItems = [...editedItems];
+  //   const item = newItems[index];
+
+  //   if (field === "quantity") {
+  //     const qty = parseInt(value) || 1;
+  //     item.quantity = qty;
+  //     recalculateItemSubtotal(item);
+  //   } else if (field === "originalPrice") {
+  //     if (!item.originalPrice) item.originalPrice = {};
+  //     item.originalPrice[order!.currency] = Math.round(value) || 0;
+  //     recalculateItemSubtotal(item);
+  //   } else if (field === "discountPercentage") {
+  //     const discount = Math.max(0, Math.min(100, Math.round(value) || 0));
+  //     item.discountPercentage = discount;
+  //     recalculateItemSubtotal(item);
+  //   } else if (field === "discountedPrice") {
+  //     if (!item.discountedPrice) item.discountedPrice = {};
+  //     const discountedPrice = Math.round(value) || 0;
+  //     item.discountedPrice[order!.currency] = discountedPrice;
+
+  //     // Recalculate discount percentage from discounted price
+  //     const originalPrice = item.originalPrice[order!.currency];
+  //     if (originalPrice > 0 && discountedPrice < originalPrice) {
+  //       const discountAmount = originalPrice - discountedPrice;
+  //       item.discountPercentage = (discountAmount / originalPrice) * 100;
+  //     } else {
+  //       item.discountPercentage = 0;
+  //       item.discountedPrice = null;
+  //     }
+
+  //     recalculateItemSubtotal(item);
+  //   } else if (field === "subTotal") {
+  //     item.subTotal = Math.round(value) || 0;
+  //   }
+
+  //   setEditedItems(newItems);
+  //   updateOrderTotal(newItems);
+  // };
+
+  const formatDecimal = (val: any) => parseFloat(Number(val).toFixed(2));
+
   const updateItemField = (
     index: number,
     field: keyof IOrderDetail,
@@ -219,22 +263,24 @@ export default function EditOrderPage() {
       recalculateItemSubtotal(item);
     } else if (field === "originalPrice") {
       if (!item.originalPrice) item.originalPrice = {};
-      item.originalPrice[order!.currency] = parseFloat(value) || 0;
+      item.originalPrice[order!.currency] = formatDecimal(value);
       recalculateItemSubtotal(item);
     } else if (field === "discountPercentage") {
-      const discount = Math.max(0, Math.min(100, parseFloat(value) || 0));
+      const discount = Math.max(0, Math.min(100, formatDecimal(value) || 0));
       item.discountPercentage = discount;
       recalculateItemSubtotal(item);
     } else if (field === "discountedPrice") {
       if (!item.discountedPrice) item.discountedPrice = {};
-      const discountedPrice = parseFloat(value) || 0;
+
+      const discountedPrice = formatDecimal(value);
       item.discountedPrice[order!.currency] = discountedPrice;
 
-      // Recalculate discount percentage from discounted price
-      const originalPrice = item.originalPrice[order!.currency];
+      const originalPrice = item?.originalPrice?.[order!.currency] ?? 0;
       if (originalPrice > 0 && discountedPrice < originalPrice) {
         const discountAmount = originalPrice - discountedPrice;
-        item.discountPercentage = (discountAmount / originalPrice) * 100;
+        item.discountPercentage = formatDecimal(
+          (discountAmount / originalPrice) * 100
+        );
       } else {
         item.discountPercentage = 0;
         item.discountedPrice = null;
@@ -242,7 +288,7 @@ export default function EditOrderPage() {
 
       recalculateItemSubtotal(item);
     } else if (field === "subTotal") {
-      item.subTotal = parseFloat(value) || 0;
+      item.subTotal = formatDecimal(value);
     }
 
     setEditedItems(newItems);
@@ -258,11 +304,13 @@ export default function EditOrderPage() {
     if (discount > 0) {
       const discountedPrice = originalPrice - (originalPrice * discount) / 100;
       if (!item.discountedPrice) item.discountedPrice = {};
-      item.discountedPrice[order!.currency] = Math.round(discountedPrice);
-      item.subTotal = Math.round(discountedPrice * qty);
+      item.discountedPrice[order!.currency] = formatDecimal(discountedPrice);
+      item.subTotal = formatDecimal(
+        item.discountedPrice[order!.currency] * qty
+      );
     } else {
       item.discountedPrice = null;
-      item.subTotal = Math.round(originalPrice * qty);
+      item.subTotal = formatDecimal(originalPrice * qty);
     }
   };
 
@@ -332,6 +380,7 @@ export default function EditOrderPage() {
         shippingAddress: order!.shippingAddress,
         shippingCost: order!.shippingCost,
         discountShipping: order!.discountShipping || 0,
+        currency: order!.currency,
       });
 
       showSuccessAlert("Success", "Order updated successfully");
@@ -385,7 +434,7 @@ export default function EditOrderPage() {
             )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <div>
                   <div className="flex items-center space-x-2 text-gray-600 mb-3">
                     <FileText className="w-4 h-4" />
@@ -443,6 +492,20 @@ export default function EditOrderPage() {
                     className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
                     disabled
                     defaultValue={order.currency}
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center space-x-2 text-gray-600 ">
+                    <BanknoteArrowDown className="w-4 h-4" />
+                    <span className="text-sm font-medium">Revenue </span>
+                  </div>
+                  <span className="text-xs mb-2">(convert rupiah amount)</span>
+                  <Input
+                    type="text"
+                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
+                    disabled
+                    defaultValue={order.revenue || 0}
                   />
                 </div>
               </div>

@@ -25,6 +25,7 @@ import {
   User,
   Trash2,
   FileImage,
+  BanknoteArrowDown,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -43,11 +44,11 @@ export default function DetailProduct() {
   const getOrderTypeBadge = (type: string) => {
     return type === "B2B" ? (
       <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium border border-indigo-200">
-        B2B - Reseller
+        B2B
       </span>
     ) : (
       <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium border border-gray-200">
-        B2C - Customer
+        B2C
       </span>
     );
   };
@@ -173,7 +174,7 @@ export default function DetailProduct() {
         order && (
           <div className="my-5 space-y-8">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <div>
                   <div className="flex items-center space-x-2 text-gray-600 mb-2">
                     <FileText className="w-4 h-4" />
@@ -213,6 +214,17 @@ export default function DetailProduct() {
                   </div>
                   <p className="text-lg font-semibold text-foreground">
                     {order.currency.toUpperCase()}
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center space-x-2 text-gray-600 ">
+                    <BanknoteArrowDown className="w-4 h-4" />
+                    <span className="text-sm font-medium">Revenue </span>
+                  </div>
+                  <span className="text-xs mb-2">(convert rupiah amount)</span>
+                  <p className="text-lg font-semibold text-foreground">
+                    {currencyFormat(order.revenue || 0, "IDR")}
                   </p>
                 </div>
               </div>

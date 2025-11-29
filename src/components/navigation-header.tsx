@@ -166,7 +166,13 @@ export default function NavigationHeader() {
           })
         );
 
-        setCollections(mappingCollections);
+        setCollections([
+          ...mappingCollections,
+          {
+            name: "All Collections",
+            href: "/catalog",
+          },
+        ]);
       }
     } catch (err: any) {
       setError(err.message);
