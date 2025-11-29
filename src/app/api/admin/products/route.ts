@@ -19,7 +19,7 @@ export async function GET() {
   try {
     const products = await Product.find({})
       .select(
-        "productName slug categoryId productDescription productMedia tags createdAt"
+        "productName slug categoryId productDescription productMedia tags preOrder createdAt"
       )
       .populate([
         {
