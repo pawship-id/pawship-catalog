@@ -235,7 +235,7 @@ export default function ProductDetailPage() {
             />
 
             <div className="hidden lg:block">
-              <ProductTabs />
+              <ProductTabs product={product} />
             </div>
           </div>
 
@@ -292,10 +292,10 @@ export default function ProductDetailPage() {
 
         {/* Tabs Section */}
         <div className="lg:hidden">
-          <ProductTabs />
+          <ProductTabs product={product} />
         </div>
 
-        <RelatedProduct />
+        <RelatedProduct selectedProduct={product} />
       </div>
     </div>
   );

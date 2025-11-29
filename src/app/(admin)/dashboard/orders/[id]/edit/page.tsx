@@ -42,7 +42,11 @@ import {
   BanknoteArrowDown,
 } from "lucide-react";
 import { currencyFormat } from "@/lib/helpers";
-import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import {
+  showErrorAlert,
+  showSuccessAlert,
+  showWarningAlert,
+} from "@/lib/helpers/sweetalert2";
 import ErrorPage from "@/components/admin/error-page";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductData } from "@/lib/types/product";
@@ -58,6 +62,9 @@ export default function EditOrderPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editedItems, setEditedItems] = useState<IOrderDetail[]>([]);
+  const [originalQuantities, setOriginalQuantities] = useState<{
+    [key: string]: number;
+  }>({});
 
   // Add Product Modal States
   const [showAddProductModal, setShowAddProductModal] = useState(false);
@@ -68,6 +75,11 @@ export default function EditOrderPage() {
     null
   );
   const [showVariantSelection, setShowVariantSelection] = useState(false);
+  const [variantQuantity, setVariantQuantity] = useState<{
+    [key: string]: number;
+  }>({});
+
+  console.log(selectedProduct);
 
   // Check if order can be edited based on status
   const canEditOrder = () => {
@@ -76,6 +88,107 @@ export default function EditOrderPage() {
       order.status === "pending confirmation" ||
       order.status === "awaiting payment"
     );
+  };
+
+  // B2B: Calculate tier discount for a specific product based on total category quantities
+  const calculateB2BDiscount = (
+    categoryId: string,
+    currentOrderItems: any[],
+    resellerPricing?: {
+      currency: string;
+      tiers: Array<{
+        name: string;
+        minimumQuantity: number;
+        discount: number;
+        categoryProduct: string | string[];
+      }>;
+    }
+  ) => {
+    if (
+      !resellerPricing ||
+      !resellerPricing.tiers ||
+      !Array.isArray(resellerPricing.tiers)
+    ) {
+      return { discountPercentage: 0, tierName: null };
+    }
+
+    const applicableTiers = resellerPricing.tiers.filter((tier) => {
+      const categories = Array.isArray(tier.categoryProduct)
+        ? tier.categoryProduct
+        : [tier.categoryProduct];
+      return categories.includes(categoryId);
+    });
+
+    if (applicableTiers.length === 0) {
+      return { discountPercentage: 0, tierName: null };
+    }
+
+    let bestTier = null;
+    let highestDiscount = 0;
+
+    for (const tier of applicableTiers) {
+      const categories = Array.isArray(tier.categoryProduct)
+        ? tier.categoryProduct
+        : [tier.categoryProduct];
+
+      const totalCategoryQty = currentOrderItems.reduce((sum, item: any) => {
+        if (categories.includes(item.categoryId)) {
+          return sum + item.quantity;
+        }
+        return sum;
+      }, 0);
+
+      if (
+        totalCategoryQty >= tier.minimumQuantity &&
+        tier.discount > highestDiscount
+      ) {
+        highestDiscount = tier.discount;
+        bestTier = tier;
+      }
+    }
+
+    if (bestTier) {
+      return {
+        discountPercentage: bestTier.discount,
+        tierName: bestTier.name,
+      };
+    }
+
+    return { discountPercentage: 0, tierName: null };
+  };
+
+  // Calculate discount for new item
+  const getDiscountedPriceForNewItem = (
+    basePrice: number,
+    quantity: number,
+    categoryId: string,
+    currentItems: IOrderDetail[],
+    resellerPricing?: any
+  ) => {
+    let discountPercentage = 0;
+    let finalPrice = basePrice;
+
+    if (order?.orderType === "B2B" && resellerPricing) {
+      const tierResult = calculateB2BDiscount(
+        categoryId,
+        currentItems,
+        resellerPricing
+      );
+
+      if (tierResult.discountPercentage > 0) {
+        discountPercentage = tierResult.discountPercentage;
+        finalPrice = Math.round(
+          basePrice - (basePrice * discountPercentage) / 100
+        );
+      }
+    }
+
+    return {
+      finalPrice,
+      discountPercentage,
+      discountedPrice:
+        discountPercentage > 0 ? { [order!.currency]: finalPrice } : null,
+    };
   };
 
   const fetchOrder = async () => {
@@ -87,7 +200,67 @@ export default function EditOrderPage() {
 
       if (response.data) {
         setOrder(response.data);
-        setEditedItems(response.data.orderDetails);
+
+        // Store original quantities for stock update calculation later
+        const origQty: { [key: string]: number } = {};
+
+        // Fetch latest product data for metadata only (not for stock validation)
+        const updatedItems = await Promise.all(
+          response.data.orderDetails.map(async (item) => {
+            // Save original quantity
+            origQty[item.variantId] = item.quantity;
+
+            try {
+              const productResponse = await getById<ProductData>(
+                "/api/admin/products",
+                item.productId
+              );
+
+              if (productResponse.data) {
+                const product = productResponse.data;
+                const variant = product.productVariantsData?.find(
+                  (v) => v._id === item.variantId
+                );
+
+                if (variant) {
+                  // For existing items, add back the original qty to stock
+                  // (because stock was already deducted on checkout)
+                  const availableStock = variant.stock + item.quantity;
+
+                  return {
+                    ...item,
+                    stock: availableStock, // Available stock including what was already ordered
+                    preOrder: product.preOrder,
+                    categoryId: product.categoryId,
+                    moq: product.moq,
+                    resellerPricing: product.resellerPricing,
+                  };
+                }
+              }
+
+              // If product/variant not found, keep original item with default values
+              return {
+                ...item,
+                stock: item.stock || 0,
+                preOrder: item.preOrder || { enabled: false, leadTime: "" },
+              };
+            } catch (error) {
+              console.error(
+                `Failed to fetch product ${item.productId}:`,
+                error
+              );
+              // On error, keep original item with default values
+              return {
+                ...item,
+                stock: item.stock || 0,
+                preOrder: item.preOrder || { enabled: false, leadTime: "" },
+              };
+            }
+          })
+        );
+
+        setOriginalQuantities(origQty);
+        setEditedItems(updatedItems);
       }
     } catch (err: any) {
       setError(err.message);
@@ -133,11 +306,13 @@ export default function EditOrderPage() {
 
   // Select product and show variant selection
   const handleSelectProduct = (product: ProductData) => {
+    console.log(product, ">>>>>>");
+
     setSelectedProduct(product);
     setShowVariantSelection(true);
   };
 
-  // Add variant to order
+  // Add variant to order (always start with qty 1)
   const handleAddVariant = (variantId: string) => {
     if (!selectedProduct || !order) return;
 
@@ -156,37 +331,83 @@ export default function EditOrderPage() {
         "Already Added",
         "This product variant is already in the order."
       );
-      // Close modals to prevent selecting another variant
       setShowVariantSelection(false);
       setShowAddProductModal(false);
       setSelectedProduct(null);
       return;
     }
 
-    const newItem: IOrderDetail = {
+    // Start with quantity 1
+    const quantity = 1;
+    const basePrice = variant.price[order.currency] || 0;
+    const tempItem: IOrderDetail = {
       productId: selectedProduct._id,
       productName: selectedProduct.productName,
+      categoryId: selectedProduct.categoryId,
       variantId: variant._id,
       variantName: variant.name,
-      quantity: 1,
+      quantity: quantity,
       originalPrice: variant.price,
-      discountPercentage: 0,
-      discountedPrice: null,
-      subTotal: variant.price[order.currency] || 0,
-      image:
-        variant.image ||
-        selectedProduct.productMedia.find((m) => m.type === "image")!,
       stock: variant.stock,
       preOrder: selectedProduct.preOrder,
       moq: selectedProduct.moq,
       resellerPricing: selectedProduct.resellerPricing,
+      image:
+        variant.image ||
+        selectedProduct.productMedia.find((m) => m.type === "image")!,
+      subTotal: basePrice * quantity,
+      discountPercentage: 0,
+    };
+
+    // Calculate discount with all items including the new one
+    const itemsForCalculation = [...editedItems, tempItem];
+
+    const discountResult = getDiscountedPriceForNewItem(
+      basePrice,
+      quantity,
+      selectedProduct.categoryId,
+      itemsForCalculation,
+      selectedProduct.resellerPricing
+    );
+
+    const newItem: IOrderDetail = {
+      ...tempItem,
+      discountPercentage: discountResult.discountPercentage,
+      discountedPrice: discountResult.discountedPrice,
+      subTotal: quantity * discountResult.finalPrice,
     };
 
     const newItems = [...editedItems, newItem];
-    setEditedItems(newItems);
-    updateOrderTotal(newItems);
 
-    // Close modals
+    // Recalculate all items' discounts (for B2B tier discount)
+    const recalculatedItems = newItems.map((item: any) => {
+      const itemBasePrice = item.originalPrice[order.currency];
+      const result = getDiscountedPriceForNewItem(
+        itemBasePrice,
+        item.quantity,
+        item.categoryId || selectedProduct.categoryId,
+        newItems,
+        item.resellerPricing
+      );
+
+      return {
+        ...item,
+        discountPercentage: result.discountPercentage,
+        discountedPrice: result.discountedPrice,
+        subTotal: item.quantity * result.finalPrice,
+      };
+    });
+
+    setEditedItems(recalculatedItems);
+    updateOrderTotal(recalculatedItems);
+
+    // Save original quantity for new item (0 because it's new)
+    setOriginalQuantities({
+      ...originalQuantities,
+      [variant._id]: 0,
+    });
+
+    // Close modals and reset
     setShowAddProductModal(false);
     setShowVariantSelection(false);
     setSelectedProduct(null);
@@ -258,8 +479,36 @@ export default function EditOrderPage() {
     const item = newItems[index];
 
     if (field === "quantity") {
-      const qty = parseInt(value) || 1;
+      let qty = parseInt(value) || 1;
+
+      // Get original qty for this item (to calculate actual available stock)
+      const originalQty = originalQuantities[item.variantId] || 0;
+
+      // Calculate actual available stock (current stock already includes originalQty)
+      // So available stock = item.stock - originalQty
+      const actualAvailableStock = item.stock - originalQty;
+      const newQtyNeeded = qty - originalQty;
+
+      // Validate quantity vs actual available stock
+      if (!item.preOrder.enabled && newQtyNeeded > actualAvailableStock) {
+        const maxAllowedQty = originalQty + actualAvailableStock;
+        showWarningAlert(
+          "Quantity exceeds available stock",
+          `Available stock is ${actualAvailableStock} pcs. Maximum quantity you can order is ${maxAllowedQty} pcs (${originalQty} already ordered + ${actualAvailableStock} available). Quantity has been set to maximum.`
+        );
+        qty = maxAllowedQty;
+      }
+
       item.quantity = qty;
+
+      // For B2B, recalculate all items because tier discount might change
+      if (order?.orderType === "B2B") {
+        const recalculatedItems = recalculateAllItemsWithDiscount(newItems);
+        setEditedItems(recalculatedItems);
+        updateOrderTotal(recalculatedItems);
+        return;
+      }
+
       recalculateItemSubtotal(item);
     } else if (field === "originalPrice") {
       if (!item.originalPrice) item.originalPrice = {};
@@ -314,11 +563,59 @@ export default function EditOrderPage() {
     }
   };
 
-  // Update order total amount
+  // Recalculate all items with B2B discount (for tier changes)
+  const recalculateAllItemsWithDiscount = (items: IOrderDetail[]) => {
+    if (order?.orderType !== "B2B") return items;
+
+    return items.map((item: any) => {
+      const itemBasePrice = item.originalPrice[order.currency];
+      const result = getDiscountedPriceForNewItem(
+        itemBasePrice,
+        item.quantity,
+        item.categoryId,
+        items,
+        item.resellerPricing
+      );
+
+      return {
+        ...item,
+        discountPercentage: result.discountPercentage,
+        discountedPrice: result.discountedPrice,
+        subTotal: item.quantity * result.finalPrice,
+      };
+    });
+  };
+
+  // Exchange rates for revenue calculation (convert to IDR)
+  const exchangeRates = {
+    IDR: 1,
+    USD: 15800,
+    SGD: 11800,
+  };
+
+  // Calculate revenue in IDR
+  const calculateRevenue = (
+    totalAmount: number,
+    shippingCost: number,
+    discountShipping: number,
+    currency: string
+  ) => {
+    const finalTotal = totalAmount + shippingCost - discountShipping;
+    const rate = exchangeRates[currency as keyof typeof exchangeRates] || 1;
+    return Math.round(finalTotal * rate);
+  };
+
+  // Update order total amount and revenue
   const updateOrderTotal = (items: IOrderDetail[]) => {
     const total = items.reduce((sum, item) => sum + item.subTotal, 0);
     if (order) {
-      setOrder({ ...order, totalAmount: total, orderDetails: items });
+      const revenue = calculateRevenue(
+        total,
+        order.shippingCost,
+        order.discountShipping || 0,
+        order.currency
+      );
+      setOrder({ ...order, totalAmount: total, orderDetails: items, revenue });
     }
   };
 
@@ -340,9 +637,18 @@ export default function EditOrderPage() {
       return;
     }
 
+    const deletedItem = editedItems[index];
     const newItems = editedItems.filter((_, i) => i !== index);
-    setEditedItems(newItems);
-    updateOrderTotal(newItems);
+
+    // For B2B, recalculate discounts after item removal
+    if (order?.orderType === "B2B") {
+      const recalculatedItems = recalculateAllItemsWithDiscount(newItems);
+      setEditedItems(recalculatedItems);
+      updateOrderTotal(recalculatedItems);
+    } else {
+      setEditedItems(newItems);
+      updateOrderTotal(newItems);
+    }
   };
 
   // Save changes to order
@@ -373,6 +679,7 @@ export default function EditOrderPage() {
     try {
       setSaving(true);
 
+      // Stock updates will be handled by the backend API
       await updateData<OrderData, Partial<OrderData>>("/api/admin/orders", id, {
         status: order!.status,
         orderDetails: editedItems,
@@ -380,6 +687,7 @@ export default function EditOrderPage() {
         shippingAddress: order!.shippingAddress,
         shippingCost: order!.shippingCost,
         discountShipping: order!.discountShipping || 0,
+        revenue: order!.revenue || 0,
         currency: order!.currency,
       });
 
@@ -922,9 +1230,17 @@ export default function EditOrderPage() {
                               <p className="font-semibold text-sm mb-2 text-foreground">
                                 {item.productName}
                               </p>
-                              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
-                                {item.variantName}
-                              </span>
+                              <div className="flex flex-wrap gap-2 items-center">
+                                <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                                  {item.variantName}
+                                </span>
+                                {item.quantity > item.stock &&
+                                  item.preOrder.enabled && (
+                                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
+                                      Pre-Order
+                                    </span>
+                                  )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1182,17 +1498,19 @@ export default function EditOrderPage() {
               open={showVariantSelection}
               onOpenChange={setShowVariantSelection}
             >
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Select Variant</DialogTitle>
                   <DialogDescription>
-                    Choose a variant for {selectedProduct?.productName}
+                    Choose a variant for {selectedProduct?.productName}.
+                    Quantity will be set to 1 (you can adjust it in the table).
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-4 space-y-3 max-h-[500px] overflow-y-auto">
+                <div className="mt-4 space-y-3">
                   {selectedProduct?.productVariantsData?.map((variant) => {
                     const isOutOfStock = !variant.stock || variant.stock === 0;
+
                     return (
                       <div
                         key={variant._id}
@@ -1201,8 +1519,8 @@ export default function EditOrderPage() {
                         }
                         className={`border rounded-lg p-4 transition-all ${
                           isOutOfStock
-                            ? "opacity-50 cursor-not-allowed bg-gray-100"
-                            : "cursor-pointer hover:border-primary hover:bg-gray-50"
+                            ? "opacity-50 bg-gray-100 cursor-not-allowed"
+                            : "hover:border-primary hover:bg-gray-50 cursor-pointer"
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1216,21 +1534,31 @@ export default function EditOrderPage() {
                             />
                             <div>
                               <h4
-                                className={`font-semibold ${isOutOfStock ? "text-gray-500" : "text-gray-900"}`}
+                                className={`font-semibold ${
+                                  isOutOfStock
+                                    ? "text-gray-500"
+                                    : "text-gray-900"
+                                }`}
                               >
                                 {variant.name}
                               </h4>
                               <p
-                                className={`text-sm mt-1 ${isOutOfStock ? "text-red-600 font-medium" : "text-gray-600"}`}
+                                className={`text-sm mt-1 ${
+                                  isOutOfStock
+                                    ? "text-red-600 font-medium"
+                                    : "text-gray-600"
+                                }`}
                               >
-                                Stock: {variant.stock || 0}{" "}
-                                {isOutOfStock && "(Out of Stock)"}
+                                Stock: {variant.stock || 0}
+                                {isOutOfStock && " (Out of Stock)"}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p
-                              className={`font-semibold ${isOutOfStock ? "text-gray-500" : "text-gray-900"}`}
+                              className={`font-semibold ${
+                                isOutOfStock ? "text-gray-500" : "text-gray-900"
+                              }`}
                             >
                               {currencyFormat(
                                 variant.price?.[order.currency] || 0,

@@ -74,6 +74,6 @@ export const showWarningAlert = (
     icon: "warning",
     title: title,
     html: msg,
-    timer: 3000,
+    timer: 5000,
   });
 };

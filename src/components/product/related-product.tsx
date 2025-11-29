@@ -1,16 +1,86 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import ProductCard from "../product-card";
-import { products as productData } from "@/lib/data/products";
+// import { products as productData } from "@/lib/data/products";
 import Loading from "../loading";
+import { ProductData } from "@/lib/types/product";
+import { getAll } from "@/lib/apiService";
+import { hasTag } from "@/lib/helpers/product";
+import LoadingPage from "../loading";
+interface RelatedProductProps {
+  selectedProduct: ProductData;
+}
 
-export default function RelatedProduct() {
+export default function RelatedProduct({
+  selectedProduct,
+}: RelatedProductProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const sliderRef = useRef<HTMLDivElement>(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  const products = productData.slice(0, 10);
+  const [products, setProducts] = useState<ProductData[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [visibleCards, setVisibleCards] = useState(0); // Default to prevent hydration mismatch
+
+  const fetchRelatedProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getAll<ProductData>("/api/public/products");
+
+      if (response.data) {
+        const data = response.data;
+
+        // Filter products: exclude current product
+        const filteredProducts = data.filter(
+          (product: ProductData) => product._id !== selectedProduct._id
+        );
+
+        // Get products from same category
+        const sameCategoryProducts = filteredProducts.filter(
+          (product: ProductData) =>
+            product.categoryId === selectedProduct.categoryId
+        );
+
+        let relatedProducts: ProductData[] = [];
+
+        // If same category has >= 10 products, use them
+        if (sameCategoryProducts.length >= 10) {
+          relatedProducts = sameCategoryProducts.slice(0, 10);
+        } else {
+          // If no products in same category, show best selling
+          // Assuming products are already sorted by best selling or you can add sorting logic
+          const bestSallerProducts = filteredProducts.filter(
+            (product: ProductData) =>
+              product.categoryId !== selectedProduct.categoryId &&
+              hasTag(product.tags, "best sellers").isFound
+          );
+
+          console.log(bestSallerProducts);
+
+          relatedProducts = [
+            ...(sameCategoryProducts || []),
+            ...(bestSallerProducts || []),
+          ].slice(0, 10);
+        }
+
+        setProducts(relatedProducts);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch related products
+  useEffect(() => {
+    if (selectedProduct) {
+      fetchRelatedProducts();
+    }
+  }, [selectedProduct]);
 
   // Calculate total slides based on visible cards
   const getVisibleCards = () => {
@@ -19,9 +89,6 @@ export default function RelatedProduct() {
     if (window.innerWidth >= 768) return 4; // md
     return 3;
   };
-
-  const [visibleCards, setVisibleCards] = useState(0); // Default to prevent hydration mismatch
-  const totalSlides = Math.ceil(products.length / visibleCards);
 
   useEffect(() => {
     // Set mounted to true and initialize visibleCards on client
@@ -35,6 +102,16 @@ export default function RelatedProduct() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  if (loading) {
+    return <LoadingPage />;
+  }
+
+  if (!products) {
+    return "";
+  }
+
+  const totalSlides = Math.ceil(products.length / visibleCards);
 
   // Handle scroll events to update current slide indicator
   const handleScroll = () => {
@@ -90,7 +167,7 @@ export default function RelatedProduct() {
               <div className="flex gap-4 px-2">
                 {products.map((product) => (
                   <div
-                    key={product.id}
+                    key={product._id}
                     className="flex-shrink-0"
                     style={{
                       width: mounted
@@ -108,7 +185,7 @@ export default function RelatedProduct() {
                       maxWidth: "280px",
                     }}
                   >
-                    {/* <ProductCard product={product} /> */}
+                    <ProductCard product={product} />
                   </div>
                 ))}
               </div>

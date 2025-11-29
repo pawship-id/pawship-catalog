@@ -1,6 +1,7 @@
 export interface IOrderDetail {
   productId: string;
   productName: string;
+  categoryId?: string; // Category ID for B2B discount calculation
   quantity: number;
   stock: number;
   preOrder: { enabled: boolean; leadTime: string };

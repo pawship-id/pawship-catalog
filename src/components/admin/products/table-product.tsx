@@ -241,10 +241,9 @@ export default function TableProduct({
         <Dialog open={showUrlModal} onOpenChange={setShowUrlModal}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Collection URL</DialogTitle>
+              <DialogTitle>Product URL</DialogTitle>
               <DialogDescription>
-                Copy the public URL for "{selectedProduct?.productName}"
-                collection
+                Copy the public URL for "{selectedProduct?.productName}" product
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center space-x-2">
