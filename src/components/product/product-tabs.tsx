@@ -2,25 +2,41 @@
 import {
   ArrowRight,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   ExternalLink,
   MessageCircle,
   Ruler,
 } from "lucide-react";
 import React, { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
 import { Button } from "../ui/button";
+import Image from "next/image";
+import { ProductData } from "@/lib/types/product";
 
-export default function ProductTabs() {
+interface ProductTabsProps {
+  product: ProductData;
+}
+
+export default function ProductTabs({ product }: ProductTabsProps) {
   const [expandedTab, setExpandedTab] = useState("description");
   const [activeTabSize, setActiveTabSize] = useState("size-chart");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const sizeImages = product.sizeProduct || [];
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? sizeImages.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === sizeImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
   const sizeChart = [
     {
       size: "XS",
@@ -160,47 +176,54 @@ export default function ProductTabs() {
 
             {activeTabSize === "size-chart" && (
               <div className="space-y-6 mt-6">
-                <Table className="border border-gray-300 overflow-x-auto">
-                  <TableHeader>
-                    <TableRow className="bg-gray-100 hover:bg-gray-100">
-                      <TableHead className="font-medium border border-gray-300">
-                        Size
-                      </TableHead>
-                      <TableHead className="font-medium border border-gray-300">
-                        Neck (cm)
-                      </TableHead>
-                      <TableHead className="font-medium border border-gray-300">
-                        Chest (cm)
-                      </TableHead>
-                      <TableHead className="font-medium border border-gray-300">
-                        Length (cm)
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sizeChart.map((item, idx) => {
-                      return (
-                        <TableRow
-                          key={idx}
-                          className="hover:bg-gray-50 transition-colors border border-gray-300"
+                {/* Size Chart Image Slider */}
+                <div className="flex justify-center">
+                  <div className="relative w-full max-w-sm aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <Image
+                      src={sizeImages[currentImageIndex].imageUrl}
+                      alt={`Size chart ${currentImageIndex + 1}`}
+                      fill
+                      className="object-contain"
+                      priority
+                    />
+
+                    {/* Slider Controls - Only show if more than 1 image */}
+                    {sizeImages.length > 1 && (
+                      <>
+                        <button
+                          onClick={handlePrevImage}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+                          aria-label="Previous image"
                         >
-                          <TableCell className="font-medium border border-gray-300">
-                            {item.size}
-                          </TableCell>
-                          <TableCell className="border border-gray-300">
-                            {item.neck}
-                          </TableCell>
-                          <TableCell className="border border-gray-300">
-                            {item.chest}
-                          </TableCell>
-                          <TableCell className="border border-gray-300">
-                            {item.length}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                          <ChevronLeft className="w-5 h-5 text-gray-800" />
+                        </button>
+                        <button
+                          onClick={handleNextImage}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+                          aria-label="Next image"
+                        >
+                          <ChevronRight className="w-5 h-5 text-gray-800" />
+                        </button>
+
+                        {/* Dots Indicator */}
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                          {sizeImages.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setCurrentImageIndex(idx)}
+                              className={`w-2 h-2 rounded-full transition-all ${
+                                idx === currentImageIndex
+                                  ? "bg-primary w-6"
+                                  : "bg-white/60 hover:bg-white/80"
+                              }`}
+                              aria-label={`Go to image ${idx + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
 
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3">
