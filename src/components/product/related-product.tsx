@@ -7,6 +7,9 @@ import { ProductData } from "@/lib/types/product";
 import { getAll } from "@/lib/apiService";
 import { hasTag } from "@/lib/helpers/product";
 import LoadingPage from "../loading";
+import { useCurrency } from "@/context/CurrencyContext";
+import { filterProductsByCountry } from "@/lib/helpers/product-filter";
+
 interface RelatedProductProps {
   selectedProduct: ProductData;
 }
@@ -24,6 +27,8 @@ export default function RelatedProduct({
   const [error, setError] = useState<string | null>(null);
   const [visibleCards, setVisibleCards] = useState(0); // Default to prevent hydration mismatch
 
+  const { userCountry } = useCurrency();
+
   const fetchRelatedProducts = async () => {
     try {
       setLoading(true);
@@ -31,7 +36,10 @@ export default function RelatedProduct({
       const response = await getAll<ProductData>("/api/public/products");
 
       if (response.data) {
-        const data = response.data;
+        let data = response.data;
+
+        // Filter products by user's country (exclude products not available in user's country)
+        data = filterProductsByCountry(data, userCountry);
 
         // Filter products: exclude current product
         const filteredProducts = data.filter(

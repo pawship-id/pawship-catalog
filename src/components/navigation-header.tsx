@@ -59,7 +59,7 @@ export default function NavigationHeader() {
     [key: string]: boolean;
   }>({});
 
-  const { currency, setCurrency, loading } = useCurrency();
+  const { currency, setCurrency, loading, userCountry } = useCurrency();
   const { data: session, status } = useSession();
 
   const [cartItemCount, setCartItemCount] = useState(0);
@@ -328,12 +328,20 @@ export default function NavigationHeader() {
                     onValueChange={(value) => setCurrency(value as any)}
                   >
                     <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
-                      <SelectValue placeholder="Select Currency" />
+                      {/* <SelectValue placeholder="Select Currency" /> */}
+                      <SelectValue placeholder="Select Currency">
+                        {currency && (
+                          <span>
+                            {currency} - {userCountry}
+                          </span>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USD">USD | United States</SelectItem>
-                      <SelectItem value="IDR">IDR | Indonesia</SelectItem>
-                      <SelectItem value="SGD">SGD | Singapore</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="IDR">IDR</SelectItem>
+                      <SelectItem value="SGD">SGD</SelectItem>
+                      <SelectItem value="HKD">HKD</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -554,12 +562,20 @@ export default function NavigationHeader() {
                     onValueChange={(value) => setCurrency(value as any)}
                   >
                     <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
-                      <SelectValue placeholder="Select Currency" />
+                      {/* <SelectValue placeholder="Select Currency" /> */}
+                      <SelectValue placeholder="Select Currency">
+                        {currency && (
+                          <span>
+                            {currency} - {userCountry}
+                          </span>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USD">USD | United States</SelectItem>
-                      <SelectItem value="IDR">IDR | Indonesia</SelectItem>
-                      <SelectItem value="SGD">SGD | Singapore</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="IDR">IDR</SelectItem>
+                      <SelectItem value="SGD">SGD</SelectItem>
+                      <SelectItem value="HKD">HKD</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
