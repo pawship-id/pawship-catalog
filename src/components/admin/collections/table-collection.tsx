@@ -51,6 +51,16 @@ export default function TableCollection() {
     useState<Collection | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
+
+  // Calculate pagination
+  const totalPages = Math.ceil(collections.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentCollections = collections.slice(startIndex, endIndex);
+
   const fetchCollections = async () => {
     try {
       setLoading(true);
@@ -109,102 +119,153 @@ export default function TableCollection() {
   };
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Rule Type</TableHead>
-            <TableHead>Items Count</TableHead>
-            <TableHead>Display on Homepage</TableHead>
-            <TableHead>Display on Navbar</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {collections.length === 0 ? (
+    <div className="space-y-4">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell
-                colSpan={5}
-                className="text-center py-8 text-muted-foreground"
-              >
-                No collections found
-              </TableCell>
+              <TableHead>Name</TableHead>
+              <TableHead>Rule Type</TableHead>
+              <TableHead>Items Count</TableHead>
+              <TableHead>Display on Homepage</TableHead>
+              <TableHead>Display on Navbar</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
-          ) : (
-            collections.map((item) => (
-              <TableRow key={item._id}>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>
-                  <span className="inline-flex px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-800 font-medium">
-                    {getRuleLabel(item.rules)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-gray-600">
-                    {item.ruleIds.length} item(s)
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      item.displayOnHomepage
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {item.displayOnHomepage ? "Yes" : "No"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      item.displayOnNavbar
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {item.displayOnNavbar ? "Yes" : "No"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="cursor-pointer"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link href={`/dashboard/collections/edit/${item._id}`}>
-                          <Edit className="mr-2 h-4 w-4" /> Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => handleShowUrl(item)}
-                      >
-                        <Link2 className="mr-2 h-4 w-4" /> Show URL
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="p-0">
-                        <DeleteButton
-                          id={item._id}
-                          onFetch={fetchCollections}
-                          resource="collections"
-                        />
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+          </TableHeader>
+          <TableBody>
+            {collections.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="text-center py-8 text-muted-foreground"
+                >
+                  No collections found
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              currentCollections.map((item) => (
+                <TableRow key={item._id}>
+                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-800 font-medium">
+                      {getRuleLabel(item.rules)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-gray-600">
+                      {item.ruleIds.length} item(s)
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                        item.displayOnHomepage
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {item.displayOnHomepage ? "Yes" : "No"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                        item.displayOnNavbar
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {item.displayOnNavbar ? "Yes" : "No"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link
+                            href={`/dashboard/collections/edit/${item._id}`}
+                          >
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => handleShowUrl(item)}
+                        >
+                          <Link2 className="mr-2 h-4 w-4" /> Show URL
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="p-0">
+                          <DeleteButton
+                            id={item._id}
+                            onFetch={fetchCollections}
+                            resource="collections"
+                          />
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      {collections.length > 0 && (
+        <div className="flex items-center justify-between my-6">
+          <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to {Math.min(endIndex, collections.length)}{" "}
+            of {collections.length} collections
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="cursor-pointer"
+            >
+              Previous
+            </Button>
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="cursor-pointer w-10"
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              className="cursor-pointer"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* URL Modal */}
       <Dialog open={showUrlModal} onOpenChange={setShowUrlModal}>

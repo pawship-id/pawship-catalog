@@ -35,6 +35,21 @@ export default function TableCategory({ searchQuery }: TableCategoryProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentCategories = filteredCategories.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const fetchCategories = async () => {
     try {
       setLoading(true);
@@ -114,7 +129,7 @@ export default function TableCategory({ searchQuery }: TableCategoryProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredCategories.map((item) => (
+              currentCategories.map((item) => (
                 <TableRow key={item._id}>
                   <TableCell className="font-medium ">
                     {item.imageUrl ? (
@@ -174,6 +189,54 @@ export default function TableCategory({ searchQuery }: TableCategoryProps) {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {filteredCategories.length > 0 && (
+        <div className="flex items-center justify-between my-6">
+          <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to{" "}
+            {Math.min(endIndex, filteredCategories.length)} of{" "}
+            {filteredCategories.length} categories
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="cursor-pointer"
+            >
+              Previous
+            </Button>
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="cursor-pointer w-10"
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              className="cursor-pointer"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
