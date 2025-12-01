@@ -51,6 +51,21 @@ export default function TableProduct({
   );
   const [copied, setCopied] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory]);
+
   const handleCopyUrl = () => {
     if (selectedProduct) {
       const url = `${window.location.origin}/product/${selectedProduct.slug}`;
@@ -153,7 +168,7 @@ export default function TableProduct({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProducts.map((item) => (
+              currentProducts.map((item) => (
                 <TableRow key={item._id}>
                   <TableCell>
                     <div className="flex items-center space-x-3">
@@ -236,50 +251,98 @@ export default function TableProduct({
             )}
           </TableBody>
         </Table>
-
-        {/* URL Modal */}
-        <Dialog open={showUrlModal} onOpenChange={setShowUrlModal}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Product URL</DialogTitle>
-              <DialogDescription>
-                Copy the public URL for "{selectedProduct?.productName}" product
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex items-center space-x-2">
-              <div className="grid flex-1 gap-2">
-                <Input
-                  readOnly
-                  value={
-                    selectedProduct
-                      ? `${typeof window !== "undefined" ? window.location.origin : ""}/product/${selectedProduct.slug}`
-                      : ""
-                  }
-                  className="bg-gray-50"
-                />
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                className="px-3"
-                onClick={handleCopyUrl}
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-4 w-4 mr-1" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4 mr-1" />
-                    Copy
-                  </>
-                )}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
+
+      {/* Pagination */}
+      {filteredProducts.length > 0 && (
+        <div className="flex items-center justify-between my-6">
+          <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to{" "}
+            {Math.min(endIndex, filteredProducts.length)} of{" "}
+            {filteredProducts.length} products
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="cursor-pointer"
+            >
+              Previous
+            </Button>
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="cursor-pointer w-10"
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              className="cursor-pointer"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* URL Modal */}
+      <Dialog open={showUrlModal} onOpenChange={setShowUrlModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Product URL</DialogTitle>
+            <DialogDescription>
+              Copy the public URL for "{selectedProduct?.productName}" product
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center space-x-2">
+            <div className="grid flex-1 gap-2">
+              <Input
+                readOnly
+                value={
+                  selectedProduct
+                    ? `${typeof window !== "undefined" ? window.location.origin : ""}/product/${selectedProduct.slug}`
+                    : ""
+                }
+                className="bg-gray-50"
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="px-3"
+              onClick={handleCopyUrl}
+            >
+              {copied ? (
+                <>
+                  <Check className="h-4 w-4 mr-1" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 mr-1" />
+                  Copy
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
