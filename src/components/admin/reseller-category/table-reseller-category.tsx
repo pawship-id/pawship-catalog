@@ -24,10 +24,17 @@ import LoadingTable from "@/components/admin/loading-table";
 import ErrorTable from "@/components/admin/error-table";
 import DeleteButton from "@/components/admin/delete-button";
 
-export default function TableResellerCategory() {
+interface TableResellerCategoryProps {
+  searchQuery: string;
+}
+
+export default function TableResellerCategory({
+  searchQuery,
+}: TableResellerCategoryProps) {
   const [resellerCategoryData, setResellerCategoryData] = useState<
     ResellerCategoryData[]
   >([]);
+  const [filteredData, setFilteredData] = useState<ResellerCategoryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,10 +43,15 @@ export default function TableResellerCategory() {
   const itemsPerPage = 25;
 
   // Calculate pagination
-  const totalPages = Math.ceil(resellerCategoryData.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentData = resellerCategoryData.slice(startIndex, endIndex);
+  const currentData = filteredData.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const fetchResellerCategories = async () => {
     try {
@@ -52,6 +64,7 @@ export default function TableResellerCategory() {
 
       if (response.data) {
         setResellerCategoryData(response.data);
+        setFilteredData(response.data);
       }
     } catch (err: any) {
       setError(err.message);
@@ -64,6 +77,20 @@ export default function TableResellerCategory() {
     fetchResellerCategories();
   }, []);
 
+  // Search filter effect
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredData(resellerCategoryData);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = resellerCategoryData.filter((item) =>
+      item.resellerCategoryName.toLowerCase().includes(query)
+    );
+    setFilteredData(filtered);
+  }, [searchQuery, resellerCategoryData]);
+
   if (loading) {
     return <LoadingTable text="Loading fetch reseller categories" />;
   }
@@ -74,6 +101,15 @@ export default function TableResellerCategory() {
 
   return (
     <div className="space-y-4">
+      {/* Results Counter */}
+      {searchQuery && (
+        <div className="text-sm text-muted-foreground">
+          Found {filteredData.length} reseller categor
+          {filteredData.length !== 1 ? "ies" : "y"} matching "{searchQuery}"
+        </div>
+      )}
+
+      {/* Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -85,13 +121,15 @@ export default function TableResellerCategory() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {resellerCategoryData.length === 0 ? (
+            {filteredData.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={6}
                   className="text-center py-8 text-muted-foreground"
                 >
-                  No reselller categories found
+                  {searchQuery
+                    ? `No reseller categories found matching "${searchQuery}"`
+                    : "No reseller categories found"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -149,12 +187,12 @@ export default function TableResellerCategory() {
       </div>
 
       {/* Pagination */}
-      {resellerCategoryData.length > 0 && (
+      {filteredData.length > 0 && (
         <div className="flex items-center justify-between my-6">
           <div className="text-sm text-muted-foreground">
             Showing {startIndex + 1} to{" "}
-            {Math.min(endIndex, resellerCategoryData.length)} of{" "}
-            {resellerCategoryData.length} reseller categories
+            {Math.min(endIndex, filteredData.length)} of {filteredData.length}{" "}
+            reseller categories
           </div>
           <div className="flex items-center space-x-2">
             <Button
