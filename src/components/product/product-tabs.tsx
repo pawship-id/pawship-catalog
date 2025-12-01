@@ -86,48 +86,12 @@ export default function ProductTabs({ product }: ProductTabsProps) {
         </div>
         {expandedTab === "description" && (
           <div className="mt-2 pb-4 text-gray-600">
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <h3 className="font-semibold text-gray-900">Overview</h3>
-                <p className="text-gray-700">
-                  Crafted from premium soft cotton, the Magician BIP Set offers
-                  all-day comfort with a lightweight and breathable feel. Gentle
-                  on the skin, it’s safe for babies and kids. The playful
-                  magician-themed design makes it not only functional but also
-                  stylish for everyday wear.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-gray-900">Key Features</h3>
-                <ul className="list-disc list-inside space-y-1">
-                  {[
-                    "Premium cotton material, soft & breathable",
-                    "Ergonomic design for maximum comfort",
-                    "Unique magician-themed pattern",
-                    "Perfect for daily use or special occasions",
-                  ].map((item, idx) => (
-                    <li key={idx}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-gray-900">
-                  Care Instructions
-                </h3>
-                <ul className="list-disc list-inside space-y-1">
-                  {[
-                    "Hand wash or machine wash on gentle cycle",
-                    "Use mild detergent, avoid bleach",
-                    "Dry in the shade to maintain color vibrancy",
-                    "Iron on low heat if needed",
-                  ].map((item, idx) => (
-                    <li key={idx}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            <div
+              className="prose max-w-none"
+              dangerouslySetInnerHTML={{
+                __html: product.productDescription,
+              }}
+            />
           </div>
         )}
       </div>

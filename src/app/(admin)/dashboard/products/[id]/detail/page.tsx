@@ -77,7 +77,9 @@ export default function DetailProduct() {
           <Button
             size="sm"
             className="cursor-pointer"
-            onClick={() => router.push(`/dashboard/products`)}
+            onClick={() =>
+              router.push(`/dashboard/products/${product._id}/edit`)
+            }
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit Product
@@ -187,7 +189,7 @@ export default function DetailProduct() {
                         </td>
                       </tr>
                       <tr>
-                        <td className="pr-2 font-medium">MOQ</td>
+                        <td className="pr-2 font-medium">MOQ Reseller</td>
                         <td className="px-2">:</td>
                         <td className="py-0.5">{product.moq}</td>
                       </tr>
@@ -200,7 +202,7 @@ export default function DetailProduct() {
                         <td className="pr-2 font-medium">Exclude Country</td>
                         <td className="px-2">:</td>
                         <td className="py-0.5">
-                          {product.exclusive?.country
+                          {product.exclusive?.country?.length
                             ? product.exclusive.country.join(", ")
                             : "-"}
                         </td>
@@ -235,17 +237,6 @@ export default function DetailProduct() {
                       </tr>
                     </tbody>
                   </table>
-
-                  <div className="space-y-2 text-sm md:text-base">
-                    <p className="font-semibold">Description</p>
-                    <div
-                      className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{
-                        __html: product.productDescription,
-                      }}
-                    />
-                  </div>
-
                   <div className="space-y-2 text-sm md:text-base">
                     <p className="font-semibold">Marketing Links</p>
                     {product.marketingLinks?.length ? (
@@ -271,6 +262,39 @@ export default function DetailProduct() {
                 </div>
               </div>
             </div>
+
+            <div className="space-y-2 text-sm md:text-base">
+              <h3 className="text-base md:text-lg font-medium">Description</h3>
+              <div
+                className="prose max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: product.productDescription,
+                }}
+              />
+            </div>
+
+            {/* Size Product */}
+            {product.sizeProduct && product.sizeProduct.length > 0 && (
+              <div className="mt-6 space-y-4">
+                <h3 className="text-base md:text-lg font-medium">
+                  Size Product
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {product.sizeProduct.map((size, index) => (
+                    <div
+                      key={index}
+                      className="aspect-square rounded-md overflow-hidden border border-gray-200 hover:border-primary transition-colors"
+                    >
+                      <img
+                        src={size.imageUrl}
+                        alt={`Size chart ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Variant */}
             <div className="mt-6 space-y-4">

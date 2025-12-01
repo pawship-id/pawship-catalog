@@ -360,7 +360,7 @@ export default function FormProduct({
                 htmlFor="productName"
                 className="text-base font-medium text-gray-700"
               >
-                Product Name *
+                Product Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="productName"
@@ -380,7 +380,7 @@ export default function FormProduct({
                   htmlFor="categoryId"
                   className="text-base font-medium text-gray-700"
                 >
-                  Category *
+                  Category <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   value={formData.categoryId}
@@ -449,7 +449,7 @@ export default function FormProduct({
                 htmlFor="productDescription"
                 className="text-base font-medium text-gray-700"
               >
-                Product Description *
+                Product Description <span className="text-red-500">*</span>
               </Label>
               <RichTextEditor
                 value={formData.productDescription}

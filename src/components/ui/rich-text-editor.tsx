@@ -16,6 +16,8 @@ import {
   Heading2,
   Heading3,
   Heading4,
+  Heading5,
+  Heading6,
   Quote,
   Undo,
   Redo,
@@ -233,6 +235,26 @@ export default function RichTextEditor({
           icon={Heading4}
           label="h4"
           tooltip="Heading 4 (Ctrl+Alt+4)"
+        />
+
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 5 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 5 })}
+          icon={Heading5}
+          label="h5"
+          tooltip="Heading 5 (Ctrl+Alt+5)"
+        />
+
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 6 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 6 })}
+          icon={Heading6}
+          label="h6"
+          tooltip="Heading 6 (Ctrl+Alt+6)"
         />
 
         <div className="w-px bg-gray-300 mx-1" />
