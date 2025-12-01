@@ -13,6 +13,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { CategoryData } from "@/lib/types/category";
 import { createData, getAll, updateData } from "@/lib/apiService";
 import { Textarea } from "@/components/ui/textarea";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 import {
   ChevronsLeft,
   ChevronsRight,
@@ -450,18 +451,15 @@ export default function FormProduct({
               >
                 Product Description *
               </Label>
-              <Textarea
-                id="productDescription"
-                placeholder="Enter description"
+              <RichTextEditor
                 value={formData.productDescription}
-                onChange={(e) =>
+                onChange={(value) =>
                   setFormData({
                     ...formData,
-                    productDescription: e.target.value,
+                    productDescription: value,
                   })
                 }
-                className="border-gray-300 py-5"
-                required
+                placeholder="Enter product description..."
               />
             </div>
 

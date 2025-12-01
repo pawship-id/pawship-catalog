@@ -238,7 +238,12 @@ export default function DetailProduct() {
 
                   <div className="space-y-2 text-sm md:text-base">
                     <p className="font-semibold">Description</p>
-                    <p>{product.productDescription}</p>
+                    <div
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{
+                        __html: product.productDescription,
+                      }}
+                    />
                   </div>
 
                   <div className="space-y-2 text-sm md:text-base">
