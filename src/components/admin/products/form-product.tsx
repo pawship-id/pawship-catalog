@@ -142,7 +142,6 @@ export default function FormProduct({
       setActiveTab(tabMenu[currentTabIndex + 1].value);
     }
   };
-  console.log(formData);
 
   // function to move to the previous tab
   const handlePrevTab = () => {
@@ -184,6 +183,24 @@ export default function FormProduct({
     try {
       if (!formData.categoryId || formData.categoryId.trim() === "") {
         throw new Error("Please input a category");
+      }
+      // Validasi minimal 1 size product
+      const totalSizeProduct =
+        (formData.sizeProduct?.length || 0) + existingSizeProduct.length;
+      if (totalSizeProduct === 0) {
+        throw new Error("Please upload at least 1 size product image");
+      }
+
+      // Validasi minimal 1 product media
+      const totalProductMedia =
+        (formData.productMedia?.length || 0) + existingProductMedia.length;
+      if (totalProductMedia === 0) {
+        throw new Error("Please upload at least 1 product image");
+      }
+
+      // Validasi minimal 1 variant
+      if (!formData.variantRows || formData.variantRows.length === 0) {
+        throw new Error("Please add at least 1 product variant");
       }
 
       // create FormData for file upload
@@ -468,7 +485,8 @@ export default function FormProduct({
                 htmlFor="imageSizeProduct"
                 className="text-base font-medium text-gray-700"
               >
-                Upload Size Product Images
+                Upload Size Product Images{" "}
+                <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="imageSizeProduct"
@@ -680,7 +698,7 @@ export default function FormProduct({
                 htmlFor="productImageVideo"
                 className="text-base font-medium text-gray-700"
               >
-                Product Images & Videos{" "}
+                Product Images & Videos <span className="text-red-500">*</span>
                 <span className="text-xs">(Max 9 items)</span>
               </Label>
               <div className="relative py-1">
