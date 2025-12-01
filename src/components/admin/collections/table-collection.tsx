@@ -42,8 +42,15 @@ interface Collection {
   updatedAt: string;
 }
 
-export default function TableCollection() {
+interface TableCollectionProps {
+  searchQuery: string;
+}
+
+export default function TableCollection({ searchQuery }: TableCollectionProps) {
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [filteredCollections, setFilteredCollections] = useState<Collection[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUrlModal, setShowUrlModal] = useState(false);
@@ -56,10 +63,15 @@ export default function TableCollection() {
   const itemsPerPage = 25;
 
   // Calculate pagination
-  const totalPages = Math.ceil(collections.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredCollections.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentCollections = collections.slice(startIndex, endIndex);
+  const currentCollections = filteredCollections.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const fetchCollections = async () => {
     try {
@@ -70,6 +82,7 @@ export default function TableCollection() {
 
       if (response.data) {
         setCollections(response.data);
+        setFilteredCollections(response.data);
       }
     } catch (err: any) {
       setError(err.message);
@@ -81,6 +94,20 @@ export default function TableCollection() {
   useEffect(() => {
     fetchCollections();
   }, []);
+
+  // Search filter effect
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredCollections(collections);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = collections.filter((item) =>
+      item.name.toLowerCase().includes(query)
+    );
+    setFilteredCollections(filtered);
+  }, [searchQuery, collections]);
 
   if (loading) {
     return <LoadingTable text="Loading collections" />;
@@ -120,6 +147,15 @@ export default function TableCollection() {
 
   return (
     <div className="space-y-4">
+      {/* Results Counter */}
+      {searchQuery && (
+        <div className="text-sm text-muted-foreground">
+          Found {filteredCollections.length} collection
+          {filteredCollections.length !== 1 ? "s" : ""} matching "{searchQuery}"
+        </div>
+      )}
+
+      {/* Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -133,13 +169,15 @@ export default function TableCollection() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {collections.length === 0 ? (
+            {filteredCollections.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center py-8 text-muted-foreground"
                 >
-                  No collections found
+                  {searchQuery
+                    ? `No collections found matching "${searchQuery}"`
+                    : "No collections found"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -221,11 +259,12 @@ export default function TableCollection() {
       </div>
 
       {/* Pagination */}
-      {collections.length > 0 && (
+      {filteredCollections.length > 0 && (
         <div className="flex items-center justify-between my-6">
           <div className="text-sm text-muted-foreground">
-            Showing {startIndex + 1} to {Math.min(endIndex, collections.length)}{" "}
-            of {collections.length} collections
+            Showing {startIndex + 1} to{" "}
+            {Math.min(endIndex, filteredCollections.length)} of{" "}
+            {filteredCollections.length} collections
           </div>
           <div className="flex items-center space-x-2">
             <Button

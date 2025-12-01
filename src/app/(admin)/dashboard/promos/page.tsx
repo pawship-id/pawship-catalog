@@ -33,7 +33,7 @@ export default function PromoListPage() {
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search promotion..."
+                placeholder="Search by promo name..."
                 className="pl-10 border-1 border-border focus:border-primary w-full"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

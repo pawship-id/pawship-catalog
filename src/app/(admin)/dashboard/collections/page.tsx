@@ -1,11 +1,15 @@
+"use client";
+
+import React, { useState } from "react";
 import TableCollection from "@/components/admin/collections/table-collection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
-import React from "react";
 
 export default function CollectionPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+
   return (
     <div>
       <div className="mb-6 space-y-2">
@@ -29,15 +33,26 @@ export default function CollectionPage() {
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search collection..."
+                placeholder="Search by collection name..."
                 className="pl-10 border-1 border-border focus:border-primary w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                onClick={() => setSearchQuery("")}
+                className="cursor-pointer"
+              >
+                Clear
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      <TableCollection />
+      <TableCollection searchQuery={searchQuery} />
     </div>
   );
 }
