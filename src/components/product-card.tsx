@@ -6,25 +6,60 @@ import { ProductData, VariantRow } from "@/lib/types/product";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/context/CurrencyContext";
 import { usePromo } from "@/context/PromoContext";
+import { useFavorites } from "@/context/FavoritesContext";
 import { getProductMinPrice } from "@/lib/helpers/promo-helper";
 import { TagData } from "@/lib/types/tag";
 import { isNewArrival } from "@/lib/helpers/product";
 import { useSession } from "next-auth/react";
 import AddToCartModal from "./add-to-cart-modal";
+import { showSuccessAlert } from "@/lib/helpers/sweetalert2";
 
 interface ProductCardProps {
   product: ProductData;
+  onFavoriteToggle?: () => void;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({
+  product,
+  onFavoriteToggle,
+}: ProductCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const { currency, format } = useCurrency();
   const { data: session } = useSession();
   const { activePromos } = usePromo();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const router = useRouter();
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!session?.user?.id) {
+      // Redirect to login if not authenticated
+      router.push("/auth/signin");
+      return;
+    }
+
+    if (isTogglingFavorite) return;
+
+    setIsTogglingFavorite(true);
+    const result = await toggleFavorite(product._id);
+    setIsTogglingFavorite(false);
+
+    // Show notification
+    if (result) {
+      showSuccessAlert("Success", "Product added to wishlist");
+    } else {
+      showSuccessAlert("Success", "Product removed from wishlist");
+    }
+
+    // Call callback if provided (for wishlist page to refresh)
+    if (onFavoriteToggle) {
+      onFavoriteToggle();
+    }
+  };
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -137,12 +172,12 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.productName}
           </h3>
           <Heart
-            onClick={() => setIsLiked(!isLiked)}
-            className={`w-5 h-5 transition-colors duration-200 flex-shrink-0 ${
-              isLiked
+            onClick={handleToggleFavorite}
+            className={`w-5 h-5 transition-all duration-200 flex-shrink-0 ${
+              isFavorite(product._id)
                 ? "fill-red-500 text-red-500"
-                : "text-gray-600 hover:text-red-500"
-            } cursor-pointer`}
+                : "text-gray-400 hover:text-red-500"
+            } ${isTogglingFavorite ? "opacity-50" : "cursor-pointer"}`}
           />
         </div>
 

@@ -621,26 +621,32 @@ export default function CartPage() {
 
   if (!isLoading && formData.orderDetails.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
-        <div className="text-center">
-          <div className="bg-gradient-to-r from-orange-400 to-rose-400 p-6 sm:p-8 rounded-full inline-flex mb-6 sm:mb-8">
-            <ShoppingBag className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3 sm:mb-4">
-            Your Cart is Empty
+      <main className="container mx-auto px-4 py-10">
+        <div className="mb-8 space-y-2">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
+            Cart Product
           </h1>
-          <p className="text-gray-600 mb-6 sm:mb-8 px-4">
+          <p className="text-medium lg:text-lg text-muted-foreground">
+            All the products you have selected to purchase
+          </p>
+        </div>
+
+        <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+          <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-600 mb-2">
+            Your Cart is empty
+          </h2>
+          <p className="text-gray-500 mb-6">
             Looks like you haven't added any items to your cart yet.
           </p>
-          <Link
-            href="/catalog"
-            className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-orange-400 to-rose-400 text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+          <button
+            onClick={() => router.push("/catalog")}
+            className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors font-medium"
           >
-            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            Continue Shopping
-          </Link>
+            Browse Products
+          </button>
         </div>
-      </div>
+      </main>
     );
   }
 
