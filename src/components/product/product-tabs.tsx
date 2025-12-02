@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import { Button } from "../ui/button";
 import Image from "next/image";
 import { ProductData } from "@/lib/types/product";
+import { eachWeekOfInterval } from "date-fns";
 
 interface ProductTabsProps {
   product: ProductData;
@@ -383,15 +384,21 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                   Download ready-to-use product photos, lifestyle shots, and
                   captions to promote this item to your customers.
                 </p>
-                <a
-                  href="https://drive.google.com/file/d/1K8rGfSZRVUb-MG5kf8VEzIlb8ljzbKZK/view?usp=drive_link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Download Marketing Content</span>
-                </a>
+                {product.marketingLinks?.map((el: string, idx: number) => {
+                  return (
+                    <div key={idx}>
+                      <a
+                        href={el}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        <span>Download Marketing Content</span>
+                      </a>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
