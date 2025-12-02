@@ -216,10 +216,10 @@ export default function MyOrdersPage() {
           orders.map((order) => {
             const StatusIcon = statusConfig[order.status].icon;
             const isExpanded = expandedOrders.has(order._id);
-            const hasMoreItems = order.orderDetails.length > 2;
+            const hasMoreItems = order.orderDetails.length > 3;
             const displayedItems = isExpanded
               ? order.orderDetails
-              : order.orderDetails.slice(0, 2);
+              : order.orderDetails.slice(0, 3);
 
             return (
               <Card
@@ -286,7 +286,7 @@ export default function MyOrdersPage() {
                         ) : (
                           <>
                             <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
-                            Show {order.orderDetails.length - 2} More Items
+                            Show {order.orderDetails.length - 3} More Items
                           </>
                         )}
                       </button>
