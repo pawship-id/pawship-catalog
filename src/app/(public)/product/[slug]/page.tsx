@@ -118,6 +118,35 @@ export default function ProductDetailPage() {
         (el: any) => el.variantId === selectedVariantDetail._id
       );
 
+      // Check stock availability including existing cart quantity (only for non-PO products)
+      if (!product.preOrder?.enabled) {
+        const existingQuantityInCart =
+          existingVariantIndex !== -1
+            ? cartItem[existingVariantIndex].quantity
+            : 0;
+
+        const totalQuantity = existingQuantityInCart + quantity;
+        const availableStock = selectedVariantDetail.stock;
+
+        // Validate against available stock
+        if (totalQuantity > availableStock) {
+          const remainingStock = availableStock - existingQuantityInCart;
+
+          if (remainingStock <= 0) {
+            showErrorAlert(
+              undefined,
+              `The product in the cart has reached the maximum stock of ${availableStock} pcs`
+            );
+          } else {
+            showErrorAlert(
+              undefined,
+              `There are already ${existingQuantityInCart} items in your cart. You can only add ${remainingStock} more.`
+            );
+          }
+          return;
+        }
+      }
+
       if (existingVariantIndex !== -1) {
         cartItem[existingVariantIndex].quantity += quantity;
       } else {
