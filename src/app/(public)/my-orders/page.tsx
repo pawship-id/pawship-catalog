@@ -24,28 +24,8 @@ import {
   ChevronUp,
 } from "lucide-react";
 import Image from "next/image";
-
-interface OrderItem {
-  _id: string;
-  invoiceNumber: string;
-  orderDate: string;
-  totalAmount: number;
-  status:
-    | "pending confirmation"
-    | "awaiting payment"
-    | "payment confirmed"
-    | "processing"
-    | "shipped";
-  orderDetails: Array<{
-    productId: string;
-    productName: string;
-    quantity: number;
-    image: {
-      imageUrl: string;
-    };
-  }>;
-  currency: string;
-}
+import { OrderData } from "@/lib/types/order";
+import { currencyFormat } from "@/lib/helpers";
 
 const statusConfig = {
   "pending confirmation": {
@@ -85,7 +65,7 @@ const statusConfig = {
 export default function MyOrdersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
@@ -140,7 +120,7 @@ export default function MyOrdersPage() {
     }
   };
 
-  const fetchProductSlugs = async (ordersData: OrderItem[]) => {
+  const fetchProductSlugs = async (ordersData: OrderData[]) => {
     try {
       // Collect all unique product IDs from all orders
       const productIds = new Set<string>();
@@ -178,17 +158,6 @@ export default function MyOrdersPage() {
     } catch (error) {
       console.error("Error fetching product slugs:", error);
     }
-  };
-
-  const formatPrice = (amount: number, currency: string) => {
-    const currencies: { [key: string]: string } = {
-      IDR: "Rp",
-      USD: "$",
-      SGD: "S$",
-      HKD: "HK$",
-    };
-    const symbol = currencies[currency] || currency;
-    return `${symbol} ${amount.toLocaleString()}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -276,7 +245,7 @@ export default function MyOrdersPage() {
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                        Order Date: {formatDate(order.orderDate)}
+                        Order Date: {formatDate(String(order.orderDate))}
                       </p>
                       <p className="font-semibold text-sm sm:text-lg truncate">
                         {order.invoiceNumber}
@@ -360,7 +329,11 @@ export default function MyOrdersPage() {
                         Total Amount
                       </p>
                       <p className="text-lg sm:text-xl font-bold">
-                        {formatPrice(order.totalAmount, order.currency)}
+                        {currencyFormat(
+                          order.totalAmount +
+                            (order.shippingCost - order.discountShipping),
+                          order.currency
+                        )}
                       </p>
                     </div>
                     <Link

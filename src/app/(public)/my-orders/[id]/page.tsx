@@ -22,6 +22,7 @@ import {
 import Image from "next/image";
 import { UploadPaymentProofModal } from "@/components/orders/upload-payment-proof-modal";
 import { PaymentProofDetailModal } from "@/components/orders/payment-proof-detail-modal";
+import { currencyFormat } from "@/lib/helpers";
 
 interface PaymentProof {
   imageUrl: string;
@@ -38,6 +39,7 @@ interface OrderDetail {
   orderDate: string;
   totalAmount: number;
   shippingCost: number;
+  discountShipping: number;
   status:
     | "pending confirmation"
     | "awaiting payment"
@@ -191,17 +193,6 @@ export default function OrderDetailPage() {
     }
   };
 
-  const formatPrice = (amount: number, currency: string) => {
-    const currencies: { [key: string]: string } = {
-      IDR: "Rp",
-      USD: "$",
-      SGD: "S$",
-      HKD: "HK$",
-    };
-    const symbol = currencies[currency] || currency;
-    return `${symbol} ${amount.toLocaleString()}`;
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -211,14 +202,6 @@ export default function OrderDetailPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getProductPrice = (item: OrderDetail["orderDetails"][0]) => {
-    const currency = order?.currency || "IDR";
-    if (item.discountedPrice && item.discountedPrice[currency]) {
-      return item.discountedPrice[currency];
-    }
-    return item.originalPrice[currency];
   };
 
   if (status === "loading" || loading) {
@@ -250,7 +233,6 @@ export default function OrderDetailPage() {
   }
 
   const StatusIcon = statusConfig[order.status].icon;
-  const subtotal = order.totalAmount - order.shippingCost;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -413,7 +395,7 @@ export default function OrderDetailPage() {
                                 <>
                                   <div className="flex items-center space-x-1.5">
                                     <span className="text-base font-bold text-orange-600">
-                                      {formatPrice(
+                                      {currencyFormat(
                                         item.discountedPrice[order.currency],
                                         order.currency
                                       )}
@@ -439,7 +421,7 @@ export default function OrderDetailPage() {
                                       )}
                                   </div>
                                   <span className="text-xs text-gray-500 line-through">
-                                    {formatPrice(
+                                    {currencyFormat(
                                       item.originalPrice[order.currency],
                                       order.currency
                                     )}
@@ -447,7 +429,7 @@ export default function OrderDetailPage() {
                                 </>
                               ) : (
                                 <span className="text-base font-bold text-gray-800">
-                                  {formatPrice(
+                                  {currencyFormat(
                                     item.originalPrice[order.currency],
                                     order.currency
                                   )}
@@ -463,7 +445,7 @@ export default function OrderDetailPage() {
                               Subtotal
                             </span>
                             <span className="text-base font-bold text-primary">
-                              {formatPrice(item.subTotal, order.currency)}
+                              {currencyFormat(item.subTotal, order.currency)}
                             </span>
                           </div>
                         </div>
@@ -521,17 +503,30 @@ export default function OrderDetailPage() {
             <CardContent className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatPrice(subtotal, order.currency)}</span>
+                <span>{currencyFormat(order.totalAmount, order.currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shipping Cost</span>
-                <span>{formatPrice(order.shippingCost, order.currency)}</span>
+                <span>
+                  {currencyFormat(order.shippingCost, order.currency)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Discount Shipping</span>
+                <span className="font-semibold text-red-600">
+                  - {currencyFormat(order.discountShipping, order.currency)}
+                </span>
               </div>
               <Separator />
               <div className="flex justify-between text-base font-bold">
                 <span>Total</span>
                 <span className="text-primary">
-                  {formatPrice(order.totalAmount, order.currency)}
+                  {currencyFormat(
+                    order.totalAmount +
+                      order.shippingCost -
+                      (order.discountShipping || 0),
+                    order.currency
+                  )}
                 </span>
               </div>
             </CardContent>
