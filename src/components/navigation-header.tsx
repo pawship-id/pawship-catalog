@@ -169,11 +169,11 @@ export default function NavigationHeader() {
         );
 
         setCollections([
-          ...mappingCollections,
           {
             name: "All Collections",
             href: "/catalog",
           },
+          ...mappingCollections,
         ]);
       }
     } catch (err: any) {
