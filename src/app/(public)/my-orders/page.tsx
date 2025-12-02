@@ -37,6 +37,7 @@ interface OrderItem {
     | "processing"
     | "shipped";
   orderDetails: Array<{
+    productId: string;
     productName: string;
     quantity: number;
     image: {
@@ -88,6 +89,9 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [productSlugs, setProductSlugs] = useState<{
+    [productId: string]: string;
+  }>({});
 
   const toggleOrderExpansion = (orderId: string) => {
     setExpandedOrders((prev) => {
@@ -126,11 +130,53 @@ export default function MyOrdersPage() {
 
       if (result.success) {
         setOrders(result.data);
+        // Fetch latest slugs for all products
+        await fetchProductSlugs(result.data);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProductSlugs = async (ordersData: OrderItem[]) => {
+    try {
+      // Collect all unique product IDs from all orders
+      const productIds = new Set<string>();
+      ordersData.forEach((order) => {
+        order.orderDetails.forEach((item) => {
+          if (item.productId) {
+            productIds.add(item.productId);
+          }
+        });
+      });
+
+      // Fetch all products in parallel
+      const slugsMap: { [productId: string]: string } = {};
+
+      await Promise.all(
+        Array.from(productIds).map(async (productId) => {
+          try {
+            const response = await fetch(`/api/public/products/${productId}`);
+            const result = await response.json();
+
+            if (result.success && result.data) {
+              // Use slug if available, otherwise fallback to productId
+              slugsMap[productId] = result.data.slug || productId;
+            } else {
+              slugsMap[productId] = productId;
+            }
+          } catch (error) {
+            console.error(`Error fetching product ${productId}:`, error);
+            slugsMap[productId] = productId;
+          }
+        })
+      );
+
+      setProductSlugs(slugsMap);
+    } catch (error) {
+      console.error("Error fetching product slugs:", error);
     }
   };
 
@@ -249,29 +295,44 @@ export default function MyOrdersPage() {
                   </div>
 
                   <div className="border-t border-b py-3 sm:py-4 mb-3 sm:mb-4">
-                    {displayedItems.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex gap-2 sm:gap-3 mb-2 sm:mb-3 last:mb-0"
-                      >
-                        <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded border overflow-hidden flex-shrink-0">
-                          <Image
-                            src={item.image.imageUrl}
-                            alt={item.productName}
-                            fill
-                            className="object-cover"
-                          />
+                    {displayedItems.map((item, index) => {
+                      const productSlug =
+                        productSlugs[item.productId] || item.productId;
+
+                      return (
+                        <div
+                          key={index}
+                          className="flex gap-2 sm:gap-3 mb-2 sm:mb-3 last:mb-0"
+                        >
+                          <Link
+                            href={`/product/${productSlug}`}
+                            className="block flex-shrink-0"
+                          >
+                            <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded border overflow-hidden hover:opacity-80 transition-opacity cursor-pointer">
+                              <Image
+                                src={item.image.imageUrl}
+                                alt={item.productName}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          </Link>
+                          <div className="flex-1 min-w-0">
+                            <Link
+                              href={`/product/${productSlug}`}
+                              className="hover:text-primary transition-colors block"
+                            >
+                              <p className="font-medium text-sm sm:text-base line-clamp-2">
+                                {item.productName}
+                              </p>
+                            </Link>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
+                              Qty: {item.quantity}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm sm:text-base line-clamp-2">
-                            {item.productName}
-                          </p>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            Qty: {item.quantity}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {hasMoreItems && (
                       <button
