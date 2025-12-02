@@ -7,6 +7,9 @@ import { ProductData } from "@/lib/types/product";
 import { getAll } from "@/lib/apiService";
 import { hasTag } from "@/lib/helpers/product";
 import LoadingPage from "../loading";
+import { useCurrency } from "@/context/CurrencyContext";
+import { filterProductsByCountry } from "@/lib/helpers/product-filter";
+
 interface RelatedProductProps {
   selectedProduct: ProductData;
 }
@@ -24,6 +27,8 @@ export default function RelatedProduct({
   const [error, setError] = useState<string | null>(null);
   const [visibleCards, setVisibleCards] = useState(0); // Default to prevent hydration mismatch
 
+  const { userCountry } = useCurrency();
+
   const fetchRelatedProducts = async () => {
     try {
       setLoading(true);
@@ -31,7 +36,10 @@ export default function RelatedProduct({
       const response = await getAll<ProductData>("/api/public/products");
 
       if (response.data) {
-        const data = response.data;
+        let data = response.data;
+
+        // Filter products by user's country (exclude products not available in user's country)
+        data = filterProductsByCountry(data, userCountry);
 
         // Filter products: exclude current product
         const filteredProducts = data.filter(
@@ -153,59 +161,69 @@ export default function RelatedProduct({
       </div>
       {visibleCards !== 0 ? (
         <>
-          {/* Horizontal Scroll Container */}
-          <div className="relative mt-8">
-            <div
-              ref={sliderRef}
-              className="overflow-x-auto pb-6 scrollbar-hide"
-              onScroll={handleScroll}
-              style={{
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-              }}
-            >
-              <div className="flex gap-4 px-2">
-                {products.map((product) => (
-                  <div
-                    key={product._id}
-                    className="flex-shrink-0"
-                    style={{
-                      width: mounted
-                        ? `calc((100vw - 32px - ${
-                            (visibleCards - 1) * 16
-                          }px) / ${visibleCards} - 20px)`
-                        : "calc(50% - 8px)",
-                      minWidth: mounted
-                        ? visibleCards === 3
-                          ? "240px"
-                          : visibleCards === 4
-                            ? "260px"
-                            : "200px"
-                        : "280px",
-                      maxWidth: "280px",
-                    }}
-                  >
-                    <ProductCard product={product} />
+          {products.length === 0 ? (
+            <div className="flex justify-center items-center h-64">
+              <p className="text-2xl font-semibold text-gray-500">
+                Product Not Found
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Horizontal Scroll Container */}
+              <div className="relative mt-8">
+                <div
+                  ref={sliderRef}
+                  className="overflow-x-auto pb-6 scrollbar-hide"
+                  onScroll={handleScroll}
+                  style={{
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  }}
+                >
+                  <div className="flex gap-4 px-2">
+                    {products.map((product) => (
+                      <div
+                        key={product._id}
+                        className="flex-shrink-0"
+                        style={{
+                          width: mounted
+                            ? `calc((100vw - 32px - ${
+                                (visibleCards - 1) * 16
+                              }px) / ${visibleCards} - 20px)`
+                            : "calc(50% - 8px)",
+                          minWidth: mounted
+                            ? visibleCards === 3
+                              ? "240px"
+                              : visibleCards === 4
+                                ? "260px"
+                                : "200px"
+                            : "280px",
+                          maxWidth: "280px",
+                        }}
+                      >
+                        <ProductCard product={product} />
+                      </div>
+                    ))}
                   </div>
+                </div>
+              </div>
+              {/* Page Indicators */}
+              <div className="flex justify-center items-center space-x-2 mt-6">
+                {Array.from({ length: totalSlides }, (_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => scrollToSlide(index)}
+                    className={`transition-all duration-300 cursor-pointer ${
+                      index === currentSlide
+                        ? "w-8 h-3 bg-primary rounded-full"
+                        : "w-3 h-3 bg-gray-300 hover:bg-gray-400 rounded-full"
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
                 ))}
               </div>
-            </div>
-          </div>
-          {/* Page Indicators */}
-          <div className="flex justify-center items-center space-x-2 mt-6">
-            {Array.from({ length: totalSlides }, (_, index) => (
-              <button
-                key={index}
-                onClick={() => scrollToSlide(index)}
-                className={`transition-all duration-300 cursor-pointer ${
-                  index === currentSlide
-                    ? "w-8 h-3 bg-primary rounded-full"
-                    : "w-3 h-3 bg-gray-300 hover:bg-gray-400 rounded-full"
-                }`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
+            </>
+          )}
         </>
       ) : (
         <Loading />

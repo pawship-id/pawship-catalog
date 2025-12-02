@@ -1,63 +1,65 @@
 "use client";
-import { ChevronRight, ChevronLeft, X } from "lucide-react";
-import React, { useEffect, useState } from "react";
-import ProductGrid from "@/components/catalog/product-grid";
-import { TCurrency } from "@/lib/types/product";
-import { products } from "@/lib/data/products";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useFavorites } from "@/context/FavoritesContext";
+import ProductCard from "@/components/product-card";
+import { ProductData } from "@/lib/types/product";
+import { Heart } from "lucide-react";
+import LoadingPage from "@/components/loading";
 
-const mockProducts = products.slice(0, 5);
+interface FavoriteData {
+  _id: string;
+  userId: string;
+  productId: ProductData;
+  createdAt: string;
+}
 
 export default function WishlistPage() {
-  const [products] = useState(mockProducts);
-  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const [currency, setCurrency] = useState<TCurrency>("IDR");
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { refreshFavorites } = useFavorites();
+  const [favorites, setFavorites] = useState<FavoriteData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let filtered = products;
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter((product) =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+      return;
     }
 
-    setFilteredProducts(filtered);
-    setCurrentPage(1);
-  }, [products, searchQuery, currency]);
+    if (status === "authenticated") {
+      fetchFavorites();
+    }
+  }, [status, router]);
 
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentProducts = filteredProducts.slice(startIndex, endIndex);
+  const fetchFavorites = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/favorites");
+      const data = await response.json();
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      handlePageChange(currentPage - 1);
+      if (data.success) {
+        setFavorites(data.data);
+        refreshFavorites();
+      }
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      handlePageChange(currentPage + 1);
-    }
-  };
+  if (status === "loading" || loading) {
+    return <LoadingPage />;
+  }
+
   return (
-    <div className=" bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50">
       <main className="container mx-auto px-4 py-10">
         {/* Page Header */}
-        <div className="mb-8 space-y-3">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">
+        <div className="mb-8 space-y-2">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
             Wishlist Product
           </h1>
           <p className="text-medium lg:text-lg text-muted-foreground">
@@ -65,102 +67,47 @@ export default function WishlistPage() {
           </p>
         </div>
 
-        <div className="bg-white px-4 py-2 mb-6 rounded-lg border border-gray-200 w-fit">
-          <span className="text-sm text-gray-600">
-            Showing{" "}
-            <span className="font-semibold text-gray-800">
-              {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-gray-800">
-              {filteredProducts.length}
-            </span>{" "}
-            products
-          </span>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex gap-8">
-          {/* Product Grid */}
-          <div className="flex-1">
-            {currentProducts.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="text-6xl mb-4">🐾</div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">
-                  No products found
-                </h3>
-                <p className="text-muted-foreground">
-                  Try adjusting your search or filters
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {/* <ProductGrid products={currentProducts} /> */}
-              </div>
-            )}
-            {totalPages > 1 && (
-              <div className="mt-16 flex items-center justify-center space-x-2">
-                <button
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 1}
-                  className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft size={18} />
-                  <span>Previous</span>
-                </button>
-
-                <div className="flex items-center space-x-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => {
-                      const showPage =
-                        page === 1 ||
-                        page === totalPages ||
-                        (page >= currentPage - 1 && page <= currentPage + 1);
-
-                      const showEllipsis =
-                        (page === currentPage - 2 && currentPage > 3) ||
-                        (page === currentPage + 2 &&
-                          currentPage < totalPages - 2);
-
-                      if (showEllipsis) {
-                        return (
-                          <span key={page} className="px-2 text-gray-400">
-                            ...
-                          </span>
-                        );
-                      }
-
-                      if (!showPage) return null;
-
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`min-w-[44px] h-11 rounded-xl font-medium transition-all duration-200 ${
-                            currentPage === page
-                              ? "bg-primary text-white shadow-lg"
-                              : "bg-white border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-md"
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    }
-                  )}
-                </div>
-
-                <button
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages}
-                  className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span>Next</span>
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            )}
+        {/* Product Count */}
+        {favorites.length > 0 && (
+          <div className="bg-white px-4 py-2 mb-6 rounded-lg border border-gray-200 w-fit">
+            <span className="text-sm text-gray-600">
+              You have{" "}
+              <span className="font-semibold text-gray-800">
+                {favorites.length}
+              </span>{" "}
+              product{favorites.length !== 1 ? "s" : ""} in your wishlist
+            </span>
           </div>
-        </div>
+        )}
+
+        {/* Product Grid or Empty State */}
+        {favorites.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+            <Heart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-600 mb-2">
+              Your wishlist is empty
+            </h2>
+            <p className="text-gray-500 mb-6">
+              Start adding products to your wishlist by clicking the heart icon
+            </p>
+            <button
+              onClick={() => router.push("/catalog")}
+              className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors font-medium"
+            >
+              Browse Products
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {favorites.map((favorite) => (
+              <ProductCard
+                key={favorite._id}
+                product={favorite.productId}
+                onFavoriteToggle={fetchFavorites}
+              />
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

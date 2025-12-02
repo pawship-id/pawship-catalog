@@ -13,6 +13,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { CategoryData } from "@/lib/types/category";
 import { createData, getAll, updateData } from "@/lib/apiService";
 import { Textarea } from "@/components/ui/textarea";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 import {
   ChevronsLeft,
   ChevronsRight,
@@ -141,7 +142,6 @@ export default function FormProduct({
       setActiveTab(tabMenu[currentTabIndex + 1].value);
     }
   };
-  console.log(formData);
 
   // function to move to the previous tab
   const handlePrevTab = () => {
@@ -183,6 +183,24 @@ export default function FormProduct({
     try {
       if (!formData.categoryId || formData.categoryId.trim() === "") {
         throw new Error("Please input a category");
+      }
+      // Validasi minimal 1 size product
+      const totalSizeProduct =
+        (formData.sizeProduct?.length || 0) + existingSizeProduct.length;
+      if (totalSizeProduct === 0) {
+        throw new Error("Please upload at least 1 size product image");
+      }
+
+      // Validasi minimal 1 product media
+      const totalProductMedia =
+        (formData.productMedia?.length || 0) + existingProductMedia.length;
+      if (totalProductMedia === 0) {
+        throw new Error("Please upload at least 1 product image");
+      }
+
+      // Validasi minimal 1 variant
+      if (!formData.variantRows || formData.variantRows.length === 0) {
+        throw new Error("Please add at least 1 product variant");
       }
 
       // create FormData for file upload
@@ -359,7 +377,7 @@ export default function FormProduct({
                 htmlFor="productName"
                 className="text-base font-medium text-gray-700"
               >
-                Product Name *
+                Product Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="productName"
@@ -379,7 +397,7 @@ export default function FormProduct({
                   htmlFor="categoryId"
                   className="text-base font-medium text-gray-700"
                 >
-                  Category *
+                  Category <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   value={formData.categoryId}
@@ -448,20 +466,17 @@ export default function FormProduct({
                 htmlFor="productDescription"
                 className="text-base font-medium text-gray-700"
               >
-                Product Description *
+                Product Description <span className="text-red-500">*</span>
               </Label>
-              <Textarea
-                id="productDescription"
-                placeholder="Enter description"
+              <RichTextEditor
                 value={formData.productDescription}
-                onChange={(e) =>
+                onChange={(value) =>
                   setFormData({
                     ...formData,
-                    productDescription: e.target.value,
+                    productDescription: value,
                   })
                 }
-                className="border-gray-300 py-5"
-                required
+                placeholder="Enter product description..."
               />
             </div>
 
@@ -470,7 +485,8 @@ export default function FormProduct({
                 htmlFor="imageSizeProduct"
                 className="text-base font-medium text-gray-700"
               >
-                Upload Size Product Images
+                Upload Size Product Images{" "}
+                <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="imageSizeProduct"
@@ -682,7 +698,7 @@ export default function FormProduct({
                 htmlFor="productImageVideo"
                 className="text-base font-medium text-gray-700"
               >
-                Product Images & Videos{" "}
+                Product Images & Videos <span className="text-red-500">*</span>
                 <span className="text-xs">(Max 9 items)</span>
               </Label>
               <div className="relative py-1">

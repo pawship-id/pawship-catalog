@@ -108,7 +108,7 @@ export interface EnrichedProduct {
   availableSizes: string[];
 }
 
-export type TCurrency = "IDR" | "SGD" | "USD";
+export type TCurrency = "IDR" | "SGD" | "USD" | "HKD";
 export type TStockStatus = "Ready" | "Pre-Order";
 
 export interface ProductImage {

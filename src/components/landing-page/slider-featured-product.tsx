@@ -7,6 +7,8 @@ import { Button } from "../ui/button";
 import ScrollHorizontalCard from "../scroll-horizontal-card";
 import { ProductData } from "@/lib/types/product";
 import LoadingPage from "../loading";
+import { useCurrency } from "@/context/CurrencyContext";
+import { filterProductsByCountry } from "@/lib/helpers/product-filter";
 
 interface Collection {
   _id: string;
@@ -30,6 +32,7 @@ export default function SliderFeaturedProduct() {
     newArrivals: [],
     collections: [],
   });
+  const { userCountry } = useCurrency();
 
   // Fetch homepage products and collections
   useEffect(() => {
@@ -40,7 +43,27 @@ export default function SliderFeaturedProduct() {
         const result = await response.json();
 
         if (result.success) {
-          setHomepageData(result.data);
+          // Filter all products by country
+          const filteredData = {
+            allProducts: filterProductsByCountry(
+              result.data.allProducts || [],
+              userCountry
+            ),
+            newArrivals: filterProductsByCountry(
+              result.data.newArrivals || [],
+              userCountry
+            ),
+            collections: (result.data.collections || []).map(
+              (col: Collection) => ({
+                ...col,
+                products: filterProductsByCountry(
+                  col.products || [],
+                  userCountry
+                ),
+              })
+            ),
+          };
+          setHomepageData(filteredData);
         }
       } catch (error) {
         console.error("Error fetching homepage products:", error);
@@ -50,7 +73,7 @@ export default function SliderFeaturedProduct() {
     };
 
     fetchHomepageProducts();
-  }, []);
+  }, [userCountry]); // Re-fetch when country changes
 
   // Build tabs dynamically: All, New Arrivals, + Collections
   const tabs = [

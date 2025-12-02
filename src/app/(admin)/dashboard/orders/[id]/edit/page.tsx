@@ -591,6 +591,7 @@ export default function EditOrderPage() {
     IDR: 1,
     USD: 15800,
     SGD: 11800,
+    HKD: 2000,
   };
 
   // Calculate revenue in IDR

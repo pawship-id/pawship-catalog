@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import MainContent from "@/components/catalog/main-content";
 import Loading from "@/components/loading";
 import ErrorPublicPage from "@/components/error-public-page";
+import { useCurrency } from "@/context/CurrencyContext";
+import { filterProductsByCountry } from "@/lib/helpers/product-filter";
 
 interface CatalogData {
   products: ProductData[];
@@ -22,6 +24,7 @@ function CatalogContent() {
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const [filterCategoryTab, setFilterCategoryTab] = useState(true);
+  const { userCountry } = useCurrency();
 
   const fetchProducts = async () => {
     try {
@@ -50,7 +53,16 @@ function CatalogContent() {
       const result = await response.json();
 
       if (result.success && result.data) {
-        setCatalogData(result.data);
+        // Filter products by user's country
+        const filteredProducts = filterProductsByCountry(
+          result.data.products,
+          userCountry
+        );
+
+        setCatalogData({
+          ...result.data,
+          products: filteredProducts,
+        });
       } else {
         setError(result.message || "Failed to fetch products");
       }
@@ -63,7 +75,7 @@ function CatalogContent() {
 
   useEffect(() => {
     fetchProducts();
-  }, [searchParams]);
+  }, [searchParams, userCountry]); // Re-fetch when country changes
 
   // Determine banner image based on screen size
   const [isMobile, setIsMobile] = useState(false);

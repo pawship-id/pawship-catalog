@@ -40,6 +40,7 @@ import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
 import { CategoryData } from "@/lib/types/category";
 import { getAll } from "@/lib/apiService";
+import { useFavorites } from "@/context/FavoritesContext";
 
 interface CollectionData {
   _id: string;
@@ -59,8 +60,9 @@ export default function NavigationHeader() {
     [key: string]: boolean;
   }>({});
 
-  const { currency, setCurrency, loading } = useCurrency();
+  const { currency, setCurrency, loading, userCountry } = useCurrency();
   const { data: session, status } = useSession();
+  const { favorites } = useFavorites();
 
   const [cartItemCount, setCartItemCount] = useState(0);
 
@@ -328,12 +330,20 @@ export default function NavigationHeader() {
                     onValueChange={(value) => setCurrency(value as any)}
                   >
                     <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
-                      <SelectValue placeholder="Select Currency" />
+                      {/* <SelectValue placeholder="Select Currency" /> */}
+                      <SelectValue placeholder="Select Currency">
+                        {currency && (
+                          <span>
+                            {currency} - {userCountry}
+                          </span>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USD">USD | United States</SelectItem>
-                      <SelectItem value="IDR">IDR | Indonesia</SelectItem>
-                      <SelectItem value="SGD">SGD | Singapore</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="IDR">IDR</SelectItem>
+                      <SelectItem value="SGD">SGD</SelectItem>
+                      <SelectItem value="HKD">HKD</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -355,6 +365,11 @@ export default function NavigationHeader() {
             <Button variant="ghost" size="sm" className="relative" asChild>
               <Link href="/wishlist">
                 <Heart className="h-4 w-4" />
+                {session && status === "authenticated" && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                    {favorites.size > 99 ? "99+" : favorites.size}
+                  </span>
+                )}
               </Link>
             </Button>
 
@@ -362,7 +377,7 @@ export default function NavigationHeader() {
             <Button variant="ghost" size="sm" className="relative" asChild>
               <Link href="/cart">
                 <ShoppingCart className="h-4 w-4" />
-                {session && status === "authenticated" && cartItemCount > 0 && (
+                {session && status === "authenticated" && (
                   <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
                     {cartItemCount > 99 ? "99+" : cartItemCount}
                   </span>
@@ -409,6 +424,15 @@ export default function NavigationHeader() {
                     >
                       <ReceiptText className="h-4 w-4" />
                       <span>My Orders</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link
+                      href="/wishlist"
+                      className="flex items-center space-x-2"
+                    >
+                      <Heart className="h-4 w-4" />
+                      <span>My Wishlist</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
@@ -554,12 +578,20 @@ export default function NavigationHeader() {
                     onValueChange={(value) => setCurrency(value as any)}
                   >
                     <SelectTrigger className="w-auto bg-transparent border-none outline-none hover:bg-accent hover:text-accent-foreground transition-colors rounded-md p-2">
-                      <SelectValue placeholder="Select Currency" />
+                      {/* <SelectValue placeholder="Select Currency" /> */}
+                      <SelectValue placeholder="Select Currency">
+                        {currency && (
+                          <span>
+                            {currency} - {userCountry}
+                          </span>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USD">USD | United States</SelectItem>
-                      <SelectItem value="IDR">IDR | Indonesia</SelectItem>
-                      <SelectItem value="SGD">SGD | Singapore</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="IDR">IDR</SelectItem>
+                      <SelectItem value="SGD">SGD</SelectItem>
+                      <SelectItem value="HKD">HKD</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
