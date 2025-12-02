@@ -256,10 +256,22 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                     request.
                   </p>
                   <p className="text-sm text-gray-700 mb-3">
-                    👉 Talk to Our Agent to discuss your pet’s exact needs and
+                    👉 Talk to Our Agent to discuss your pet's exact needs and
                     get a tailored price
                   </p>
-                  <button className="flex items-center space-x-2 text-primary/90 hover:text-primary font-medium">
+                  <button
+                    onClick={() => {
+                      const productName = product.productName || "this product";
+                      const productLink = `${window.location.origin}/product/${product.slug || product._id}`;
+                      const message = `Hi Admin, I would like to inquire about the sizes for product *${productName}*. Please provide me with the information.\n\nProduct Link: ${productLink}`;
+                      const encodedMessage = encodeURIComponent(message);
+                      window.open(
+                        `https://wa.me/6281231351150?text=${encodedMessage}`,
+                        "_blank"
+                      );
+                    }}
+                    className="flex items-center space-x-2 text-primary/90 hover:text-primary font-medium cursor-pointer"
+                  >
                     <MessageCircle className="h-4 w-4" />
                     <span>Talk to Our Team</span>
                   </button>
