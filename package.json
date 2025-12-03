@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "seed": "node ./src/lib/seeders/userSeeder.js"
+    "seed": "node ./src/lib/seeders/productSeeder.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
