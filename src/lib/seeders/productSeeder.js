@@ -239,28 +239,36 @@ async function seedProducts() {
                 }
                 console.log(`   ✓ Category: ${category.name}`);
 
-                // 2. Process Tags (Tag model uses 'tagName' field)
+                // 2. Find or Create Tags
                 const tagIds = [];
                 const tagsData = productData['Tags'];
                 if (tagsData && tagsData.trim() !== '') {
                     const tagNames = parseArrayData(tagsData);
-                    const tagPromises = tagNames.map(tagName =>
-                        Tag.findOne({
-                            tagName: { $regex: new RegExp(`^${tagName.trim()}$`, 'i') }
-                        }).lean().exec()
-                    );
 
-                    const tags = await Promise.all(tagPromises);
-                    tags.forEach((tag, index) => {
-                        if (tag) {
-                            tagIds.push(tag._id);
-                        } else {
-                            console.log(`      ⚠️  Tag "${tagNames[index]}" not found, skipping`);
+                    for (const tagName of tagNames) {
+                        const tagNameTrimmed = tagName.trim();
+
+                        let tag = await Tag.findOne({
+                            tagName: { $regex: new RegExp(`^${tagNameTrimmed}$`, 'i') }
+                        }).lean().exec();
+
+                        if (!tag) {
+                            // Tag not found, create new one
+                            const newTag = await Tag.create({
+                                tagName: tagNameTrimmed,
+                                deleted: false,
+                                createdAt: new Date(),
+                                updatedAt: new Date()
+                            });
+                            tag = newTag.toObject();
+                            console.log(`      ✓ Tag created: ${tag.tagName}`);
                         }
-                    });
+
+                        tagIds.push(tag._id);
+                    }
 
                     if (tagIds.length > 0) {
-                        console.log(`   ✓ Tags: ${tagIds.length} matched`);
+                        console.log(`   ✓ Tags: ${tagIds.length} tag(s) processed`);
                     }
                 }
 
