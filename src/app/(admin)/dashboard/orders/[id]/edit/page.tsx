@@ -1228,8 +1228,11 @@ export default function EditOrderPage() {
                               className="w-16 h-16 object-cover rounded-lg border border-gray-200"
                             />
                             <div>
-                              <p className="font-semibold text-sm mb-2 text-foreground">
+                              <p className="font-semibold text-sm mb-1 text-foreground">
                                 {item.productName}
+                              </p>
+                              <p className="text-xs text-gray-500 mb-1.5">
+                                SKU: {item.sku || "-"}
                               </p>
                               <div className="flex flex-wrap gap-2 items-center">
                                 <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">

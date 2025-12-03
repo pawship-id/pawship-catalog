@@ -22,6 +22,7 @@ import {
 import Image from "next/image";
 import { UploadPaymentProofModal } from "@/components/orders/upload-payment-proof-modal";
 import { PaymentProofDetailModal } from "@/components/orders/payment-proof-detail-modal";
+import { currencyFormat } from "@/lib/helpers";
 
 interface PaymentProof {
   imageUrl: string;
@@ -38,6 +39,7 @@ interface OrderDetail {
   orderDate: string;
   totalAmount: number;
   shippingCost: number;
+  discountShipping: number;
   status:
     | "pending confirmation"
     | "awaiting payment"
@@ -119,6 +121,9 @@ export default function OrderDetailPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedProof, setSelectedProof] = useState<PaymentProof | null>(null);
   const [showProofDetail, setShowProofDetail] = useState(false);
+  const [productSlugs, setProductSlugs] = useState<{
+    [productId: string]: string;
+  }>({});
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -140,6 +145,8 @@ export default function OrderDetailPage() {
 
       if (result.success) {
         setOrder(result.data);
+        // Fetch latest slugs for all products in the order
+        await fetchProductSlugs(result.data.orderDetails);
       } else {
         setError(result.message || "Failed to fetch order");
       }
@@ -151,15 +158,39 @@ export default function OrderDetailPage() {
     }
   };
 
-  const formatPrice = (amount: number, currency: string) => {
-    const currencies: { [key: string]: string } = {
-      IDR: "Rp",
-      USD: "$",
-      SGD: "S$",
-      HKD: "HK$",
-    };
-    const symbol = currencies[currency] || currency;
-    return `${symbol} ${amount.toLocaleString()}`;
+  const fetchProductSlugs = async (
+    orderDetails: OrderDetail["orderDetails"]
+  ) => {
+    try {
+      const productIds = orderDetails.map((item) => item.productId);
+      const uniqueProductIds = [...new Set(productIds)];
+
+      // Fetch all products in parallel
+      const slugsMap: { [productId: string]: string } = {};
+
+      await Promise.all(
+        uniqueProductIds.map(async (productId) => {
+          try {
+            const response = await fetch(`/api/public/products/${productId}`);
+            const result = await response.json();
+
+            if (result.success && result.data) {
+              // Use slug if available, otherwise fallback to productId
+              slugsMap[productId] = result.data.slug || productId;
+            } else {
+              slugsMap[productId] = productId;
+            }
+          } catch (error) {
+            console.error(`Error fetching product ${productId}:`, error);
+            slugsMap[productId] = productId;
+          }
+        })
+      );
+
+      setProductSlugs(slugsMap);
+    } catch (error) {
+      console.error("Error fetching product slugs:", error);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -171,14 +202,6 @@ export default function OrderDetailPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getProductPrice = (item: OrderDetail["orderDetails"][0]) => {
-    const currency = order?.currency || "IDR";
-    if (item.discountedPrice && item.discountedPrice[currency]) {
-      return item.discountedPrice[currency];
-    }
-    return item.originalPrice[currency];
   };
 
   if (status === "loading" || loading) {
@@ -210,7 +233,6 @@ export default function OrderDetailPage() {
   }
 
   const StatusIcon = statusConfig[order.status].icon;
-  const subtotal = order.totalAmount - order.shippingCost;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -334,89 +356,106 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {order.orderDetails.map((item, index) => (
-                  <div key={index}>
-                    <div className="flex gap-4">
-                      <div className="relative w-25 h-25 rounded-lg border overflow-hidden flex-shrink-0">
-                        <Image
-                          src={item.image.imageUrl}
-                          alt={item.productName}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-semibold text-gray-800 mb-1">
-                          {item.productName}
-                        </h3>
-                        <p className="text-xs text-gray-600 mb-2">
-                          Variant: {item.variantName}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex flex-col space-y-0.5">
-                            {item.discountedPrice &&
-                            item.discountedPrice[order.currency] ? (
-                              <>
-                                <div className="flex items-center space-x-1.5">
-                                  <span className="text-base font-bold text-orange-600">
-                                    {formatPrice(
-                                      item.discountedPrice[order.currency],
+                {order.orderDetails.map((item, index) => {
+                  const productSlug =
+                    productSlugs[item.productId] || item.productId;
+
+                  return (
+                    <div key={index}>
+                      <div className="flex gap-4">
+                        <Link
+                          href={`/product/${productSlug}`}
+                          className="block flex-shrink-0"
+                        >
+                          <div className="relative w-25 h-25 rounded-lg border overflow-hidden hover:opacity-80 transition-opacity cursor-pointer">
+                            <Image
+                              src={item.image.imageUrl}
+                              alt={item.productName}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        </Link>
+                        <div className="flex-1 min-w-0">
+                          <Link
+                            href={`/product/${productSlug}`}
+                            className="hover:text-primary transition-colors block"
+                          >
+                            <h3 className="text-base font-semibold text-gray-800 mb-1">
+                              {item.productName}
+                            </h3>
+                          </Link>
+                          <p className="text-xs text-gray-600 mb-2">
+                            Variant: {item.variantName}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col space-y-0.5">
+                              {item.discountedPrice &&
+                              item.discountedPrice[order.currency] ? (
+                                <>
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="text-base font-bold text-orange-600">
+                                      {currencyFormat(
+                                        item.discountedPrice[order.currency],
+                                        order.currency
+                                      )}
+                                    </span>
+                                    {item.originalPrice[order.currency] &&
+                                      item.discountedPrice[order.currency] && (
+                                        <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                          -
+                                          {Math.round(
+                                            ((item.originalPrice[
+                                              order.currency
+                                            ] -
+                                              item.discountedPrice[
+                                                order.currency
+                                              ]) /
+                                              item.originalPrice[
+                                                order.currency
+                                              ]) *
+                                              100
+                                          )}
+                                          %
+                                        </span>
+                                      )}
+                                  </div>
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {currencyFormat(
+                                      item.originalPrice[order.currency],
                                       order.currency
                                     )}
                                   </span>
-                                  {item.originalPrice[order.currency] &&
-                                    item.discountedPrice[order.currency] && (
-                                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">
-                                        -
-                                        {Math.round(
-                                          ((item.originalPrice[order.currency] -
-                                            item.discountedPrice[
-                                              order.currency
-                                            ]) /
-                                            item.originalPrice[
-                                              order.currency
-                                            ]) *
-                                            100
-                                        )}
-                                        %
-                                      </span>
-                                    )}
-                                </div>
-                                <span className="text-xs text-gray-500 line-through">
-                                  {formatPrice(
+                                </>
+                              ) : (
+                                <span className="text-base font-bold text-gray-800">
+                                  {currencyFormat(
                                     item.originalPrice[order.currency],
                                     order.currency
                                   )}
                                 </span>
-                              </>
-                            ) : (
-                              <span className="text-base font-bold text-gray-800">
-                                {formatPrice(
-                                  item.originalPrice[order.currency],
-                                  order.currency
-                                )}
-                              </span>
-                            )}
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              x{item.quantity}
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-600">
-                            x{item.quantity}
+                          <div className="flex flex-col min-[380px]:flex-row justify-between items-start md:items-center mt-3 pt-2 border-t border-gray-250">
+                            <span className="text-sm font-semibold text-gray-700">
+                              Subtotal
+                            </span>
+                            <span className="text-base font-bold text-primary">
+                              {currencyFormat(item.subTotal, order.currency)}
+                            </span>
                           </div>
-                        </div>
-                        <div className="flex flex-col min-[380px]:flex-row justify-between items-start md:items-center mt-3 pt-2 border-t border-gray-250">
-                          <span className="text-sm font-semibold text-gray-700">
-                            Subtotal
-                          </span>
-                          <span className="text-base font-bold text-primary">
-                            {formatPrice(item.subTotal, order.currency)}
-                          </span>
                         </div>
                       </div>
+                      {index < order.orderDetails.length - 1 && (
+                        <Separator className="mt-4" />
+                      )}
                     </div>
-                    {index < order.orderDetails.length - 1 && (
-                      <Separator className="mt-4" />
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -464,17 +503,30 @@ export default function OrderDetailPage() {
             <CardContent className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatPrice(subtotal, order.currency)}</span>
+                <span>{currencyFormat(order.totalAmount, order.currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shipping Cost</span>
-                <span>{formatPrice(order.shippingCost, order.currency)}</span>
+                <span>
+                  {currencyFormat(order.shippingCost, order.currency)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Discount Shipping</span>
+                <span className="font-semibold text-red-600">
+                  - {currencyFormat(order.discountShipping, order.currency)}
+                </span>
               </div>
               <Separator />
               <div className="flex justify-between text-base font-bold">
                 <span>Total</span>
                 <span className="text-primary">
-                  {formatPrice(order.totalAmount, order.currency)}
+                  {currencyFormat(
+                    order.totalAmount +
+                      order.shippingCost -
+                      (order.discountShipping || 0),
+                    order.currency
+                  )}
                 </span>
               </div>
             </CardContent>

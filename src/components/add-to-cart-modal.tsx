@@ -90,20 +90,48 @@ export default function AddToCartModal({
 
     if (!selectedVariant) return;
 
-    const cartItem = {
-      productId: product._id,
-      variantId: selectedVariant.selectedVariantDetail._id,
-      quantity: quantity,
-    };
+    const { selectedVariantDetail } = selectedVariant;
 
     // Get existing cart
     const existingCart = JSON.parse(localStorage.getItem("cartItem") || "[]");
 
     // Check if item already exists
     const existingItemIndex = existingCart.findIndex(
-      (item: any) =>
-        item.variantId === selectedVariant.selectedVariantDetail._id
+      (item: any) => item.variantId === selectedVariantDetail._id
     );
+
+    // Check stock availability including existing cart quantity (only for non-PO products)
+    if (!product.preOrder?.enabled) {
+      const existingQuantityInCart =
+        existingItemIndex > -1 ? existingCart[existingItemIndex].quantity : 0;
+
+      const totalQuantity = existingQuantityInCart + quantity;
+      const availableStock = selectedVariantDetail.stock;
+
+      // Validate against available stock
+      if (totalQuantity > availableStock) {
+        const remainingStock = availableStock - existingQuantityInCart;
+
+        if (remainingStock <= 0) {
+          showErrorAlert(
+            undefined,
+            `The product in the cart has reached the maximum stock of ${availableStock} pcs`
+          );
+        } else {
+          showErrorAlert(
+            undefined,
+            `There are already ${existingQuantityInCart} items in your cart. You can only add ${remainingStock} more.`
+          );
+        }
+        return;
+      }
+    }
+
+    const cartItem = {
+      productId: product._id,
+      variantId: selectedVariantDetail._id,
+      quantity: quantity,
+    };
 
     if (existingItemIndex > -1) {
       // Update quantity
@@ -120,7 +148,7 @@ export default function AddToCartModal({
 
     showSuccessAlert(
       "Added to Cart",
-      `${product.productName} (${selectedVariant.selectedVariantDetail.name}) has been added to your cart!`
+      `${product.productName} (${selectedVariantDetail.name}) has been added to your cart!`
     );
 
     onClose();

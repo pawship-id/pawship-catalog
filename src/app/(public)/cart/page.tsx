@@ -506,6 +506,7 @@ export default function CartPage() {
               categoryId: data.categoryId,
               variantId: el.variantId,
               variantName: variant.name,
+              sku: variant.sku,
               originalPrice: variant.price,
               quantity: el.quantity,
               image:

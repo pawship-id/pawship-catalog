@@ -7,6 +7,7 @@ export interface IOrderDetail {
   preOrder: { enabled: boolean; leadTime: string };
   variantId: string;
   variantName: string;
+  sku?: string; // SKU of the variant
   originalPrice: any; // Original price before any discount (for both B2B and B2C)
   discountedPrice?: any; // Price after discount (if discount applied)
   image: {

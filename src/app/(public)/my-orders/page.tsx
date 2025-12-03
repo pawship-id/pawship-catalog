@@ -20,29 +20,12 @@ import {
   CheckCircle,
   Truck,
   Filter,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import Image from "next/image";
-
-interface OrderItem {
-  _id: string;
-  invoiceNumber: string;
-  orderDate: string;
-  totalAmount: number;
-  status:
-    | "pending confirmation"
-    | "awaiting payment"
-    | "payment confirmed"
-    | "processing"
-    | "shipped";
-  orderDetails: Array<{
-    productName: string;
-    quantity: number;
-    image: {
-      imageUrl: string;
-    };
-  }>;
-  currency: string;
-}
+import { OrderData } from "@/lib/types/order";
+import { currencyFormat } from "@/lib/helpers";
 
 const statusConfig = {
   "pending confirmation": {
@@ -82,9 +65,25 @@ const statusConfig = {
 export default function MyOrdersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [productSlugs, setProductSlugs] = useState<{
+    [productId: string]: string;
+  }>({});
+
+  const toggleOrderExpansion = (orderId: string) => {
+    setExpandedOrders((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -111,6 +110,8 @@ export default function MyOrdersPage() {
 
       if (result.success) {
         setOrders(result.data);
+        // Fetch latest slugs for all products
+        await fetchProductSlugs(result.data);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -119,15 +120,44 @@ export default function MyOrdersPage() {
     }
   };
 
-  const formatPrice = (amount: number, currency: string) => {
-    const currencies: { [key: string]: string } = {
-      IDR: "Rp",
-      USD: "$",
-      SGD: "S$",
-      HKD: "HK$",
-    };
-    const symbol = currencies[currency] || currency;
-    return `${symbol} ${amount.toLocaleString()}`;
+  const fetchProductSlugs = async (ordersData: OrderData[]) => {
+    try {
+      // Collect all unique product IDs from all orders
+      const productIds = new Set<string>();
+      ordersData.forEach((order) => {
+        order.orderDetails.forEach((item) => {
+          if (item.productId) {
+            productIds.add(item.productId);
+          }
+        });
+      });
+
+      // Fetch all products in parallel
+      const slugsMap: { [productId: string]: string } = {};
+
+      await Promise.all(
+        Array.from(productIds).map(async (productId) => {
+          try {
+            const response = await fetch(`/api/public/products/${productId}`);
+            const result = await response.json();
+
+            if (result.success && result.data) {
+              // Use slug if available, otherwise fallback to productId
+              slugsMap[productId] = result.data.slug || productId;
+            } else {
+              slugsMap[productId] = productId;
+            }
+          } catch (error) {
+            console.error(`Error fetching product ${productId}:`, error);
+            slugsMap[productId] = productId;
+          }
+        })
+      );
+
+      setProductSlugs(slugsMap);
+    } catch (error) {
+      console.error("Error fetching product slugs:", error);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -200,74 +230,122 @@ export default function MyOrdersPage() {
         ) : (
           orders.map((order) => {
             const StatusIcon = statusConfig[order.status].icon;
+            const isExpanded = expandedOrders.has(order._id);
+            const hasMoreItems = order.orderDetails.length > 3;
+            const displayedItems = isExpanded
+              ? order.orderDetails
+              : order.orderDetails.slice(0, 3);
+
             return (
               <Card
                 key={order._id}
                 className="hover:shadow-md transition-shadow"
               >
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Order Date: {formatDate(order.orderDate)}
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                        Order Date: {formatDate(String(order.orderDate))}
                       </p>
-                      <p className="font-semibold text-lg">
+                      <p className="font-semibold text-sm sm:text-lg truncate">
                         {order.invoiceNumber}
                       </p>
                     </div>
                     <div
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+                      className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full ${
                         statusConfig[order.status].color
-                      }`}
+                      } self-start shrink-0`}
                     >
-                      <StatusIcon className="h-4 w-4" />
-                      <span className="text-sm font-medium">
+                      <StatusIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
                         {statusConfig[order.status].label}
                       </span>
                     </div>
                   </div>
 
-                  <div className="border-t border-b py-4 mb-4">
-                    {order.orderDetails.slice(0, 2).map((item, index) => (
-                      <div key={index} className="flex gap-3 mb-3 last:mb-0">
-                        <div className="relative w-16 h-16 rounded border overflow-hidden flex-shrink-0">
-                          <Image
-                            src={item.image.imageUrl}
-                            alt={item.productName}
-                            fill
-                            className="object-cover"
-                          />
+                  <div className="border-t border-b py-3 sm:py-4 mb-3 sm:mb-4">
+                    {displayedItems.map((item, index) => {
+                      const productSlug =
+                        productSlugs[item.productId] || item.productId;
+
+                      return (
+                        <div
+                          key={index}
+                          className="flex gap-2 sm:gap-3 mb-2 sm:mb-3 last:mb-0"
+                        >
+                          <Link
+                            href={`/product/${productSlug}`}
+                            className="block flex-shrink-0"
+                          >
+                            <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded border overflow-hidden hover:opacity-80 transition-opacity cursor-pointer">
+                              <Image
+                                src={item.image.imageUrl}
+                                alt={item.productName}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          </Link>
+                          <div className="flex-1 min-w-0">
+                            <Link
+                              href={`/product/${productSlug}`}
+                              className="hover:text-primary transition-colors block"
+                            >
+                              <p className="font-medium text-sm sm:text-base line-clamp-2">
+                                {item.productName}
+                              </p>
+                            </Link>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
+                              Qty: {item.quantity}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-medium line-clamp-1">
-                            {item.productName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Qty: {item.quantity}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {order.orderDetails.length > 2 && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        +{order.orderDetails.length - 2} more items
-                      </p>
+                      );
+                    })}
+
+                    {hasMoreItems && (
+                      <button
+                        onClick={() => toggleOrderExpansion(order._id)}
+                        className="flex items-center gap-1 text-xs sm:text-sm text-primary hover:text-primary/80 font-medium mt-2 transition-colors"
+                      >
+                        {isExpanded ? (
+                          <>
+                            <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                            Show {order.orderDetails.length - 3} More Items
+                          </>
+                        )}
+                      </button>
                     )}
                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Total Amount
                       </p>
-                      <p className="text-xl font-bold">
-                        {formatPrice(order.totalAmount, order.currency)}
+                      <p className="text-lg sm:text-xl font-bold">
+                        {currencyFormat(
+                          order.totalAmount +
+                            (order.shippingCost - order.discountShipping),
+                          order.currency
+                        )}
                       </p>
                     </div>
-                    <Link href={`/my-orders/${order._id}`}>
-                      <Button variant="outline" className="gap-2">
+                    <Link
+                      href={`/my-orders/${order._id}`}
+                      className="self-start sm:self-auto"
+                    >
+                      <Button
+                        variant="outline"
+                        className="gap-1.5 sm:gap-2 text-xs sm:text-sm h-8 sm:h-10 px-3 sm:px-4"
+                      >
                         View Details
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </Link>
                   </div>

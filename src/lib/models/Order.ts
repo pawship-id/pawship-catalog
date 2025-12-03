@@ -46,6 +46,7 @@ const OrderDetailSchema = new Schema<IOrderDetail>(
     quantity: { type: Number, required: true },
     variantId: { type: String, required: true },
     variantName: { type: String, required: true },
+    sku: { type: String },
     originalPrice: {
       type: Object,
       required: true,

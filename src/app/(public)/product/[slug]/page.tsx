@@ -118,6 +118,35 @@ export default function ProductDetailPage() {
         (el: any) => el.variantId === selectedVariantDetail._id
       );
 
+      // Check stock availability including existing cart quantity (only for non-PO products)
+      if (!product.preOrder?.enabled) {
+        const existingQuantityInCart =
+          existingVariantIndex !== -1
+            ? cartItem[existingVariantIndex].quantity
+            : 0;
+
+        const totalQuantity = existingQuantityInCart + quantity;
+        const availableStock = selectedVariantDetail.stock;
+
+        // Validate against available stock
+        if (totalQuantity > availableStock) {
+          const remainingStock = availableStock - existingQuantityInCart;
+
+          if (remainingStock <= 0) {
+            showErrorAlert(
+              undefined,
+              `The product in the cart has reached the maximum stock of ${availableStock} pcs`
+            );
+          } else {
+            showErrorAlert(
+              undefined,
+              `There are already ${existingQuantityInCart} items in your cart. You can only add ${remainingStock} more.`
+            );
+          }
+          return;
+        }
+      }
+
       if (existingVariantIndex !== -1) {
         cartItem[existingVariantIndex].quantity += quantity;
       } else {
@@ -168,27 +197,30 @@ export default function ProductDetailPage() {
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.aoa_to_sheet([]);
 
-      // Add headers
+      // Add Currency row at row 1
+      const currencyRow = ["Currency", `SGD/IDR/USD/HKD`];
+      XLSX.utils.sheet_add_aoa(worksheet, [currencyRow], { origin: "A1" });
+
+      // Row 2 is empty (blank row)
+
+      // Add headers at row 3
       const headers = [
         "Product Link",
         "Product Name",
         "Product Category",
         "Variant",
         "SKU",
-        `Price ${currency} (before discount)`,
+        `Price (before discount)`,
         "Qty",
       ];
-      XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A1" });
+      XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A3" });
 
-      let currentRow = 2; // Start from row 2 (after header)
+      let currentRow = 4; // Start from row 4 (after currency, blank row, and header)
 
       filteredProducts.forEach((prod: ProductData) => {
         const productLink = `${window.location.origin}/product/${prod.slug}`;
         const productName = prod.productName;
         const productCategory = prod.categoryDetail?.name || "";
-
-        // Enrich product to get pricing
-        const enrichedProd = enrichProduct(prod, currency);
 
         const variants = prod.productVariantsData || [];
         const variantCount = variants.length;
@@ -203,8 +235,6 @@ export default function ProductDetailPage() {
           // Get price before discount
           let priceBeforeDiscount = variant.price[currency] || 0;
 
-          const formattedPrice = format(priceBeforeDiscount);
-
           // Add row data
           const rowData = [
             index === 0 ? productLink : "", // Product Link only on first row
@@ -212,7 +242,7 @@ export default function ProductDetailPage() {
             index === 0 ? productCategory : "", // Category only on first row
             variantAttrs || "-",
             sku,
-            formattedPrice,
+            priceBeforeDiscount,
             0,
           ];
 
