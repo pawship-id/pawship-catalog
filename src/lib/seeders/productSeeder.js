@@ -389,10 +389,37 @@ async function seedProducts() {
                 let skippedCount = 0;
 
                 const variantPromises = variants.map(async (variantRow, i) => {
-                    // Validate SKU first
-                    const sku = variantRow['Variant SKU Code'];
-                    const variantName = variantRow['Variant Name'] || 'Unnamed';
+                    // Parse variant attributes as object: { Size: "M", Color: "Boy" }
+                    const attributesData = variantRow['Attributes'];
+                    const attrs = {};
+                    const attrValuesArray = [];
 
+                    if (attributesData && attributesData.trim() !== '' && variantTypes.length > 0) {
+                        const attrValues = parseArrayData(attributesData); // Split by comma and trim
+
+                        variantTypes.forEach((vType, index) => {
+                            if (attrValues[index]) {
+                                // Use variant type name as key, attribute value as value
+                                const attrValue = attrValues[index].trim();
+                                attrs[vType.name] = attrValue;
+                                attrValuesArray.push(attrValue);
+                            }
+                        });
+                    }
+
+                    // Generate Variant Name from attributes joined with "-"
+                    let variantName = '';
+                    if (attrValuesArray.length > 0) {
+                        variantName = attrValuesArray.join('-');
+                    } else {
+                        // No attributes, skip this variant
+                        console.log(`      ⚠️  SKIPPED - Product: "${productName}" - No attributes to generate variant name`);
+                        skippedCount++;
+                        return null;
+                    }
+
+                    // Get SKU from Excel
+                    const sku = variantRow['Variant SKU Code'];
                     if (!sku || sku.trim() === '') {
                         console.log(`      ⚠️  SKIPPED - Product: "${productName}", Variant: "${variantName}" - SKU is empty`);
                         skippedCount++;
@@ -407,21 +434,6 @@ async function seedProducts() {
                         console.log(`      ⚠️  SKIPPED - Product: "${productName}", Variant: "${variantName}" - SKU "${skuTrimmed}" already exists`);
                         skippedCount++;
                         return null;
-                    }
-
-                    // Parse variant attributes as object: { Size: "M", Color: "Boy" }
-                    const attributesData = variantRow['Attributes'];
-                    const attrs = {};
-
-                    if (attributesData && attributesData.trim() !== '' && variantTypes.length > 0) {
-                        const attrValues = parseArrayData(attributesData); // Split by comma and trim
-
-                        variantTypes.forEach((vType, index) => {
-                            if (attrValues[index]) {
-                                // Use variant type name as key, attribute value as value
-                                attrs[vType.name] = attrValues[index].trim();
-                            }
-                        });
                     }
 
                     // Parse variant image
@@ -474,10 +486,17 @@ async function seedProducts() {
                 const results = await Promise.all(variantPromises);
                 const createdVariants = results.filter(v => v !== null);
 
-                console.log(`      ✓ ${createdVariants.length} variant(s) created${skippedCount > 0 ? `, ${skippedCount} skipped` : ''}`);
-
-                successCount++;
-                console.log(`   ✅ Completed successfully!`);
+                if (createdVariants.length === 0) {
+                    // No variants created, delete the product
+                    await Product.findByIdAndDelete(product._id);
+                    console.log(`      ⚠️  No variants created, product deleted`);
+                    console.log(`   ❌ Product "${productName}" removed - no valid variants`);
+                    errorCount++;
+                } else {
+                    console.log(`      ✓ ${createdVariants.length} variant(s) created${skippedCount > 0 ? `, ${skippedCount} skipped` : ''}`);
+                    successCount++;
+                    console.log(`   ✅ Completed successfully!`);
+                }
 
             } catch (error) {
                 errorCount++;
