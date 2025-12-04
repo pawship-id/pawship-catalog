@@ -385,7 +385,30 @@ async function seedProducts() {
                 // 11. Create Product Variants (all variants from the array)
                 console.log(`   📋 Creating ${variants.length} variant(s)...`);
 
+                let createdCount = 0;
+                let skippedCount = 0;
+
                 const variantPromises = variants.map(async (variantRow, i) => {
+                    // Validate SKU first
+                    const sku = variantRow['Variant SKU Code'];
+                    const variantName = variantRow['Variant Name'] || 'Unnamed';
+
+                    if (!sku || sku.trim() === '') {
+                        console.log(`      ⚠️  SKIPPED - Product: "${productName}", Variant: "${variantName}" - SKU is empty`);
+                        skippedCount++;
+                        return null;
+                    }
+
+                    const skuTrimmed = sku.trim();
+
+                    // Check if SKU already exists
+                    const existingSKU = await ProductVariant.findOne({ sku: skuTrimmed }).lean().exec();
+                    if (existingSKU) {
+                        console.log(`      ⚠️  SKIPPED - Product: "${productName}", Variant: "${variantName}" - SKU "${skuTrimmed}" already exists`);
+                        skippedCount++;
+                        return null;
+                    }
+
                     // Parse variant attributes as object: { Size: "M", Color: "Boy" }
                     const attributesData = variantRow['Attributes'];
                     const attrs = {};
@@ -431,13 +454,14 @@ async function seedProducts() {
                     };
 
                     // Create variant
+                    createdCount++;
                     return ProductVariant.create({
                         codeRow: generateRandomCode(),
                         position: i + 1,
                         image: variantImage,
-                        sku: variantRow['Variant SKU Code'] || '',
+                        sku: skuTrimmed,
                         attrs,
-                        name: variantRow['Variant Name'] || '',
+                        name: variantName,
                         stock: parseInt(variantRow['Variant Stock']) || 0,
                         price,
                         productId: product._id,
@@ -447,8 +471,10 @@ async function seedProducts() {
                     });
                 });
 
-                await Promise.all(variantPromises);
-                console.log(`      ✓ ${variants.length} variant(s) created`);
+                const results = await Promise.all(variantPromises);
+                const createdVariants = results.filter(v => v !== null);
+
+                console.log(`      ✓ ${createdVariants.length} variant(s) created${skippedCount > 0 ? `, ${skippedCount} skipped` : ''}`);
 
                 successCount++;
                 console.log(`   ✅ Completed successfully!`);

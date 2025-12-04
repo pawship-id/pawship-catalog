@@ -125,6 +125,42 @@ export async function POST(req: NextRequest) {
       (formData.get("variantRows") as string) || "[]"
     );
 
+    // Check for duplicate SKUs within the submitted variants
+    const skus = variantRows.map((v: VariantRowForm) => v.sku).filter(Boolean);
+    const duplicateSKUs = skus.filter(
+      (sku: string, index: number) => skus.indexOf(sku) !== index
+    );
+
+    if (duplicateSKUs.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Duplicate SKUs found in variants: ${duplicateSKUs.join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check if any SKU already exists in database
+    if (skus.length > 0) {
+      const existingVariants = await ProductVariant.find({
+        sku: { $in: skus },
+      })
+        .select("sku")
+        .lean();
+
+      if (existingVariants.length > 0) {
+        const existingSKUs = existingVariants.map((v) => v.sku);
+        return NextResponse.json(
+          {
+            success: false,
+            message: `SKU(s) already exist: ${existingSKUs.join(", ")}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const variantRowsData = variantRows.map((el: VariantRowForm) => ({
       ...el,
       productId: product._id,
