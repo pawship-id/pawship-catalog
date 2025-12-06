@@ -46,7 +46,7 @@
     "lucide-react": "^0.542.0",
     "mongoose": "^8.18.3",
     "mongoose-delete": "^1.0.2",
-    "next": "15.5.2",
+    "next": "^15.5.7",
     "next-auth": "^4.24.11",
     "nodemailer": "^6.10.1",
     "papaparse": "^5.5.3",
