@@ -66,8 +66,6 @@ export default function RelatedProduct({
               hasTag(product.tags, "best sellers").isFound
           );
 
-          console.log(bestSallerProducts);
-
           relatedProducts = [
             ...(sameCategoryProducts || []),
             ...(bestSallerProducts || []),
