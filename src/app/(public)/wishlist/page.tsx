@@ -24,7 +24,7 @@ export default function WishlistPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth/signin");
+      router.push("/login");
       return;
     }
 

@@ -38,7 +38,7 @@ export default function ProductCard({
 
     if (!session?.user?.id) {
       // Redirect to login if not authenticated
-      router.push("/auth/signin");
+      router.push("/login");
       return;
     }
 
