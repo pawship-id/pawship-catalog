@@ -58,3 +58,22 @@ export const showConfirmAlert = async (
     cancelButtonText: "Cancel",
   });
 };
+
+// function to display warning alert
+export const showWarningAlert = (
+  title: string = "Warning",
+  message: string | string[]
+) => {
+  let msg = message;
+
+  if (Array.isArray(message)) {
+    msg = message.map((item) => `<span>${item}</span>`).join("<br>");
+  }
+
+  MySwal.fire({
+    icon: "warning",
+    title: title,
+    html: msg,
+    timer: 5000,
+  });
+};

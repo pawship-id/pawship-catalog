@@ -193,7 +193,12 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
                 <SelectItem value="pending confirmation">
                   Pending Confirmation
                 </SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="awaiting payment">
+                  Awaiting Payment
+                </SelectItem>
+                <SelectItem value="payment confirmed">
+                  Payment Confirmed
+                </SelectItem>
                 <SelectItem value="processing">Processing</SelectItem>
                 <SelectItem value="shipped">Shipped</SelectItem>
               </SelectContent>

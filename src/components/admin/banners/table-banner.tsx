@@ -69,8 +69,23 @@ export default function TableBanner() {
   const [loading, setLoading] = useState(true);
   const [filterPage, setFilterPage] = useState<string>("all");
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
+
+  // Calculate pagination
+  const totalPages = Math.ceil(banners.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentBanners = banners.slice(startIndex, endIndex);
+
   useEffect(() => {
     fetchBanners();
+  }, [filterPage]);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
   }, [filterPage]);
 
   const fetchBanners = async () => {
@@ -218,7 +233,7 @@ export default function TableBanner() {
                 </TableCell>
               </TableRow>
             ) : (
-              banners.map((banner) => (
+              currentBanners.map((banner) => (
                 <TableRow key={banner._id} className="hover:bg-gray-50">
                   {/* Preview */}
                   <TableCell>
@@ -294,6 +309,53 @@ export default function TableBanner() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {banners.length > 0 && (
+        <div className="flex items-center justify-between my-6">
+          <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to {Math.min(endIndex, banners.length)} of{" "}
+            {banners.length} banners
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="cursor-pointer"
+            >
+              Previous
+            </Button>
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="cursor-pointer w-10"
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              className="cursor-pointer"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -237,6 +237,24 @@ export async function PUT(req: NextRequest, { params }: Context) {
           attrs: variant.attrs,
         };
 
+        // If SKU is being changed, check uniqueness
+        if (variant.sku) {
+          const existingVariant = await ProductVariant.findOne({
+            sku: variant.sku,
+            _id: { $ne: variant._id }, // exclude current variant
+          }).lean();
+
+          if (existingVariant) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: `SKU "${variant.sku}" already exists for another variant`,
+              },
+              { status: 400 }
+            );
+          }
+        }
+
         // Include image if it exists in the variant data
         if (variant.image) {
           updateData.image = variant.image;
@@ -246,6 +264,23 @@ export async function PUT(req: NextRequest, { params }: Context) {
           runValidators: true,
         });
       } else {
+        // Create new variant - check SKU uniqueness first
+        if (variant.sku) {
+          const existingVariant = await ProductVariant.findOne({
+            sku: variant.sku,
+          }).lean();
+
+          if (existingVariant) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: `SKU "${variant.sku}" already exists`,
+              },
+              { status: 400 }
+            );
+          }
+        }
+
         // Create new variant
         await ProductVariant.create({
           ...variant,

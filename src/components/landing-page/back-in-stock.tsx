@@ -6,10 +6,13 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import ScrollHorizontalCard from "../scroll-horizontal-card";
 import { ProductData } from "@/lib/types/product";
+import { useCurrency } from "@/context/CurrencyContext";
+import { filterProductsByCountry } from "@/lib/helpers/product-filter";
 
 export default function BackInStock() {
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(true);
+  const { userCountry } = useCurrency();
 
   useEffect(() => {
     const fetchBackInStockProducts = async () => {
@@ -18,7 +21,12 @@ export default function BackInStock() {
         const result = await response.json();
 
         if (result.success) {
-          setProducts(result.data);
+          // Filter products by user's country
+          const filteredProducts = filterProductsByCountry(
+            result.data,
+            userCountry
+          );
+          setProducts(filteredProducts);
         }
       } catch (error) {
         console.error("Error fetching back in stock products:", error);
@@ -28,7 +36,7 @@ export default function BackInStock() {
     };
 
     fetchBackInStockProducts();
-  }, []);
+  }, [userCountry]); // Re-fetch when country changes
 
   // Don't show section if no products
   if (!loading && products.length === 0) {

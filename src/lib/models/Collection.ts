@@ -5,6 +5,7 @@ export interface ICollection extends Document {
   name: string;
   slug: string;
   displayOnHomepage: boolean;
+  displayOnNavbar: boolean;
   rules: "tag" | "category" | "custom";
   ruleIds: string[]; // Array of IDs based on rule type
   desktopImageUrl: string;
@@ -31,6 +32,10 @@ const CollectionSchema = new Schema<ICollection>(
       unique: true,
     },
     displayOnHomepage: {
+      type: Boolean,
+      default: false,
+    },
+    displayOnNavbar: {
       type: Boolean,
       default: false,
     },
@@ -78,6 +83,7 @@ CollectionSchema.plugin(softDelete, {
 
 // Index for faster queries
 CollectionSchema.index({ displayOnHomepage: 1 });
+CollectionSchema.index({ displayOnNavbar: 1 });
 CollectionSchema.index({ rules: 1 });
 
 const Collection =

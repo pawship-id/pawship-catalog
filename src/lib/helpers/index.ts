@@ -31,7 +31,13 @@ export function generateSlug(text: string) {
 
 export const currencyFormat = (amount: number, currency: string) => {
   const locale =
-    currency === "IDR" ? "id-ID" : currency === "SGD" ? "en-SG" : "en-US";
+    currency === "IDR"
+      ? "id-ID"
+      : currency === "SGD"
+        ? "en-SG"
+        : currency === "HKD"
+          ? "zh-HK"
+          : "en-US";
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,

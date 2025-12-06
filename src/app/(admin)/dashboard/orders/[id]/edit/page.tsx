@@ -1,13 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getById, updateData } from "@/lib/apiService";
-import {
-  OrderData,
-  IOrderDetail,
-  IShippingAddress,
-  OrderForm,
-} from "@/lib/types/order";
+import { getAll, getById, updateData } from "@/lib/apiService";
+import { OrderData, IOrderDetail } from "@/lib/types/order";
 import LoadingPage from "@/components/loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   Calendar,
@@ -35,11 +37,20 @@ import {
   AlertCircle,
   Trash2,
   Save,
+  Plus,
+  Search,
+  BanknoteArrowDown,
 } from "lucide-react";
 import { currencyFormat } from "@/lib/helpers";
-import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import {
+  showErrorAlert,
+  showSuccessAlert,
+  showWarningAlert,
+} from "@/lib/helpers/sweetalert2";
 import ErrorPage from "@/components/admin/error-page";
 import { Textarea } from "@/components/ui/textarea";
+import { ProductData } from "@/lib/types/product";
+import Link from "next/link";
 
 export default function EditOrderPage() {
   const params = useParams();
@@ -50,6 +61,135 @@ export default function EditOrderPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editedItems, setEditedItems] = useState<IOrderDetail[]>([]);
+  const [originalQuantities, setOriginalQuantities] = useState<{
+    [key: string]: number;
+  }>({});
+
+  // Add Product Modal States
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [products, setProducts] = useState<ProductData[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(
+    null
+  );
+  const [showVariantSelection, setShowVariantSelection] = useState(false);
+  const [variantQuantity, setVariantQuantity] = useState<{
+    [key: string]: number;
+  }>({});
+
+  console.log(selectedProduct);
+
+  // Check if order can be edited based on status
+  const canEditOrder = () => {
+    if (!order) return false;
+    return (
+      order.status === "pending confirmation" ||
+      order.status === "awaiting payment"
+    );
+  };
+
+  // B2B: Calculate tier discount for a specific product based on total category quantities
+  const calculateB2BDiscount = (
+    categoryId: string,
+    currentOrderItems: any[],
+    resellerPricing?: {
+      currency: string;
+      tiers: Array<{
+        name: string;
+        minimumQuantity: number;
+        discount: number;
+        categoryProduct: string | string[];
+      }>;
+    }
+  ) => {
+    if (
+      !resellerPricing ||
+      !resellerPricing.tiers ||
+      !Array.isArray(resellerPricing.tiers)
+    ) {
+      return { discountPercentage: 0, tierName: null };
+    }
+
+    const applicableTiers = resellerPricing.tiers.filter((tier) => {
+      const categories = Array.isArray(tier.categoryProduct)
+        ? tier.categoryProduct
+        : [tier.categoryProduct];
+      return categories.includes(categoryId);
+    });
+
+    if (applicableTiers.length === 0) {
+      return { discountPercentage: 0, tierName: null };
+    }
+
+    let bestTier = null;
+    let highestDiscount = 0;
+
+    for (const tier of applicableTiers) {
+      const categories = Array.isArray(tier.categoryProduct)
+        ? tier.categoryProduct
+        : [tier.categoryProduct];
+
+      const totalCategoryQty = currentOrderItems.reduce((sum, item: any) => {
+        if (categories.includes(item.categoryId)) {
+          return sum + item.quantity;
+        }
+        return sum;
+      }, 0);
+
+      if (
+        totalCategoryQty >= tier.minimumQuantity &&
+        tier.discount > highestDiscount
+      ) {
+        highestDiscount = tier.discount;
+        bestTier = tier;
+      }
+    }
+
+    if (bestTier) {
+      return {
+        discountPercentage: bestTier.discount,
+        tierName: bestTier.name,
+      };
+    }
+
+    return { discountPercentage: 0, tierName: null };
+  };
+
+  // Calculate discount for new item
+  const getDiscountedPriceForNewItem = (
+    basePrice: number,
+    quantity: number,
+    categoryId: string,
+    currentItems: IOrderDetail[],
+    resellerPricing?: any
+  ) => {
+    let discountPercentage = 0;
+    let finalPrice = basePrice;
+
+    if (order?.orderType === "B2B" && resellerPricing) {
+      const tierResult = calculateB2BDiscount(
+        categoryId,
+        currentItems,
+        resellerPricing
+      );
+
+      if (tierResult.discountPercentage > 0) {
+        discountPercentage = tierResult.discountPercentage;
+        finalPrice = Math.round(
+          basePrice - (basePrice * discountPercentage) / 100
+        );
+      }
+    }
+
+    return {
+      finalPrice,
+      discountPercentage,
+      discountedPrice:
+        discountPercentage > 0 ? { [order!.currency]: finalPrice } : null,
+    };
+  };
 
   const fetchOrder = async () => {
     try {
@@ -60,6 +200,67 @@ export default function EditOrderPage() {
 
       if (response.data) {
         setOrder(response.data);
+
+        // Store original quantities for stock update calculation later
+        const origQty: { [key: string]: number } = {};
+
+        // Fetch latest product data for metadata only (not for stock validation)
+        const updatedItems = await Promise.all(
+          response.data.orderDetails.map(async (item) => {
+            // Save original quantity
+            origQty[item.variantId] = item.quantity;
+
+            try {
+              const productResponse = await getById<ProductData>(
+                "/api/admin/products",
+                item.productId
+              );
+
+              if (productResponse.data) {
+                const product = productResponse.data;
+                const variant = product.productVariantsData?.find(
+                  (v) => v._id === item.variantId
+                );
+
+                if (variant) {
+                  // For existing items, add back the original qty to stock
+                  // (because stock was already deducted on checkout)
+                  const availableStock = variant.stock + item.quantity;
+
+                  return {
+                    ...item,
+                    stock: availableStock, // Available stock including what was already ordered
+                    preOrder: product.preOrder,
+                    categoryId: product.categoryId,
+                    moq: product.moq,
+                    resellerPricing: product.resellerPricing,
+                  };
+                }
+              }
+
+              // If product/variant not found, keep original item with default values
+              return {
+                ...item,
+                stock: item.stock || 0,
+                preOrder: item.preOrder || { enabled: false, leadTime: "" },
+              };
+            } catch (error) {
+              console.error(
+                `Failed to fetch product ${item.productId}:`,
+                error
+              );
+              // On error, keep original item with default values
+              return {
+                ...item,
+                stock: item.stock || 0,
+                preOrder: item.preOrder || { enabled: false, leadTime: "" },
+              };
+            }
+          })
+        );
+
+        setOriginalQuantities(origQty);
+        setEditedItems(updatedItems);
       }
     } catch (err: any) {
       setError(err.message);
@@ -74,202 +275,441 @@ export default function EditOrderPage() {
     }
   }, [id]);
 
-  //   // Helper function to calculate subtotal from original price, quantity, and discount
-  //   const calculateSubtotalFromDiscount = (
-  //     originalPrice: number,
-  //     quantity: number,
-  //     discountPercentage: number
-  //   ) => {
-  //     const totalBeforeDiscount = originalPrice * quantity;
-  //     const discountAmount = (totalBeforeDiscount * discountPercentage) / 100;
-  //     return Math.round(totalBeforeDiscount - discountAmount);
-  //   };
+  // Fetch products for add product modal
+  const fetchProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const response = await getAll<ProductData>("/api/admin/products");
+      if (response.data) {
+        setProducts(response.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+      showErrorAlert("Error", "Failed to load products");
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
-  //   // Helper function to calculate discount percentage from subtotal
-  //   const calculateDiscountFromSubtotal = (
-  //     originalPrice: number,
-  //     quantity: number,
-  //     subtotal: number
-  //   ) => {
-  //     const totalBeforeDiscount = originalPrice * quantity;
-  //     if (totalBeforeDiscount === 0) return 0;
-  //     const discountAmount = totalBeforeDiscount - subtotal;
-  //     const discountPercentage = (discountAmount / totalBeforeDiscount) * 100;
-  //     return Math.max(
-  //       0,
-  //       Math.min(100, Math.round(discountPercentage * 100) / 100)
-  //     ); // Round to 2 decimals and clamp between 0-100
-  //   };
+  // Open add product modal
+  const handleOpenAddProduct = () => {
+    if (!canEditOrder()) {
+      showErrorAlert(
+        "Cannot Edit Order",
+        "You can only edit orders with 'Pending Confirmation' or 'Awaiting Payment' status."
+      );
+      return;
+    }
+    setShowAddProductModal(true);
+    fetchProducts();
+  };
 
-  //   // Update order detail and recalculate total
-  //   const updateOrderDetailAndTotal = (updatedDetails: IOrderDetail[]) => {
-  //     const newTotal = updatedDetails.reduce(
-  //       (sum, item) => sum + item.subTotal,
-  //       0
-  //     );
-  //     setOrder((prev) =>
-  //       prev
-  //         ? {
-  //             ...prev,
-  //             orderDetails: updatedDetails,
-  //             totalAmount: newTotal,
-  //           }
-  //         : prev
-  //     );
-  //   };
+  // Select product and show variant selection
+  const handleSelectProduct = (product: ProductData) => {
+    console.log(product, ">>>>>>");
 
-  //   // Handle original price change
-  //   const handleOriginalPriceChange = (index: number, newPrice: number) => {
-  //     if (!order) return;
-  //     const updatedDetails = [...order.orderDetails];
-  //     const item = updatedDetails[index];
+    setSelectedProduct(product);
+    setShowVariantSelection(true);
+  };
 
-  //     updatedDetails[index] = {
-  //       ...item,
-  //       originalPrice: {
-  //         ...item.originalPrice,
-  //         [order.currency]: newPrice,
-  //       },
-  //       subTotal: calculateSubtotalFromDiscount(
-  //         newPrice,
-  //         item.quantity,
-  //         item.discountPercentage || 0
-  //       ),
-  //     };
+  // Add variant to order (always start with qty 1)
+  const handleAddVariant = (variantId: string) => {
+    if (!selectedProduct || !order) return;
 
-  //     // Update discounted price if there's a discount
-  //     if (item.discountPercentage && item.discountPercentage > 0) {
-  //       const discountedUnitPrice = Math.round(
-  //         newPrice - (newPrice * item.discountPercentage) / 100
-  //       );
-  //       updatedDetails[index].discountedPrice = {
-  //         ...item.discountedPrice,
-  //         [order.currency]: discountedUnitPrice,
-  //       };
-  //     }
+    const variant = selectedProduct.productVariantsData?.find(
+      (v) => v._id === variantId
+    );
 
-  //     updateOrderDetailAndTotal(updatedDetails);
-  //   };
+    if (!variant) return;
 
-  //   // Handle quantity change
-  //   const handleQuantityChange = (index: number, newQuantity: number) => {
-  //     if (!order || newQuantity < 1) return;
-  //     const updatedDetails = [...order.orderDetails];
-  //     const item = updatedDetails[index];
+    // Check if this variant already exists in order
+    const existingItem = editedItems.find(
+      (item) => item.variantId === variantId
+    );
+    if (existingItem) {
+      showErrorAlert(
+        "Already Added",
+        "This product variant is already in the order."
+      );
+      setShowVariantSelection(false);
+      setShowAddProductModal(false);
+      setSelectedProduct(null);
+      return;
+    }
 
-  //     updatedDetails[index] = {
-  //       ...item,
-  //       quantity: newQuantity,
-  //       subTotal: calculateSubtotalFromDiscount(
-  //         item.originalPrice[order.currency],
-  //         newQuantity,
-  //         item.discountPercentage || 0
-  //       ),
-  //     };
+    // Start with quantity 1
+    const quantity = 1;
+    const basePrice = variant.price[order.currency] || 0;
+    const tempItem: IOrderDetail = {
+      productId: selectedProduct._id,
+      productName: selectedProduct.productName,
+      categoryId: selectedProduct.categoryId,
+      variantId: variant._id,
+      variantName: variant.name,
+      quantity: quantity,
+      originalPrice: variant.price,
+      stock: variant.stock,
+      preOrder: selectedProduct.preOrder,
+      moq: selectedProduct.moq,
+      resellerPricing: selectedProduct.resellerPricing,
+      image:
+        variant.image ||
+        selectedProduct.productMedia.find((m) => m.type === "image")!,
+      subTotal: basePrice * quantity,
+      discountPercentage: 0,
+    };
 
-  //     updateOrderDetailAndTotal(updatedDetails);
-  //   };
+    // Calculate discount with all items including the new one
+    const itemsForCalculation = [...editedItems, tempItem];
 
-  //   // Handle discount percentage change
-  //   const handleDiscountChange = (index: number, newDiscount: number) => {
-  //     if (!order) return;
-  //     const updatedDetails = [...order.orderDetails];
-  //     const item = updatedDetails[index];
+    const discountResult = getDiscountedPriceForNewItem(
+      basePrice,
+      quantity,
+      selectedProduct.categoryId,
+      itemsForCalculation,
+      selectedProduct.resellerPricing
+    );
 
-  //     // Clamp discount between 0 and 100
-  //     const clampedDiscount = Math.max(0, Math.min(100, newDiscount));
+    const newItem: IOrderDetail = {
+      ...tempItem,
+      discountPercentage: discountResult.discountPercentage,
+      discountedPrice: discountResult.discountedPrice,
+      subTotal: quantity * discountResult.finalPrice,
+    };
 
-  //     updatedDetails[index] = {
-  //       ...item,
-  //       discountPercentage: clampedDiscount,
-  //       subTotal: calculateSubtotalFromDiscount(
-  //         item.originalPrice[order.currency],
-  //         item.quantity,
-  //         clampedDiscount
-  //       ),
-  //     };
+    const newItems = [...editedItems, newItem];
 
-  //     // Update discounted price
-  //     if (clampedDiscount > 0) {
-  //       const discountedUnitPrice = Math.round(
-  //         item.originalPrice[order.currency] -
-  //           (item.originalPrice[order.currency] * clampedDiscount) / 100
-  //       );
-  //       updatedDetails[index].discountedPrice = {
-  //         [order.currency]: discountedUnitPrice,
-  //       };
+    // Recalculate all items' discounts (for B2B tier discount)
+    const recalculatedItems = newItems.map((item: any) => {
+      const itemBasePrice = item.originalPrice[order.currency];
+      const result = getDiscountedPriceForNewItem(
+        itemBasePrice,
+        item.quantity,
+        item.categoryId || selectedProduct.categoryId,
+        newItems,
+        item.resellerPricing
+      );
+
+      return {
+        ...item,
+        discountPercentage: result.discountPercentage,
+        discountedPrice: result.discountedPrice,
+        subTotal: item.quantity * result.finalPrice,
+      };
+    });
+
+    setEditedItems(recalculatedItems);
+    updateOrderTotal(recalculatedItems);
+
+    // Save original quantity for new item (0 because it's new)
+    setOriginalQuantities({
+      ...originalQuantities,
+      [variant._id]: 0,
+    });
+
+    // Close modals and reset
+    setShowAddProductModal(false);
+    setShowVariantSelection(false);
+    setSelectedProduct(null);
+    setProductSearchQuery("");
+  };
+
+  // Filter products by search
+  const filteredProducts = products.filter((product) =>
+    product.productName.toLowerCase().includes(productSearchQuery.toLowerCase())
+  );
+
+  // Update item field
+  // const updateItemField = (
+  //   index: number,
+  //   field: keyof IOrderDetail,
+  //   value: any
+  // ) => {
+  //   if (!canEditOrder()) return;
+
+  //   const newItems = [...editedItems];
+  //   const item = newItems[index];
+
+  //   if (field === "quantity") {
+  //     const qty = parseInt(value) || 1;
+  //     item.quantity = qty;
+  //     recalculateItemSubtotal(item);
+  //   } else if (field === "originalPrice") {
+  //     if (!item.originalPrice) item.originalPrice = {};
+  //     item.originalPrice[order!.currency] = Math.round(value) || 0;
+  //     recalculateItemSubtotal(item);
+  //   } else if (field === "discountPercentage") {
+  //     const discount = Math.max(0, Math.min(100, Math.round(value) || 0));
+  //     item.discountPercentage = discount;
+  //     recalculateItemSubtotal(item);
+  //   } else if (field === "discountedPrice") {
+  //     if (!item.discountedPrice) item.discountedPrice = {};
+  //     const discountedPrice = Math.round(value) || 0;
+  //     item.discountedPrice[order!.currency] = discountedPrice;
+
+  //     // Recalculate discount percentage from discounted price
+  //     const originalPrice = item.originalPrice[order!.currency];
+  //     if (originalPrice > 0 && discountedPrice < originalPrice) {
+  //       const discountAmount = originalPrice - discountedPrice;
+  //       item.discountPercentage = (discountAmount / originalPrice) * 100;
   //     } else {
-  //       updatedDetails[index].discountedPrice = undefined;
+  //       item.discountPercentage = 0;
+  //       item.discountedPrice = null;
   //     }
 
-  //     updateOrderDetailAndTotal(updatedDetails);
-  //   };
+  //     recalculateItemSubtotal(item);
+  //   } else if (field === "subTotal") {
+  //     item.subTotal = Math.round(value) || 0;
+  //   }
 
-  //   // Handle subtotal change (calculate discount from it)
-  //   const handleSubtotalChange = (index: number, newSubtotal: number) => {
-  //     if (!order || newSubtotal < 0) return;
-  //     const updatedDetails = [...order.orderDetails];
-  //     const item = updatedDetails[index];
+  //   setEditedItems(newItems);
+  //   updateOrderTotal(newItems);
+  // };
 
-  //     const originalPrice = item.originalPrice[order.currency];
-  //     const totalBeforeDiscount = originalPrice * item.quantity;
+  const formatDecimal = (val: any) => parseFloat(Number(val).toFixed(2));
 
-  //     // Don't allow subtotal greater than total before discount
-  //     const clampedSubtotal = Math.min(newSubtotal, totalBeforeDiscount);
+  const updateItemField = (
+    index: number,
+    field: keyof IOrderDetail,
+    value: any
+  ) => {
+    if (!canEditOrder()) return;
 
-  //     const newDiscount = calculateDiscountFromSubtotal(
-  //       originalPrice,
-  //       item.quantity,
-  //       clampedSubtotal
-  //     );
+    const newItems = [...editedItems];
+    const item = newItems[index];
 
-  //     updatedDetails[index] = {
-  //       ...item,
-  //       subTotal: clampedSubtotal,
-  //       discountPercentage: newDiscount,
-  //     };
+    if (field === "quantity") {
+      let qty = parseInt(value) || 1;
 
-  //     // Update discounted price
-  //     if (newDiscount > 0) {
-  //       const discountedUnitPrice = Math.round(
-  //         originalPrice - (originalPrice * newDiscount) / 100
-  //       );
-  //       updatedDetails[index].discountedPrice = {
-  //         [order.currency]: discountedUnitPrice,
-  //       };
-  //     } else {
-  //       updatedDetails[index].discountedPrice = undefined;
-  //     }
+      // Get original qty for this item (to calculate actual available stock)
+      const originalQty = originalQuantities[item.variantId] || 0;
 
-  //     updateOrderDetailAndTotal(updatedDetails);
-  //   };
+      // Calculate actual available stock (current stock already includes originalQty)
+      // So available stock = item.stock - originalQty
+      const actualAvailableStock = item.stock - originalQty;
+      const newQtyNeeded = qty - originalQty;
 
-  console.log(order);
+      // Validate quantity vs actual available stock
+      if (!item.preOrder.enabled && newQtyNeeded > actualAvailableStock) {
+        const maxAllowedQty = originalQty + actualAvailableStock;
+        showWarningAlert(
+          "Quantity exceeds available stock",
+          `Available stock is ${actualAvailableStock} pcs. Maximum quantity you can order is ${maxAllowedQty} pcs (${originalQty} already ordered + ${actualAvailableStock} available). Quantity has been set to maximum.`
+        );
+        qty = maxAllowedQty;
+      }
+
+      item.quantity = qty;
+
+      // For B2B, recalculate all items because tier discount might change
+      if (order?.orderType === "B2B") {
+        const recalculatedItems = recalculateAllItemsWithDiscount(newItems);
+        setEditedItems(recalculatedItems);
+        updateOrderTotal(recalculatedItems);
+        return;
+      }
+
+      recalculateItemSubtotal(item);
+    } else if (field === "originalPrice") {
+      if (!item.originalPrice) item.originalPrice = {};
+      item.originalPrice[order!.currency] = formatDecimal(value);
+      recalculateItemSubtotal(item);
+    } else if (field === "discountPercentage") {
+      const discount = Math.max(0, Math.min(100, formatDecimal(value) || 0));
+      item.discountPercentage = discount;
+      recalculateItemSubtotal(item);
+    } else if (field === "discountedPrice") {
+      if (!item.discountedPrice) item.discountedPrice = {};
+
+      const discountedPrice = formatDecimal(value);
+      item.discountedPrice[order!.currency] = discountedPrice;
+
+      const originalPrice = item?.originalPrice?.[order!.currency] ?? 0;
+      if (originalPrice > 0 && discountedPrice < originalPrice) {
+        const discountAmount = originalPrice - discountedPrice;
+        item.discountPercentage = formatDecimal(
+          (discountAmount / originalPrice) * 100
+        );
+      } else {
+        item.discountPercentage = 0;
+        item.discountedPrice = null;
+      }
+
+      recalculateItemSubtotal(item);
+    } else if (field === "subTotal") {
+      item.subTotal = formatDecimal(value);
+    }
+
+    setEditedItems(newItems);
+    updateOrderTotal(newItems);
+  };
+
+  // Recalculate item subtotal based on quantity, price, and discount
+  const recalculateItemSubtotal = (item: IOrderDetail) => {
+    const originalPrice = item.originalPrice[order!.currency];
+    const qty = item.quantity;
+    const discount = item.discountPercentage || 0;
+
+    if (discount > 0) {
+      const discountedPrice = originalPrice - (originalPrice * discount) / 100;
+      if (!item.discountedPrice) item.discountedPrice = {};
+      item.discountedPrice[order!.currency] = formatDecimal(discountedPrice);
+      item.subTotal = formatDecimal(
+        item.discountedPrice[order!.currency] * qty
+      );
+    } else {
+      item.discountedPrice = null;
+      item.subTotal = formatDecimal(originalPrice * qty);
+    }
+  };
+
+  // Recalculate all items with B2B discount (for tier changes)
+  const recalculateAllItemsWithDiscount = (items: IOrderDetail[]) => {
+    if (order?.orderType !== "B2B") return items;
+
+    return items.map((item: any) => {
+      const itemBasePrice = item.originalPrice[order.currency];
+      const result = getDiscountedPriceForNewItem(
+        itemBasePrice,
+        item.quantity,
+        item.categoryId,
+        items,
+        item.resellerPricing
+      );
+
+      return {
+        ...item,
+        discountPercentage: result.discountPercentage,
+        discountedPrice: result.discountedPrice,
+        subTotal: item.quantity * result.finalPrice,
+      };
+    });
+  };
+
+  // Exchange rates for revenue calculation (convert to IDR)
+  const exchangeRates = {
+    IDR: 1,
+    USD: 15800,
+    SGD: 11800,
+    HKD: 2000,
+  };
+
+  // Calculate revenue in IDR
+  const calculateRevenue = (
+    totalAmount: number,
+    shippingCost: number,
+    discountShipping: number,
+    currency: string
+  ) => {
+    const finalTotal = totalAmount + shippingCost - discountShipping;
+    const rate = exchangeRates[currency as keyof typeof exchangeRates] || 1;
+    return Math.round(finalTotal * rate);
+  };
+
+  // Update order total amount and revenue
+  const updateOrderTotal = (items: IOrderDetail[]) => {
+    const total = items.reduce((sum, item) => sum + item.subTotal, 0);
+    if (order) {
+      const revenue = calculateRevenue(
+        total,
+        order.shippingCost,
+        order.discountShipping || 0,
+        order.currency
+      );
+      setOrder({ ...order, totalAmount: total, orderDetails: items, revenue });
+    }
+  };
+
+  // Delete item
+  const deleteItem = async (index: number) => {
+    if (!canEditOrder()) {
+      showErrorAlert(
+        "Cannot Edit Order",
+        "You can only edit orders with 'Pending Confirmation' or 'Awaiting Payment' status."
+      );
+      return;
+    }
+
+    if (editedItems.length === 1) {
+      showErrorAlert(
+        "Cannot Delete",
+        "Order must have at least one item. Consider canceling the order instead."
+      );
+      return;
+    }
+
+    const deletedItem = editedItems[index];
+    const newItems = editedItems.filter((_, i) => i !== index);
+
+    // For B2B, recalculate discounts after item removal
+    if (order?.orderType === "B2B") {
+      const recalculatedItems = recalculateAllItemsWithDiscount(newItems);
+      setEditedItems(recalculatedItems);
+      updateOrderTotal(recalculatedItems);
+    } else {
+      setEditedItems(newItems);
+      updateOrderTotal(newItems);
+    }
+  };
+
+  // Save changes to order
+  const handleSaveChanges = async () => {
+    // Validate order items only if order can be edited
+    if (canEditOrder()) {
+      const invalidItems = editedItems.filter(
+        (item) =>
+          item.quantity === 0 ||
+          !item.originalPrice[order!.currency] ||
+          item.originalPrice[order!.currency] === 0
+      );
+
+      if (invalidItems.length > 0) {
+        showErrorAlert(
+          "Invalid Items",
+          "Please ensure all items have quantity greater than 0 and original price greater than 0."
+        );
+        return;
+      }
+
+      if (editedItems.length === 0) {
+        showErrorAlert("No Items", "Order must have at least one item.");
+        return;
+      }
+    }
+
+    try {
+      setSaving(true);
+
+      // Stock updates will be handled by the backend API
+      await updateData<OrderData, Partial<OrderData>>("/api/admin/orders", id, {
+        status: order!.status,
+        orderDetails: editedItems,
+        totalAmount: order!.totalAmount,
+        shippingAddress: order!.shippingAddress,
+        shippingCost: order!.shippingCost,
+        discountShipping: order!.discountShipping || 0,
+        revenue: order!.revenue || 0,
+        currency: order!.currency,
+      });
+
+      showSuccessAlert("Success", "Order updated successfully");
+      router.push(`/dashboard/orders/${id}/detail`);
+    } catch (error: any) {
+      showErrorAlert("Error", error.message || "Failed to update order");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div>
       <div className="flex flex-wrap gap-2 items-center justify-between">
-        <Button
-          variant="ghost"
-          className="cursor-pointer"
-          onClick={() => router.back()}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Orders
+        <Button variant="ghost" className="cursor-pointer" asChild>
+          <Link href={"/dashboard/orders"}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Orders
+          </Link>
         </Button>
-
-        {order && (
-          <div className="flex gap-4">
-            <Button
-              disabled={saving}
-              size="sm"
-              className="cursor-pointer bg-primary hover:bg-primary/90"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        )}
       </div>
 
       {loading ? (
@@ -281,8 +721,29 @@ export default function EditOrderPage() {
       ) : (
         order && (
           <div className="my-5 space-y-8">
+            {/* Alert if order cannot be edited */}
+            {!canEditOrder() && (
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-lg">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-medium text-amber-800">
+                      Order Items Editing Restricted
+                    </h3>
+                    <p className="text-sm text-amber-700 mt-1">
+                      This order's items cannot be edited because its status is
+                      "{order.status}". Order items can only be modified when
+                      the status is "Pending Confirmation" or "Awaiting
+                      Payment". However, you can still update the order status
+                      and shipping information.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <div>
                   <div className="flex items-center space-x-2 text-gray-600 mb-3">
                     <FileText className="w-4 h-4" />
@@ -290,7 +751,7 @@ export default function EditOrderPage() {
                   </div>
                   <Input
                     className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
-                    required
+                    disabled
                     onChange={(e) =>
                       setOrder((prev) =>
                         prev ? { ...prev, invoiceNumber: e.target.value } : prev
@@ -342,10 +803,24 @@ export default function EditOrderPage() {
                     defaultValue={order.currency}
                   />
                 </div>
+
+                <div>
+                  <div className="flex items-center space-x-2 text-gray-600 ">
+                    <BanknoteArrowDown className="w-4 h-4" />
+                    <span className="text-sm font-medium">Revenue </span>
+                  </div>
+                  <span className="text-xs mb-2">(convert rupiah amount)</span>
+                  <Input
+                    type="text"
+                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
+                    disabled
+                    defaultValue={order.revenue || 0}
+                  />
+                </div>
               </div>
 
               {/* Status Selector */}
-              {/* <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="mt-6 pt-6 border-t border-gray-200">
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Order Status *
                 </Label>
@@ -362,12 +837,17 @@ export default function EditOrderPage() {
                     <SelectItem value="pending confirmation">
                       Pending Confirmation
                     </SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="awaiting payment">
+                      Awaiting Payment
+                    </SelectItem>
+                    <SelectItem value="payment confirmed">
+                      Payment Confirmed
+                    </SelectItem>
                     <SelectItem value="processing">Processing</SelectItem>
                     <SelectItem value="shipped">Shipped</SelectItem>
                   </SelectContent>
                 </Select>
-              </div> */}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -404,6 +884,7 @@ export default function EditOrderPage() {
                           )
                         }
                         value={order.shippingAddress.fullName}
+                        disabled={!canEditOrder()}
                       />
                     </div>
 
@@ -430,6 +911,7 @@ export default function EditOrderPage() {
                         value={order.shippingAddress.email}
                         className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
                         required
+                        disabled={!canEditOrder()}
                       />
                     </div>
 
@@ -455,6 +937,7 @@ export default function EditOrderPage() {
                         }
                         className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
                         required
+                        disabled={!canEditOrder()}
                       />
                     </div>
 
@@ -480,6 +963,7 @@ export default function EditOrderPage() {
                         value={order.shippingAddress.country}
                         className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
                         required
+                        disabled={!canEditOrder()}
                       />
                     </div>
 
@@ -504,6 +988,7 @@ export default function EditOrderPage() {
                         value={order.shippingAddress.city}
                         className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
                         required
+                        disabled={!canEditOrder()}
                       />
                     </div>
 
@@ -528,6 +1013,7 @@ export default function EditOrderPage() {
                         value={order.shippingAddress.district}
                         className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
                         required
+                        disabled={!canEditOrder()}
                       />
                     </div>
 
@@ -552,6 +1038,7 @@ export default function EditOrderPage() {
                         value={order.shippingAddress.zipCode}
                         className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
                         required
+                        disabled={!canEditOrder()}
                       />
                     </div>
                   </div>
@@ -577,6 +1064,7 @@ export default function EditOrderPage() {
                       className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
                       required
                       value={order.shippingAddress.address}
+                      disabled={!canEditOrder()}
                     />
                   </div>
                 </div>
@@ -607,6 +1095,7 @@ export default function EditOrderPage() {
                     <Input
                       type="number"
                       step="0.01"
+                      min="0"
                       onChange={(e) =>
                         setOrder((prev) =>
                           prev
@@ -619,7 +1108,35 @@ export default function EditOrderPage() {
                       }
                       value={order.shippingCost}
                       className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
+                      disabled={!canEditOrder()}
                       required
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2">
+                      Discount Shipping
+                    </Label>
+
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max={order.shippingCost}
+                      onChange={(e) =>
+                        setOrder((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                discountShipping:
+                                  parseFloat(e.target.value) || 0,
+                              }
+                            : prev
+                        )
+                      }
+                      value={order.discountShipping || 0}
+                      className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
+                      disabled={!canEditOrder()}
                     />
                   </div>
 
@@ -629,7 +1146,9 @@ export default function EditOrderPage() {
                     </span>
                     <span className="text-lg font-bold text-primary">
                       {currencyFormat(
-                        order.totalAmount + order.shippingCost,
+                        order.totalAmount +
+                          order.shippingCost -
+                          (order.discountShipping || 0),
                         order.currency
                       )}
                     </span>
@@ -641,15 +1160,29 @@ export default function EditOrderPage() {
             {/* Order Items Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center space-x-2">
-                  <Package className="w-5 h-5 text-primary" />
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Order Items
-                  </h2>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Package className="w-5 h-5 text-primary" />
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Order Items
+                      </h2>
+                    </div>
+                    <p className="text-gray-600 mt-1">
+                      {order.orderDetails.length} item(s) in this order
+                    </p>
+                  </div>
+                  {canEditOrder() && (
+                    <Button
+                      onClick={handleOpenAddProduct}
+                      size="sm"
+                      className="cursor-pointer bg-primary hover:bg-primary/90"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Product
+                    </Button>
+                  )}
                 </div>
-                <p className="text-gray-600 mt-1">
-                  {order.orderDetails.length} item(s) in this order
-                </p>
               </div>
 
               <div className="overflow-x-auto m-4 rounded-xl">
@@ -674,10 +1207,15 @@ export default function EditOrderPage() {
                       <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600 tracking-wider">
                         Subtotal
                       </th>
+                      {canEditOrder() && (
+                        <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600 tracking-wider">
+                          Action
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {order.orderDetails.map((item, index) => (
+                    {editedItems.map((item, index) => (
                       <tr
                         key={index}
                         className="hover:bg-gray-50 transition-colors"
@@ -690,12 +1228,23 @@ export default function EditOrderPage() {
                               className="w-16 h-16 object-cover rounded-lg border border-gray-200"
                             />
                             <div>
-                              <p className="font-semibold text-sm mb-2 text-foreground">
+                              <p className="font-semibold text-sm mb-1 text-foreground">
                                 {item.productName}
                               </p>
-                              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
-                                {item.variantName}
-                              </span>
+                              <p className="text-xs text-gray-500 mb-1.5">
+                                SKU: {item.sku || "-"}
+                              </p>
+                              <div className="flex flex-wrap gap-2 items-center">
+                                <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                                  {item.variantName}
+                                </span>
+                                {item.quantity > item.stock &&
+                                  item.preOrder.enabled && (
+                                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
+                                      Pre-Order
+                                    </span>
+                                  )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -706,13 +1255,15 @@ export default function EditOrderPage() {
                               min="1"
                               className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4 min-w-[50px] max-w-[70px]"
                               required
-                              defaultValue={item.quantity}
-                              //   onChange={(e) =>
-                              //     handleQuantityChange(
-                              //       index,
-                              //       parseInt(e.target.value) || 1
-                              //     )
-                              //   }
+                              value={item.quantity}
+                              onChange={(e) =>
+                                updateItemField(
+                                  index,
+                                  "quantity",
+                                  e.target.value
+                                )
+                              }
+                              disabled={!canEditOrder()}
                             />
                           </div>
                         </td>
@@ -724,13 +1275,15 @@ export default function EditOrderPage() {
                               min="0"
                               className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4 min-w-[90px] max-w-[120px]"
                               required
-                              defaultValue={item.originalPrice[order.currency]}
-                              //   onChange={(e) =>
-                              //     handleOriginalPriceChange(
-                              //       index,
-                              //       parseFloat(e.target.value) || 0
-                              //     )
-                              //   }
+                              value={item.originalPrice[order.currency]}
+                              onChange={(e) =>
+                                updateItemField(
+                                  index,
+                                  "originalPrice",
+                                  e.target.value
+                                )
+                              }
+                              disabled={!canEditOrder()}
                             />
                           </div>
                         </td>
@@ -743,13 +1296,15 @@ export default function EditOrderPage() {
                               max="100"
                               className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4 min-w-[90px] max-w-[120px]"
                               required
-                              defaultValue={item.discountPercentage || 0}
-                              //   onChange={(e) =>
-                              //     handleDiscountChange(
-                              //       index,
-                              //       parseFloat(e.target.value) || 0
-                              //     )
-                              //   }
+                              value={item.discountPercentage || 0}
+                              onChange={(e) =>
+                                updateItemField(
+                                  index,
+                                  "discountPercentage",
+                                  e.target.value
+                                )
+                              }
+                              disabled={!canEditOrder()}
                             />
                           </div>
                         </td>
@@ -760,18 +1315,19 @@ export default function EditOrderPage() {
                               step="0.01"
                               min="0"
                               className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4 min-w-[90px] max-w-[120px]"
-                              required
-                              defaultValue={
+                              value={
                                 item.discountedPrice
                                   ? item.discountedPrice[order.currency]
                                   : 0
                               }
-                              //   onChange={(e) =>
-                              //     handleSubtotalChange(
-                              //       index,
-                              //       parseFloat(e.target.value) || 0
-                              //     )
-                              //   }
+                              onChange={(e) =>
+                                updateItemField(
+                                  index,
+                                  "discountedPrice",
+                                  e.target.value
+                                )
+                              }
+                              disabled={!canEditOrder()}
                             />
                           </div>
                         </td>
@@ -782,29 +1338,46 @@ export default function EditOrderPage() {
                               step="0.01"
                               min="0"
                               className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4 min-w-[90px] max-w-[120px]"
-                              required
-                              defaultValue={item.subTotal}
-                              //   onChange={(e) =>
-                              //     handleSubtotalChange(
-                              //       index,
-                              //       parseFloat(e.target.value) || 0
-                              //     )
-                              //   }
+                              value={item.subTotal}
+                              onChange={(e) =>
+                                updateItemField(
+                                  index,
+                                  "subTotal",
+                                  e.target.value
+                                )
+                              }
+                              disabled
                             />
                           </div>
                         </td>
+                        {canEditOrder() && (
+                          <td className="px-6 py-4">
+                            <div className="flex justify-center">
+                              <button
+                                onClick={() => deleteItem(index)}
+                                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete item"
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
                   <tfoot className="bg-gray-50 border-t-2 border-gray-300">
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={canEditOrder() ? 6 : 5}
                         className="px-6 py-4 text-right font-semibold text-gray-900"
                       >
                         Total Amount:
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td
+                        className="px-6 py-4 text-right"
+                        colSpan={canEditOrder() ? 1 : 1}
+                      >
                         <span className="font-bold text-primary">
                           {currencyFormat(order.totalAmount, order.currency)}
                         </span>
@@ -814,6 +1387,212 @@ export default function EditOrderPage() {
                 </table>
               </div>
             </div>
+
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/dashboard/orders/${id}/detail`)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveChanges}
+                disabled={saving}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {saving ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Add Product Modal */}
+            <Dialog
+              open={showAddProductModal}
+              onOpenChange={setShowAddProductModal}
+            >
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add Product to Order</DialogTitle>
+                  <DialogDescription>
+                    Select a product to add to this order. You will then choose
+                    a variant.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="mt-4">
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      placeholder="Search products..."
+                      className="pl-10"
+                      value={productSearchQuery}
+                      onChange={(e) => setProductSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto">
+                    {products
+                      .filter((product) =>
+                        product.productName
+                          .toLowerCase()
+                          .includes(productSearchQuery.toLowerCase())
+                      )
+                      .map((product) => (
+                        <div
+                          key={product._id}
+                          onClick={() => handleSelectProduct(product)}
+                          className="border rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-gray-50 transition-all"
+                        >
+                          <div className="flex items-start space-x-3">
+                            <img
+                              src={
+                                product.productMedia?.[0]?.imageUrl ||
+                                "/placeholder.jpg"
+                              }
+                              alt={product.productName}
+                              className="w-20 h-20 object-cover rounded-lg"
+                            />
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-gray-900 mb-1">
+                                {product.productName}
+                              </h3>
+                              <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                                {product.productDescription}
+                              </p>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-500">
+                                  {product.productVariantsData?.length || 0}{" "}
+                                  variants
+                                </span>
+                                <span className="text-sm font-medium text-primary">
+                                  Click to select
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+
+                  {products.filter((product) =>
+                    product.productName
+                      .toLowerCase()
+                      .includes(productSearchQuery.toLowerCase())
+                  ).length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No products found
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Variant Selection Modal */}
+            <Dialog
+              open={showVariantSelection}
+              onOpenChange={setShowVariantSelection}
+            >
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Select Variant</DialogTitle>
+                  <DialogDescription>
+                    Choose a variant for {selectedProduct?.productName}.
+                    Quantity will be set to 1 (you can adjust it in the table).
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="mt-4 space-y-3">
+                  {selectedProduct?.productVariantsData?.map((variant) => {
+                    const isOutOfStock = !variant.stock || variant.stock === 0;
+
+                    return (
+                      <div
+                        key={variant._id}
+                        onClick={() =>
+                          !isOutOfStock && handleAddVariant(variant._id)
+                        }
+                        className={`border rounded-lg p-4 transition-all ${
+                          isOutOfStock
+                            ? "opacity-50 bg-gray-100 cursor-not-allowed"
+                            : "hover:border-primary hover:bg-gray-50 cursor-pointer"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={
+                                variant.image?.imageUrl || "/placeholder.jpg"
+                              }
+                              alt={variant.name}
+                              className="w-16 h-16 object-cover rounded-lg"
+                            />
+                            <div>
+                              <h4
+                                className={`font-semibold ${
+                                  isOutOfStock
+                                    ? "text-gray-500"
+                                    : "text-gray-900"
+                                }`}
+                              >
+                                {variant.name}
+                              </h4>
+                              <p
+                                className={`text-sm mt-1 ${
+                                  isOutOfStock
+                                    ? "text-red-600 font-medium"
+                                    : "text-gray-600"
+                                }`}
+                              >
+                                Stock: {variant.stock || 0}
+                                {isOutOfStock && " (Out of Stock)"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p
+                              className={`font-semibold ${
+                                isOutOfStock ? "text-gray-500" : "text-gray-900"
+                              }`}
+                            >
+                              {currencyFormat(
+                                variant.price?.[order.currency] || 0,
+                                order.currency
+                              )}
+                            </p>
+                            {!isOutOfStock ? (
+                              <span className="text-sm text-primary font-medium">
+                                Click to add
+                              </span>
+                            ) : (
+                              <span className="text-sm text-red-600 font-medium">
+                                Unavailable
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {(!selectedProduct?.productVariantsData ||
+                    selectedProduct.productVariantsData.length === 0) && (
+                    <div className="text-center py-8 text-gray-500">
+                      No variants available for this product
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )
       )}

@@ -69,30 +69,32 @@ export async function GET(request: NextRequest) {
     const totalProducts = await Product.countDocuments({ status: "active" });
 
     // Get orders data
-    const orders = await Order.find(orderQuery).select("status totalAmount");
+    const orders = await Order.find(orderQuery).select("status revenue");
 
-    // Calculate total revenue (from paid, processing, and shipped orders)
+    // Calculate total revenue (from awaiting payment, payment confirmed, processing, and shipped orders)
     const totalRevenue = orders
       .filter(
         (order) =>
-          order.status === "paid" ||
+          // order.status === "awaiting payment" ||
+          order.status === "payment confirmed" ||
           order.status === "processing" ||
           order.status === "shipped"
       )
-      .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+      .reduce((sum, order) => sum + (order.revenue || 0), 0);
 
     // Count orders by status
     const ordersByStatus = {
       pending_confirmation: 0,
-      paid: 0,
+      awaiting_payment: 0,
+      payment_confirmed: 0,
       processing: 0,
       shipped: 0,
     };
 
     orders.forEach((order) => {
-      // Map "pending confirmation" to "pending_confirmation" for consistency
+      // Map status with spaces to underscores for consistency
       const status = order.status.replace(
-        " ",
+        / /g,
         "_"
       ) as keyof typeof ordersByStatus;
       if (status in ordersByStatus) {

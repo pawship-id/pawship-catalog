@@ -2,25 +2,42 @@
 import {
   ArrowRight,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   ExternalLink,
   MessageCircle,
   Ruler,
 } from "lucide-react";
 import React, { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
 import { Button } from "../ui/button";
+import Image from "next/image";
+import { ProductData } from "@/lib/types/product";
+import { eachWeekOfInterval } from "date-fns";
 
-export default function ProductTabs() {
+interface ProductTabsProps {
+  product: ProductData;
+}
+
+export default function ProductTabs({ product }: ProductTabsProps) {
   const [expandedTab, setExpandedTab] = useState("description");
   const [activeTabSize, setActiveTabSize] = useState("size-chart");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const sizeImages = product.sizeProduct || [];
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? sizeImages.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === sizeImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
   const sizeChart = [
     {
       size: "XS",
@@ -70,48 +87,12 @@ export default function ProductTabs() {
         </div>
         {expandedTab === "description" && (
           <div className="mt-2 pb-4 text-gray-600">
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <h3 className="font-semibold text-gray-900">Overview</h3>
-                <p className="text-gray-700">
-                  Crafted from premium soft cotton, the Magician BIP Set offers
-                  all-day comfort with a lightweight and breathable feel. Gentle
-                  on the skin, it’s safe for babies and kids. The playful
-                  magician-themed design makes it not only functional but also
-                  stylish for everyday wear.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-gray-900">Key Features</h3>
-                <ul className="list-disc list-inside space-y-1">
-                  {[
-                    "Premium cotton material, soft & breathable",
-                    "Ergonomic design for maximum comfort",
-                    "Unique magician-themed pattern",
-                    "Perfect for daily use or special occasions",
-                  ].map((item, idx) => (
-                    <li key={idx}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-gray-900">
-                  Care Instructions
-                </h3>
-                <ul className="list-disc list-inside space-y-1">
-                  {[
-                    "Hand wash or machine wash on gentle cycle",
-                    "Use mild detergent, avoid bleach",
-                    "Dry in the shade to maintain color vibrancy",
-                    "Iron on low heat if needed",
-                  ].map((item, idx) => (
-                    <li key={idx}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            <div
+              className="prose max-w-none"
+              dangerouslySetInnerHTML={{
+                __html: product.productDescription,
+              }}
+            />
           </div>
         )}
       </div>
@@ -160,49 +141,56 @@ export default function ProductTabs() {
 
             {activeTabSize === "size-chart" && (
               <div className="space-y-6 mt-6">
-                <Table className="border border-gray-300 overflow-x-auto">
-                  <TableHeader>
-                    <TableRow className="bg-gray-100 hover:bg-gray-100">
-                      <TableHead className="font-medium border border-gray-300">
-                        Size
-                      </TableHead>
-                      <TableHead className="font-medium border border-gray-300">
-                        Neck (cm)
-                      </TableHead>
-                      <TableHead className="font-medium border border-gray-300">
-                        Chest (cm)
-                      </TableHead>
-                      <TableHead className="font-medium border border-gray-300">
-                        Length (cm)
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sizeChart.map((item, idx) => {
-                      return (
-                        <TableRow
-                          key={idx}
-                          className="hover:bg-gray-50 transition-colors border border-gray-300"
-                        >
-                          <TableCell className="font-medium border border-gray-300">
-                            {item.size}
-                          </TableCell>
-                          <TableCell className="border border-gray-300">
-                            {item.neck}
-                          </TableCell>
-                          <TableCell className="border border-gray-300">
-                            {item.chest}
-                          </TableCell>
-                          <TableCell className="border border-gray-300">
-                            {item.length}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                {/* Size Chart Image Slider */}
+                <div className="flex justify-center">
+                  <div className="relative w-full max-w-sm aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <Image
+                      src={sizeImages[currentImageIndex].imageUrl}
+                      alt={`Size chart ${currentImageIndex + 1}`}
+                      fill
+                      className="object-contain"
+                      priority
+                    />
 
-                <div>
+                    {/* Slider Controls - Only show if more than 1 image */}
+                    {sizeImages.length > 1 && (
+                      <>
+                        <button
+                          onClick={handlePrevImage}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+                          aria-label="Previous image"
+                        >
+                          <ChevronLeft className="w-5 h-5 text-gray-800" />
+                        </button>
+                        <button
+                          onClick={handleNextImage}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+                          aria-label="Next image"
+                        >
+                          <ChevronRight className="w-5 h-5 text-gray-800" />
+                        </button>
+
+                        {/* Dots Indicator */}
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                          {sizeImages.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setCurrentImageIndex(idx)}
+                              className={`w-2 h-2 rounded-full transition-all ${
+                                idx === currentImageIndex
+                                  ? "bg-primary w-6"
+                                  : "bg-white/60 hover:bg-white/80"
+                              }`}
+                              aria-label={`Go to image ${idx + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* <div>
                   <h3 className="font-semibold text-gray-900 mb-3">
                     Size Recommender
                   </h3>
@@ -250,7 +238,7 @@ export default function ProductTabs() {
                       Get Size Recommendation
                     </Button>
                   </form>
-                </div>
+                </div> */}
 
                 <div className="bg-secondary border border-primary/50 rounded-lg p-4 mb-4">
                   <h3 className="font-semibold text-gray-700 mb-3">
@@ -268,10 +256,22 @@ export default function ProductTabs() {
                     request.
                   </p>
                   <p className="text-sm text-gray-700 mb-3">
-                    👉 Talk to Our Agent to discuss your pet’s exact needs and
+                    👉 Talk to Our Agent to discuss your pet's exact needs and
                     get a tailored price
                   </p>
-                  <button className="flex items-center space-x-2 text-primary/90 hover:text-primary font-medium">
+                  <button
+                    onClick={() => {
+                      const productName = product.productName || "this product";
+                      const productLink = `${window.location.origin}/product/${product.slug || product._id}`;
+                      const message = `Hi Admin, I would like to inquire about the sizes for product *${productName}*. Please provide me with the information.\n\nProduct Link: ${productLink}`;
+                      const encodedMessage = encodeURIComponent(message);
+                      window.open(
+                        `https://wa.me/6281231351150?text=${encodedMessage}`,
+                        "_blank"
+                      );
+                    }}
+                    className="flex items-center space-x-2 text-primary/90 hover:text-primary font-medium cursor-pointer"
+                  >
                     <MessageCircle className="h-4 w-4" />
                     <span>Talk to Our Team</span>
                   </button>
@@ -396,15 +396,21 @@ export default function ProductTabs() {
                   Download ready-to-use product photos, lifestyle shots, and
                   captions to promote this item to your customers.
                 </p>
-                <a
-                  href=""
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Download Marketing Content</span>
-                </a>
+                {product.marketingLinks?.map((el: string, idx: number) => {
+                  return (
+                    <div key={idx}>
+                      <a
+                        href={el}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        <span>Download Marketing Content</span>
+                      </a>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -68,6 +68,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
     const formData = await req.formData();
     const name = formData.get("name") as string;
     const displayOnHomepage = formData.get("displayOnHomepage") === "true";
+    const displayOnNavbar = formData.get("displayOnNavbar") === "true";
     const rules = formData.get("rules") as string;
     const ruleIds = JSON.parse(formData.get("ruleIds") as string);
     const desktopImage = formData.get("desktopImage") as File | null;
@@ -138,6 +139,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
       name,
       slug,
       displayOnHomepage,
+      displayOnNavbar,
       rules,
       ruleIds,
     };

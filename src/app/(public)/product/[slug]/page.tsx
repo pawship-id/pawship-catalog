@@ -16,6 +16,8 @@ import { enrichProduct } from "@/lib/helpers/product";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useSession } from "next-auth/react";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import * as XLSX from "xlsx";
+import { filterProductsByCountry } from "@/lib/helpers/product-filter";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -23,7 +25,7 @@ export default function ProductDetailPage() {
 
   const router = useRouter();
 
-  const { currency } = useCurrency();
+  const { currency, userCountry, format } = useCurrency();
   const { data: session } = useSession();
 
   const [selectedVariant, setSelectedVariant] = useState<{
@@ -116,6 +118,35 @@ export default function ProductDetailPage() {
         (el: any) => el.variantId === selectedVariantDetail._id
       );
 
+      // Check stock availability including existing cart quantity (only for non-PO products)
+      if (!product.preOrder?.enabled) {
+        const existingQuantityInCart =
+          existingVariantIndex !== -1
+            ? cartItem[existingVariantIndex].quantity
+            : 0;
+
+        const totalQuantity = existingQuantityInCart + quantity;
+        const availableStock = selectedVariantDetail.stock;
+
+        // Validate against available stock
+        if (totalQuantity > availableStock) {
+          const remainingStock = availableStock - existingQuantityInCart;
+
+          if (remainingStock <= 0) {
+            showErrorAlert(
+              undefined,
+              `The product in the cart has reached the maximum stock of ${availableStock} pcs`
+            );
+          } else {
+            showErrorAlert(
+              undefined,
+              `There are already ${existingQuantityInCart} items in your cart. You can only add ${remainingStock} more.`
+            );
+          }
+          return;
+        }
+      }
+
       if (existingVariantIndex !== -1) {
         cartItem[existingVariantIndex].quantity += quantity;
       } else {
@@ -137,6 +168,160 @@ export default function ProductDetailPage() {
       setQuantity(1);
 
       showSuccessAlert(undefined, "Successfully added product to cart");
+    }
+  };
+
+  const handleDownloadBulkTemplate = async () => {
+    try {
+      // Fetch all products
+      const response = await fetch("/api/public/products");
+      const { data: allProducts } = await response.json();
+
+      if (!allProducts || allProducts.length === 0) {
+        showErrorAlert(undefined, "No products available");
+        return;
+      }
+
+      // Filter products by user country
+      const filteredProducts = filterProductsByCountry(
+        allProducts,
+        userCountry
+      );
+
+      if (filteredProducts.length === 0) {
+        showErrorAlert(undefined, "No products available for your country");
+        return;
+      }
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.aoa_to_sheet([]);
+
+      // Add Currency row at row 1
+      const currencyRow = ["Currency", `SGD/IDR/USD/HKD`];
+      XLSX.utils.sheet_add_aoa(worksheet, [currencyRow], { origin: "A1" });
+
+      // Row 2 is empty (blank row)
+
+      // Add headers at row 3
+      const headers = [
+        "Product Link",
+        "Product Name",
+        "Product Category",
+        "Variant",
+        "SKU",
+        `Price (before discount)`,
+        "Qty",
+      ];
+      XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A3" });
+
+      let currentRow = 4; // Start from row 4 (after currency, blank row, and header)
+
+      filteredProducts.forEach((prod: ProductData) => {
+        const productLink = `${window.location.origin}/product/${prod.slug}`;
+        const productName = prod.productName;
+        const productCategory = prod.categoryDetail?.name || "";
+
+        const variants = prod.productVariantsData || [];
+        const variantCount = variants.length;
+
+        variants.forEach((variant, index) => {
+          const variantAttrs = Object.entries(variant.attrs || {})
+            .map(([key, value]) => value)
+            .join(" / ");
+
+          const sku = variant.sku || "";
+
+          // Get price before discount
+          let priceBeforeDiscount = variant.price[currency] || 0;
+
+          // Add row data
+          const rowData = [
+            index === 0 ? productLink : "", // Product Link only on first row
+            index === 0 ? productName : "", // Product Name only on first row
+            index === 0 ? productCategory : "", // Category only on first row
+            variantAttrs || "-",
+            sku,
+            priceBeforeDiscount,
+            0,
+          ];
+
+          XLSX.utils.sheet_add_aoa(worksheet, [rowData], {
+            origin: `A${currentRow}`,
+          });
+
+          // Add hyperlink to Product Link cell (only on first variant row)
+          if (index === 0) {
+            const cellAddress = `A${currentRow}`;
+            if (!worksheet[cellAddress]) worksheet[cellAddress] = {};
+            worksheet[cellAddress].l = { Target: productLink };
+            worksheet[cellAddress].v = productLink;
+          }
+
+          currentRow++;
+        });
+
+        // Merge cells for Product Link, Name, and Category if multiple variants
+        if (variantCount > 1) {
+          const startRow = currentRow - variantCount;
+          const endRow = currentRow - 1;
+
+          // Merge Product Link column (A)
+          if (!worksheet["!merges"]) worksheet["!merges"] = [];
+          worksheet["!merges"].push({
+            s: { r: startRow - 1, c: 0 }, // start row, column A
+            e: { r: endRow - 1, c: 0 }, // end row, column A
+          });
+
+          // Merge Product Name column (B)
+          worksheet["!merges"].push({
+            s: { r: startRow - 1, c: 1 },
+            e: { r: endRow - 1, c: 1 },
+          });
+
+          // Merge Product Category column (C)
+          worksheet["!merges"].push({
+            s: { r: startRow - 1, c: 2 },
+            e: { r: endRow - 1, c: 2 },
+          });
+
+          // Set vertical alignment to center for merged cells
+          const cellAddressA = `A${startRow}`;
+          const cellAddressB = `B${startRow}`;
+          const cellAddressC = `C${startRow}`;
+
+          if (!worksheet[cellAddressA].s) worksheet[cellAddressA].s = {};
+          if (!worksheet[cellAddressB].s) worksheet[cellAddressB].s = {};
+          if (!worksheet[cellAddressC].s) worksheet[cellAddressC].s = {};
+
+          worksheet[cellAddressA].s.alignment = { vertical: "center" };
+          worksheet[cellAddressB].s.alignment = { vertical: "center" };
+          worksheet[cellAddressC].s.alignment = { vertical: "center" };
+        }
+      });
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Bulk Order");
+
+      // Set column widths
+      const columnWidths = [
+        { wch: 50 }, // Product Link
+        { wch: 30 }, // Product Name
+        { wch: 20 }, // Product Category
+        { wch: 20 }, // Variant
+        { wch: 15 }, // SKU
+        { wch: 25 }, // Price
+        { wch: 10 }, // Qty
+      ];
+      worksheet["!cols"] = columnWidths;
+
+      // Generate and download file
+      const fileName = `Bulk_Order_Template_${new Date().toISOString().split("T")[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+
+      showSuccessAlert(undefined, "Template downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      showErrorAlert(undefined, "Failed to download template");
     }
   };
 
@@ -193,7 +378,10 @@ export default function ProductDetailPage() {
             order template and get personalized pricing from your account
             manager.
           </p>
-          <button className="flex font-semibold items-center gap-2 text-blue-800 hover:text-blue-900  text-sm cursor-pointer">
+          <button
+            onClick={handleDownloadBulkTemplate}
+            className="flex font-semibold items-center gap-2 text-blue-800 hover:text-blue-900  text-sm cursor-pointer"
+          >
             <Download className="w-4 h-4" />
             Download Bulk Order Template
           </button>
@@ -235,7 +423,7 @@ export default function ProductDetailPage() {
             />
 
             <div className="hidden lg:block">
-              <ProductTabs />
+              <ProductTabs product={product} />
             </div>
           </div>
 
@@ -292,10 +480,10 @@ export default function ProductDetailPage() {
 
         {/* Tabs Section */}
         <div className="lg:hidden">
-          <ProductTabs />
+          <ProductTabs product={product} />
         </div>
 
-        <RelatedProduct />
+        <RelatedProduct selectedProduct={product} />
       </div>
     </div>
   );

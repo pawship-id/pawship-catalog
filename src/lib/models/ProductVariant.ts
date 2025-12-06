@@ -37,6 +37,9 @@ const ProductVariantSchema = new Schema<IProductVariant>(
     },
     sku: {
       type: String,
+      required: [true, "SKU is required"],
+      unique: true,
+      index: true,
     },
     attrs: {
       type: Map,

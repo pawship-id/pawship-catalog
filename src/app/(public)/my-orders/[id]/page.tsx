@@ -15,8 +15,22 @@ import {
   CheckCircle,
   Clock,
   Truck,
+  Upload,
+  Hourglass,
+  ImageIcon,
 } from "lucide-react";
 import Image from "next/image";
+import { UploadPaymentProofModal } from "@/components/orders/upload-payment-proof-modal";
+import { PaymentProofDetailModal } from "@/components/orders/payment-proof-detail-modal";
+import { currencyFormat } from "@/lib/helpers";
+
+interface PaymentProof {
+  imageUrl: string;
+  imagePublicId: string;
+  note?: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
 
 interface OrderDetail {
   _id: string;
@@ -25,9 +39,16 @@ interface OrderDetail {
   orderDate: string;
   totalAmount: number;
   shippingCost: number;
-  status: "pending confirmation" | "paid" | "processing" | "shipped";
+  discountShipping: number;
+  status:
+    | "pending confirmation"
+    | "awaiting payment"
+    | "payment confirmed"
+    | "processing"
+    | "shipped";
   currency: string;
   orderType: "B2C" | "B2B";
+  paymentProofs: PaymentProof[];
   shippingAddress: {
     fullName: string;
     email: string;
@@ -59,26 +80,34 @@ const statusConfig = {
   "pending confirmation": {
     label: "Pending Confirmation",
     icon: Clock,
-    color: "text-yellow-600 bg-yellow-50",
-    description: "We are waiting for your payment confirmation",
+    color: "text-orange-600 bg-orange-50",
+    description:
+      "We're reviewing your order and calculating shipping.\nOur team will message you on WhatsApp shortly with your final total.",
   },
-  paid: {
-    label: "Payment Confirmed",
+  "awaiting payment": {
+    label: "Awaiting Payment",
     icon: CheckCircle,
     color: "text-green-600 bg-green-50",
-    description: "Your payment has been confirmed",
+    description:
+      "Your total has been confirmed. Please complete your payment and upload your proof here.",
+  },
+  "payment confirmed": {
+    label: "Payment Confirmed",
+    icon: CheckCircle,
+    color: "text-blue-600 bg-blue-50",
+    description: "Thank you! Your payment has been verified.",
   },
   processing: {
     label: "Processing",
     icon: Package,
-    color: "text-blue-600 bg-blue-50",
-    description: "We are preparing your order",
+    color: "text-purple-600 bg-purple-50",
+    description: "Your order is being packed with love 💛",
   },
   shipped: {
     label: "Shipped",
     icon: Truck,
-    color: "text-purple-600 bg-purple-50",
-    description: "Your order is on the way",
+    color: "text-green-600 bg-green-50",
+    description: "Your order is on the way!",
   },
 };
 
@@ -89,6 +118,12 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedProof, setSelectedProof] = useState<PaymentProof | null>(null);
+  const [showProofDetail, setShowProofDetail] = useState(false);
+  const [productSlugs, setProductSlugs] = useState<{
+    [productId: string]: string;
+  }>({});
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -110,6 +145,8 @@ export default function OrderDetailPage() {
 
       if (result.success) {
         setOrder(result.data);
+        // Fetch latest slugs for all products in the order
+        await fetchProductSlugs(result.data.orderDetails);
       } else {
         setError(result.message || "Failed to fetch order");
       }
@@ -121,15 +158,39 @@ export default function OrderDetailPage() {
     }
   };
 
-  const formatPrice = (amount: number, currency: string) => {
-    const currencies: { [key: string]: string } = {
-      IDR: "Rp",
-      USD: "$",
-      SGD: "S$",
-      HKD: "HK$",
-    };
-    const symbol = currencies[currency] || currency;
-    return `${symbol} ${amount.toLocaleString()}`;
+  const fetchProductSlugs = async (
+    orderDetails: OrderDetail["orderDetails"]
+  ) => {
+    try {
+      const productIds = orderDetails.map((item) => item.productId);
+      const uniqueProductIds = [...new Set(productIds)];
+
+      // Fetch all products in parallel
+      const slugsMap: { [productId: string]: string } = {};
+
+      await Promise.all(
+        uniqueProductIds.map(async (productId) => {
+          try {
+            const response = await fetch(`/api/public/products/${productId}`);
+            const result = await response.json();
+
+            if (result.success && result.data) {
+              // Use slug if available, otherwise fallback to productId
+              slugsMap[productId] = result.data.slug || productId;
+            } else {
+              slugsMap[productId] = productId;
+            }
+          } catch (error) {
+            console.error(`Error fetching product ${productId}:`, error);
+            slugsMap[productId] = productId;
+          }
+        })
+      );
+
+      setProductSlugs(slugsMap);
+    } catch (error) {
+      console.error("Error fetching product slugs:", error);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -141,14 +202,6 @@ export default function OrderDetailPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getProductPrice = (item: OrderDetail["orderDetails"][0]) => {
-    const currency = order?.currency || "IDR";
-    if (item.discountedPrice && item.discountedPrice[currency]) {
-      return item.discountedPrice[currency];
-    }
-    return item.originalPrice[currency];
   };
 
   if (status === "loading" || loading) {
@@ -180,10 +233,9 @@ export default function OrderDetailPage() {
   }
 
   const StatusIcon = statusConfig[order.status].icon;
-  const subtotal = order.totalAmount - order.shippingCost;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-6">
         <Link href="/my-orders">
@@ -238,25 +290,30 @@ export default function OrderDetailPage() {
                     width:
                       order.status === "pending confirmation"
                         ? "0%"
-                        : order.status === "paid"
-                          ? "33%"
-                          : order.status === "processing"
-                            ? "66%"
-                            : "100%",
+                        : order.status === "awaiting payment"
+                          ? "25%"
+                          : order.status === "payment confirmed"
+                            ? "50%"
+                            : order.status === "processing"
+                              ? "75%"
+                              : "100%",
                   }}
                 ></div>
               </div>
 
               {/* Timeline Steps */}
               {Object.entries(statusConfig).map(([key, config], index) => {
-                const isCompleted =
-                  (key === "pending confirmation" &&
-                    order.status !== "pending confirmation") ||
-                  (key === "paid" &&
-                    ["paid", "processing", "shipped"].includes(order.status)) ||
-                  (key === "processing" &&
-                    ["processing", "shipped"].includes(order.status)) ||
-                  (key === "shipped" && order.status === "shipped");
+                const statusOrder = [
+                  "pending confirmation",
+                  "awaiting payment",
+                  "payment confirmed",
+                  "processing",
+                  "shipped",
+                ];
+                const currentIndex = statusOrder.indexOf(order.status);
+                const stepIndex = statusOrder.indexOf(key);
+
+                const isCompleted = stepIndex < currentIndex;
                 const isCurrent = key === order.status;
 
                 return (
@@ -299,62 +356,106 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {order.orderDetails.map((item, index) => (
-                  <div key={index}>
-                    <div className="flex gap-4">
-                      <div className="relative w-20 h-20 rounded border overflow-hidden flex-shrink-0">
-                        <Image
-                          src={item.image.imageUrl}
-                          alt={item.productName}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold mb-1">
-                          {item.productName}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {item.variantName}
-                        </p>
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm text-muted-foreground">
-                            x{item.quantity}
+                {order.orderDetails.map((item, index) => {
+                  const productSlug =
+                    productSlugs[item.productId] || item.productId;
+
+                  return (
+                    <div key={index}>
+                      <div className="flex gap-4">
+                        <Link
+                          href={`/product/${productSlug}`}
+                          className="block flex-shrink-0"
+                        >
+                          <div className="relative w-25 h-25 rounded-lg border overflow-hidden hover:opacity-80 transition-opacity cursor-pointer">
+                            <Image
+                              src={item.image.imageUrl}
+                              alt={item.productName}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        </Link>
+                        <div className="flex-1 min-w-0">
+                          <Link
+                            href={`/product/${productSlug}`}
+                            className="hover:text-primary transition-colors block"
+                          >
+                            <h3 className="text-base font-semibold text-gray-800 mb-1">
+                              {item.productName}
+                            </h3>
+                          </Link>
+                          <p className="text-xs text-gray-600 mb-2">
+                            Variant: {item.variantName}
                           </p>
-                          <div className="text-right">
-                            {item.discountedPrice &&
-                            item.discountedPrice[order.currency] ? (
-                              <>
-                                <p className="text-xs text-muted-foreground line-through">
-                                  {formatPrice(
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col space-y-0.5">
+                              {item.discountedPrice &&
+                              item.discountedPrice[order.currency] ? (
+                                <>
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="text-base font-bold text-orange-600">
+                                      {currencyFormat(
+                                        item.discountedPrice[order.currency],
+                                        order.currency
+                                      )}
+                                    </span>
+                                    {item.originalPrice[order.currency] &&
+                                      item.discountedPrice[order.currency] && (
+                                        <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                          -
+                                          {Math.round(
+                                            ((item.originalPrice[
+                                              order.currency
+                                            ] -
+                                              item.discountedPrice[
+                                                order.currency
+                                              ]) /
+                                              item.originalPrice[
+                                                order.currency
+                                              ]) *
+                                              100
+                                          )}
+                                          %
+                                        </span>
+                                      )}
+                                  </div>
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {currencyFormat(
+                                      item.originalPrice[order.currency],
+                                      order.currency
+                                    )}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-base font-bold text-gray-800">
+                                  {currencyFormat(
                                     item.originalPrice[order.currency],
                                     order.currency
                                   )}
-                                </p>
-                                <p className="font-semibold">
-                                  {formatPrice(
-                                    item.discountedPrice[order.currency],
-                                    order.currency
-                                  )}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="font-semibold">
-                                {formatPrice(
-                                  item.originalPrice[order.currency],
-                                  order.currency
-                                )}
-                              </p>
-                            )}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              x{item.quantity}
+                            </div>
+                          </div>
+                          <div className="flex flex-col min-[380px]:flex-row justify-between items-start md:items-center mt-3 pt-2 border-t border-gray-250">
+                            <span className="text-sm font-semibold text-gray-700">
+                              Subtotal
+                            </span>
+                            <span className="text-base font-bold text-primary">
+                              {currencyFormat(item.subTotal, order.currency)}
+                            </span>
                           </div>
                         </div>
                       </div>
+                      {index < order.orderDetails.length - 1 && (
+                        <Separator className="mt-4" />
+                      )}
                     </div>
-                    {index < order.orderDetails.length - 1 && (
-                      <Separator className="mt-4" />
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -402,33 +503,179 @@ export default function OrderDetailPage() {
             <CardContent className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatPrice(subtotal, order.currency)}</span>
+                <span>{currencyFormat(order.totalAmount, order.currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shipping Cost</span>
-                <span>{formatPrice(order.shippingCost, order.currency)}</span>
+                <span>
+                  {currencyFormat(order.shippingCost, order.currency)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Discount Shipping</span>
+                <span className="font-semibold text-red-600">
+                  - {currencyFormat(order.discountShipping, order.currency)}
+                </span>
               </div>
               <Separator />
               <div className="flex justify-between text-base font-bold">
                 <span>Total</span>
                 <span className="text-primary">
-                  {formatPrice(order.totalAmount, order.currency)}
+                  {currencyFormat(
+                    order.totalAmount +
+                      order.shippingCost -
+                      (order.discountShipping || 0),
+                    order.currency
+                  )}
                 </span>
-              </div>
-              <div className="pt-2 space-y-1">
-                <p className="text-xs text-muted-foreground">
-                  Order Type:{" "}
-                  <span className="font-medium">{order.orderType}</span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Currency:{" "}
-                  <span className="font-medium">{order.currency}</span>
-                </p>
               </div>
             </CardContent>
           </Card>
+
+          {order.status !== "pending confirmation" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  {order.status === "awaiting payment" ? (
+                    <>
+                      <Hourglass className="h-5 w-5" />
+                      Confirmation Payment
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="h-5 w-5" />
+                      Payment Proofs ({order.paymentProofs.length})
+                    </>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 text-sm">
+                {/* Payment proof upload / display area */}
+                {order && (
+                  <div>
+                    {order.status === "awaiting payment" && (
+                      <div className="space-y-4 mb-5">
+                        <p className="text-sm">
+                          Already transferred? Upload your payment proof here.
+                          We’ll confirm your order shortly.
+                        </p>
+                        <Button
+                          onClick={() => setShowUploadModal(true)}
+                          className="gap-2"
+                          size="sm"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload payment proof
+                        </Button>
+
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`https://wa.me/?text=${encodeURIComponent(
+                              `Halo, saya sudah melakukan pembayaran untuk pesanan ${order.invoiceNumber}`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md shadow-md transition-all duration-300"
+                          >
+                            <img
+                              src="/images/icon-wa.png"
+                              className="w-5 h-5"
+                              alt="WhatsApp Icon"
+                            />
+                            <span className="text-sm font-medium">
+                              Chat via WhatsApp
+                            </span>
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Display existing proofs */}
+                    {order.paymentProofs && order.paymentProofs.length > 0 && (
+                      <div className="space-y-3">
+                        {order.status === "awaiting payment" && (
+                          <>
+                            <Separator />
+                            <div className="flex items-center justify-between pt-2">
+                              <h4 className="text-base font-semibold text-gray-900">
+                                Payment Proofs ({order.paymentProofs.length})
+                              </h4>
+                            </div>
+                          </>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          {order.paymentProofs.map((proof, index) => (
+                            <div
+                              key={index}
+                              className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer group"
+                              onClick={() => {
+                                setSelectedProof(proof);
+                                setShowProofDetail(true);
+                              }}
+                            >
+                              <img
+                                src={proof.imageUrl}
+                                alt={`Payment proof ${index + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
+
+      {/* Upload Modal */}
+      {params.id && (
+        <UploadPaymentProofModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          orderId={params.id as string}
+          onSuccess={fetchOrderDetail}
+        />
+      )}
+
+      {/* Payment Proof Detail Modal */}
+      <PaymentProofDetailModal
+        isOpen={showProofDetail}
+        onClose={() => {
+          setShowProofDetail(false);
+          setSelectedProof(null);
+        }}
+        proof={selectedProof}
+        proofNumber={
+          selectedProof
+            ? order?.paymentProofs.findIndex(
+                (p) => p.imageUrl === selectedProof.imageUrl
+              )! + 1
+            : undefined
+        }
+        totalProofs={order?.paymentProofs.length}
+        onNext={() => {
+          if (!order || !selectedProof) return;
+          const currentIndex = order.paymentProofs.findIndex(
+            (p) => p.imageUrl === selectedProof.imageUrl
+          );
+          if (currentIndex < order.paymentProofs.length - 1) {
+            setSelectedProof(order.paymentProofs[currentIndex + 1]);
+          }
+        }}
+        onPrev={() => {
+          if (!order || !selectedProof) return;
+          const currentIndex = order.paymentProofs.findIndex(
+            (p) => p.imageUrl === selectedProof.imageUrl
+          );
+          if (currentIndex > 0) {
+            setSelectedProof(order.paymentProofs[currentIndex - 1]);
+          }
+        }}
+      />
     </div>
   );
 }

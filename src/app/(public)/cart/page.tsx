@@ -12,6 +12,13 @@ import {
   Phone,
 } from "lucide-react";
 import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createData, getById } from "@/lib/apiService";
 import { ProductData } from "@/lib/types/product";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -25,7 +32,11 @@ import {
   OrderData,
   OrderForm,
 } from "@/lib/types/order";
-import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
+import {
+  showConfirmAlert,
+  showErrorAlert,
+  showWarningAlert,
+} from "@/lib/helpers/sweetalert2";
 import { useRouter } from "next/navigation";
 
 export default function CartPage() {
@@ -35,6 +46,25 @@ export default function CartPage() {
   const { activePromos, loading: promosLoading } = usePromo();
 
   const { currency, format } = useCurrency();
+  console.log(currency);
+
+  const countries = [
+    { country: "Indonesia", code: "ID" },
+    { country: "Singapore", code: "SG" },
+    { country: "Malaysia", code: "MY" },
+    { country: "Thailand", code: "TH" },
+    { country: "Philippines", code: "PH" },
+    { country: "Vietnam", code: "VN" },
+    { country: "Hong Kong", code: "HK" },
+    { country: "China", code: "CN" },
+    { country: "Japan", code: "JP" },
+    { country: "South Korea", code: "KR" },
+    { country: "Australia", code: "AU" },
+    { country: "New Zealand", code: "NZ" },
+    { country: "United States", code: "US" },
+    { country: "United Kingdom", code: "UK" },
+    { country: "Canada", code: "CA" },
+  ];
 
   const [formData, setFormData] = useState<OrderForm>({
     orderDate: new Date(),
@@ -42,7 +72,8 @@ export default function CartPage() {
     totalAmount: 0,
     status: "pending confirmation" as
       | "pending confirmation"
-      | "paid"
+      | "awaiting payment"
+      | "payment confirmed"
       | "processing"
       | "shipped",
     shippingAddress: {
@@ -59,6 +90,7 @@ export default function CartPage() {
     orderDetails: [] as IOrderDetail[],
     currency,
     orderType: session?.user.role === "reseller" ? "B2B" : "B2C",
+    discountShipping: 0,
   });
 
   const router = useRouter();
@@ -294,7 +326,8 @@ export default function CartPage() {
     }
   };
 
-  const shipping = totalAmount > 50 ? 0 : 9.99;
+  // const shipping = totalAmount > 50 ? 0 : 9.99;
+  const shipping = 0;
   const total = totalAmount + shipping;
 
   // B2B: Calculate tier discount for a specific product based on total category quantities in cart
@@ -473,6 +506,7 @@ export default function CartPage() {
               categoryId: data.categoryId,
               variantId: el.variantId,
               variantName: variant.name,
+              sku: variant.sku,
               originalPrice: variant.price,
               quantity: el.quantity,
               image:
@@ -537,6 +571,50 @@ export default function CartPage() {
     }
   }, [currency, status, promosLoading, activePromos]);
 
+  // Sync currency with formData when currency changes
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      currency,
+    }));
+  }, [currency]);
+
+  // Fetch user profile to populate shipping address
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (status === "authenticated" && session?.user) {
+        setIsLoading(true);
+        try {
+          const response = await fetch("/api/public/profile");
+          if (response.ok) {
+            const { data } = await response.json();
+            // Populate shipping address from user profile
+            setFormData((prev) => ({
+              ...prev,
+              shippingAddress: {
+                fullName: data.name || "",
+                email: data.email || "",
+                phone: data.phone || "",
+                country: data.address?.country || "",
+                city: data.address?.city || "",
+                district: data.address?.district || "",
+                zipCode: data.address?.zipCode || "",
+                address: data.address?.address || "",
+              },
+            }));
+          }
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
+          // Silently fail - user can still fill in the form manually
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [status, session]);
+
   // Show loading while session or promos are loading
   if (isLoading || promosLoading) {
     return <LoadingPage />;
@@ -544,26 +622,32 @@ export default function CartPage() {
 
   if (!isLoading && formData.orderDetails.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
-        <div className="text-center">
-          <div className="bg-gradient-to-r from-orange-400 to-rose-400 p-6 sm:p-8 rounded-full inline-flex mb-6 sm:mb-8">
-            <ShoppingBag className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3 sm:mb-4">
-            Your Cart is Empty
+      <main className="container mx-auto px-4 py-10">
+        <div className="mb-8 space-y-2">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
+            Cart Product
           </h1>
-          <p className="text-gray-600 mb-6 sm:mb-8 px-4">
+          <p className="text-medium lg:text-lg text-muted-foreground">
+            All the products you have selected to purchase
+          </p>
+        </div>
+
+        <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+          <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-600 mb-2">
+            Your Cart is empty
+          </h2>
+          <p className="text-gray-500 mb-6">
             Looks like you haven't added any items to your cart yet.
           </p>
-          <Link
-            href="/catalog"
-            className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-orange-400 to-rose-400 text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+          <button
+            onClick={() => router.push("/catalog")}
+            className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors font-medium"
           >
-            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            Continue Shopping
-          </Link>
+            Browse Products
+          </button>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -664,22 +748,8 @@ export default function CartPage() {
                             <img
                               src={item.image?.imageUrl}
                               alt={item.name}
-                              className={`w-30 h-30 object-cover rounded-lg ${
-                                item.quantity > item.stock &&
-                                !item.preOrder.enabled
-                                  ? "opacity-50 grayscale"
-                                  : ""
-                              }`}
+                              className="w-30 h-30 object-cover rounded-lg"
                             />
-
-                            {item.quantity > item.stock &&
-                              !item.preOrder.enabled && (
-                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                                  <span className="text-white text-sm font-bold">
-                                    Out of Stock
-                                  </span>
-                                </div>
-                              )}
                           </div>
                         </Link>
 
@@ -748,6 +818,18 @@ export default function CartPage() {
 
                                     if (isNaN(value) || value <= 0) {
                                       updateQuantity(item.variantId, 1);
+                                    } else if (
+                                      !item.preOrder.enabled &&
+                                      value > item.stock
+                                    ) {
+                                      showWarningAlert(
+                                        "Quantity exceeds available stock",
+                                        `Maximum available stock is ${item.stock} pcs`
+                                      );
+                                      updateQuantity(
+                                        item.variantId,
+                                        item.stock
+                                      );
                                     } else {
                                       updateQuantity(item.variantId, value);
                                     }
@@ -764,8 +846,8 @@ export default function CartPage() {
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity > item.stock &&
-                                    !item.preOrder.enabled
+                                    !item.preOrder.enabled &&
+                                    item.quantity >= item.stock
                                   }
                                 >
                                   <Plus className="h-4 w-4" />
@@ -798,22 +880,8 @@ export default function CartPage() {
                             <img
                               src={item.image?.imageUrl}
                               alt={item.name}
-                              className={`w-25 h-25 object-cover rounded-lg ${
-                                item.quantity > item.stock &&
-                                !item.preOrder.enabled
-                                  ? "opacity-50 grayscale"
-                                  : ""
-                              }`}
+                              className="w-25 h-25 object-cover rounded-lg"
                             />
-
-                            {item.quantity > item.stock &&
-                              !item.preOrder.enabled && (
-                                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                                  <span className="text-white text-sm font-bold">
-                                    Out of Stock
-                                  </span>
-                                </div>
-                              )}
                           </div>
                         </Link>
 
@@ -882,6 +950,18 @@ export default function CartPage() {
 
                                     if (isNaN(value) || value <= 0) {
                                       updateQuantity(item.variantId, 1);
+                                    } else if (
+                                      !item.preOrder.enabled &&
+                                      value > item.stock
+                                    ) {
+                                      showWarningAlert(
+                                        "Quantity exceeds available stock",
+                                        `Maximum available stock is ${item.stock} pcs`
+                                      );
+                                      updateQuantity(
+                                        item.variantId,
+                                        item.stock
+                                      );
                                     } else {
                                       updateQuantity(item.variantId, value);
                                     }
@@ -898,8 +978,8 @@ export default function CartPage() {
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity > item.stock &&
-                                    !item.preOrder.enabled
+                                    !item.preOrder.enabled &&
+                                    item.quantity >= item.stock
                                   }
                                 >
                                   <Plus className="h-3 w-3" />
@@ -938,22 +1018,8 @@ export default function CartPage() {
                               <img
                                 src={item.image?.imageUrl}
                                 alt={item.name}
-                                className={`w-25 h-25 object-cover rounded-lg ${
-                                  item.quantity > item.stock &&
-                                  !item.preOrder.enabled
-                                    ? "opacity-50 grayscale"
-                                    : ""
-                                }`}
+                                className="w-25 h-25 object-cover rounded-lg"
                               />
-
-                              {item.quantity > item.stock &&
-                                !item.preOrder.enabled && (
-                                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                                    <span className="text-white text-sm font-bold">
-                                      Out of Stock
-                                    </span>
-                                  </div>
-                                )}
                             </div>
                           </Link>
 
@@ -1037,6 +1103,18 @@ export default function CartPage() {
 
                                     if (isNaN(value) || value <= 0) {
                                       updateQuantity(item.variantId, 1);
+                                    } else if (
+                                      !item.preOrder.enabled &&
+                                      value > item.stock
+                                    ) {
+                                      showWarningAlert(
+                                        "Quantity exceeds available stock",
+                                        `Maximum available stock is ${item.stock} pcs`
+                                      );
+                                      updateQuantity(
+                                        item.variantId,
+                                        item.stock
+                                      );
                                     } else {
                                       updateQuantity(item.variantId, value);
                                     }
@@ -1053,8 +1131,8 @@ export default function CartPage() {
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
-                                    item.quantity > item.stock &&
-                                    !item.preOrder.enabled
+                                    !item.preOrder.enabled &&
+                                    item.quantity >= item.stock
                                   }
                                 >
                                   <Plus className="h-3 w-3" />
@@ -1142,15 +1220,23 @@ export default function CartPage() {
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                       <span>Country</span>
                     </label>
-                    <input
-                      type="text"
+                    <Select
                       value={formData.shippingAddress.country}
-                      onChange={(e) =>
-                        handleAddressChange("country", e.target.value)
+                      onValueChange={(value) =>
+                        handleAddressChange("country", value)
                       }
-                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
-                      placeholder="Enter your country"
-                    />
+                    >
+                      <SelectTrigger className="w-full p-3 py-6 h-auto border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80">
+                        <SelectValue placeholder="Select your country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map((c) => (
+                          <SelectItem key={c.code} value={c.country}>
+                            {c.country}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>

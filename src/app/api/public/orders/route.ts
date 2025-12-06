@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       ...body,
       userId: session.user.id,
       revenue,
+      discountShipping: body.discountShipping || 0, // Set default 0 if not provided
     };
 
     // Generate unique invoice number based on shipping address country
@@ -41,6 +42,18 @@ export async function POST(req: NextRequest) {
       body.shippingAddress.country
     );
     orderData.invoiceNumber = invoiceNumber;
+
+    // Initialize status log with first entry
+    (orderData as any).statusLog = [
+      {
+        status: body.status || "pending confirmation",
+        date: new Date(),
+        username: session.user.name || session.user.email || "User",
+      },
+    ];
+
+    // Initialize empty payment proofs array
+    (orderData as any).paymentProofs = [];
 
     // orderData.orderDetails.forEach((el: IOrderDetail) => {
     //   delete el.stock;

@@ -23,7 +23,7 @@ export default function OrderSuccess() {
     const items = order?.orderDetails
       .map(
         (el) =>
-          `• ${el.quantity}x ${el.productName} (${el.variantName}) : ${currencyFormat(el.subTotal, order.currency)}`
+          `• ${el.quantity}x ${el.productName} ${el.variantName} ${el.sku ? `(SKU: ${el.sku})` : "(SKU: -)"} : ${currencyFormat(el.subTotal, order.currency)}`
       )
       .join("\n");
 
