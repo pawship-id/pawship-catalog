@@ -111,7 +111,7 @@ export default function ProductCard({
               Best Sellers
             </span>
           ) : (
-            <p>diskon</p>
+            ""
           )
           // product.originalPrice && discount > 0 ? (
           //   <span className="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
