@@ -86,7 +86,8 @@ export default function TableOrder({
                 <TableCell>
                   <span className="capitalize">
                     {currencyFormat(
-                      item.totalAmount + item.shippingCost,
+                      item.totalAmount +
+                        (item.shippingCost - item.discountShipping),
                       item.currency
                     )}
                   </span>
