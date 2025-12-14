@@ -374,3 +374,40 @@
   margin-bottom: 0.5em;
   line-height: 1.5;
 }
+
+/* Product Description Styles */
+.prose ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-left: 0.5rem;
+}
+
+.prose ol {
+  list-style-type: decimal;
+  margin-left: 1.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-left: 0.5rem;
+}
+
+.prose li {
+  margin-bottom: 0.375rem;
+  line-height: 1.6;
+}
+
+.prose li:last-child {
+  margin-bottom: 0;
+}
+
+.prose p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.prose br {
+  display: block;
+  content: "";
+  margin-top: 0.5rem;
+}

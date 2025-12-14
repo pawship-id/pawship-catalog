@@ -190,6 +190,106 @@ function parseArrayData(data) {
     return data.split(',').map(item => item.trim()).filter(item => item !== '');
 }
 
+// Helper function to format product description from Excel
+function formatProductDescription(description) {
+    if (!description || description.trim() === '') return '';
+
+    let formatted = description;
+
+    // Replace line breaks from Excel (\n or \r\n) with <br> tags
+    formatted = formatted.replace(/\r\n/g, '\n');
+
+    // Detect paragraph breaks (double line breaks) and mark them
+    formatted = formatted.replace(/\n\n+/g, '\n||PARAGRAPH||\n');
+
+    // Replace remaining single line breaks with <br>
+    formatted = formatted.replace(/\n/g, '<br>');
+
+    // Replace paragraph markers with double <br> for spacing
+    formatted = formatted.replace(/\|\|PARAGRAPH\|\|/g, '<br>');
+
+    // Detect bullet points or list items (lines starting with -, *, •, or numbers)
+    // Split by <br> to process each line
+    const lines = formatted.split('<br>');
+    const processedLines = lines.map(line => {
+        const trimmedLine = line.trim();
+
+        // Check if line starts with bullet point markers
+        if (trimmedLine.match(/^[-*•]\s+/)) {
+            // Remove the marker and wrap in list item
+            const content = trimmedLine.replace(/^[-*•]\s+/, '');
+            return `<li>${content}</li>`;
+        }
+
+        // Check if line starts with number (e.g., "1. ", "2. ")
+        if (trimmedLine.match(/^\d+\.\s+/)) {
+            // Remove the number and wrap in list item
+            const content = trimmedLine.replace(/^\d+\.\s+/, '');
+            return `<li data-numbered="true">${content}</li>`;
+        }
+
+        return line;
+    });
+
+    // Group consecutive list items into <ul> or <ol> tags
+    let result = '';
+    let inList = false;
+    let isNumberedList = false;
+
+    for (let i = 0; i < processedLines.length; i++) {
+        const line = processedLines[i];
+
+        if (line.includes('<li')) {
+            const isNumbered = line.includes('data-numbered="true"');
+
+            if (!inList) {
+                // Start a new list
+                inList = true;
+                isNumberedList = isNumbered;
+                result += isNumbered ? '<ol>' : '<ul>';
+            } else if (isNumberedList !== isNumbered) {
+                // Close previous list and start new one with different type
+                result += isNumberedList ? '</ol>' : '</ul>';
+                isNumberedList = isNumbered;
+                result += isNumbered ? '<ol>' : '<ul>';
+            }
+
+            // Clean the line for numbered lists
+            const cleanLine = line.replace(' data-numbered="true"', '');
+            result += cleanLine;
+        } else {
+            // Not a list item
+            if (inList) {
+                // Close the list
+                result += isNumberedList ? '</ol>' : '</ul>';
+                inList = false;
+            }
+            result += line;
+
+            // Add <br> between lines (except for list items)
+            if (i < processedLines.length - 1 && !processedLines[i + 1].includes('<li')) {
+                // Add <br> for spacing between non-list lines
+                if (line.trim() !== '' || processedLines[i + 1].trim() !== '') {
+                    result += '<br>';
+                }
+            }
+        }
+    }
+
+    // Close any open list at the end
+    if (inList) {
+        result += isNumberedList ? '</ol>' : '</ul>';
+    }
+
+    // Keep double <br> for paragraph spacing, but limit to max 2
+    result = result.replace(/(<br>){3,}/g, '<br><br>');
+
+    // Trim leading/trailing <br> tags
+    result = result.replace(/^(<br>)+|(<br>)+$/g, '');
+
+    return result;
+}
+
 // Connect to MongoDB
 async function connectDB() {
     try {
@@ -463,13 +563,21 @@ async function seedProducts() {
                 // 9. Generate Slug
                 const slug = generateSlug(productName);
 
-                // 10. Create Product
+                // 10. Format Product Description
+                const rawDescription = productData['Product Description'] || '';
+                const formattedDescription = formatProductDescription(rawDescription);
+
+                if (formattedDescription) {
+                    console.log(`   ✓ Description formatted (${rawDescription.length} chars → ${formattedDescription.length} chars with HTML)`);
+                }
+
+                // 11. Create Product
                 const product = await Product.create({
                     productName: productName,
                     slug: slug,
                     categoryId: category._id,
                     moq: parseInt(productData['MOQ']) || 1,
-                    productDescription: productData['Product Description'] || '',
+                    productDescription: formattedDescription,
                     tags: tagIds,
                     exclusive: exclusive,
                     preOrder: preOrder,
@@ -484,7 +592,7 @@ async function seedProducts() {
 
                 console.log(`   ✓ Product created (ID: ${product._id})`);
 
-                // 11. Create Product Variants (all variants from the array)
+                // 12. Create Product Variants (all variants from the array)
                 console.log(`   📋 Creating ${variants.length} variant(s)...`);
 
                 let createdCount = 0;
