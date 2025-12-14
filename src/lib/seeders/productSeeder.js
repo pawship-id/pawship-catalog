@@ -2,6 +2,8 @@ const XLSX = require('xlsx');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
+const { v2: cloudinary } = require('cloudinary');
 
 // Load environment variables from .env file
 try {
@@ -45,6 +47,13 @@ try {
     console.log('⚠️  Error loading .env file:', error.message);
 }
 
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 // Since models are in TypeScript, we need to handle them differently
 // We'll define the models directly here using the existing schemas in DB
 let Product, ProductVariant, Category, Tag;
@@ -70,6 +79,93 @@ function generateSlug(text) {
     const id = `${randomChars}${day}${month}${year}${seconds}`;
 
     return text.toLowerCase().split(" ").join("-") + "-" + id;
+}
+
+// Helper function to extract Google Drive file ID from URL
+function extractGoogleDriveFileId(url) {
+    if (!url) return null;
+
+    // Handle different Google Drive URL formats
+    const patterns = [
+        /\/d\/([a-zA-Z0-9_-]+)/,           // /d/FILE_ID
+        /id=([a-zA-Z0-9_-]+)/,              // id=FILE_ID
+        /file\/d\/([a-zA-Z0-9_-]+)/,        // file/d/FILE_ID
+    ];
+
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+            return match[1];
+        }
+    }
+
+    return null;
+}
+
+// Helper function to download image from Google Drive and upload to Cloudinary
+async function uploadImageToCloudinary(imageUrl, folder = 'pawship catalog/products', resourceType = 'image') {
+    try {
+        // Check if URL is already from Cloudinary
+        if (imageUrl.includes('cloudinary.com') || imageUrl.includes('res.cloudinary.com')) {
+            console.log(`      ⏭️  Already Cloudinary URL, skipping upload...`);
+            return {
+                url: imageUrl,
+                publicId: '-'
+            };
+        }
+
+        // Check if it's a Google Drive link
+        const fileId = extractGoogleDriveFileId(imageUrl);
+
+        if (fileId) {
+            // It's a Google Drive link - download and upload
+            const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+            // Download the image
+            const response = await axios.get(directDownloadUrl, {
+                responseType: 'arraybuffer',
+                timeout: 30000, // 30 seconds timeout
+                maxRedirects: 5
+            });
+
+            // Convert to base64 for Cloudinary upload
+            const base64Image = Buffer.from(response.data, 'binary').toString('base64');
+            const dataURI = `data:${response.headers['content-type'] || 'image/jpeg'};base64,${base64Image}`;
+
+            // Upload to Cloudinary
+            const result = await cloudinary.uploader.upload(dataURI, {
+                folder: folder,
+                resource_type: resourceType,
+                use_filename: true,
+                unique_filename: true,
+            });
+
+            return {
+                url: result.secure_url,
+                publicId: result.public_id
+            };
+        } else {
+            // Not a Google Drive link - try to upload directly from URL
+            const result = await cloudinary.uploader.upload(imageUrl, {
+                folder: folder,
+                resource_type: resourceType,
+                use_filename: true,
+                unique_filename: true,
+            });
+
+            return {
+                url: result.secure_url,
+                publicId: result.public_id
+            };
+        }
+    } catch (error) {
+        console.error(`      ❌ Error uploading to Cloudinary: ${error.message}`);
+        // Return original URL as fallback
+        return {
+            url: imageUrl,
+            publicId: '-'
+        };
+    }
 }
 
 // Helper function to generate random code
@@ -308,13 +404,15 @@ async function seedProducts() {
                 for (let i = 1; i <= 10; i++) {
                     const sizeImage = productData[`Sizes Product Images ${i}`];
                     if (sizeImage && sizeImage.trim() !== '') {
+                        console.log(`      📤 Uploading size image ${i} to Cloudinary...`);
+                        const uploaded = await uploadImageToCloudinary(sizeImage.trim(), 'pawship catalog/products/size', 'image');
                         sizeProduct.push({
-                            imageUrl: sizeImage.trim(),
-                            imagePublicId: '-'
+                            imageUrl: uploaded.url,
+                            imagePublicId: uploaded.publicId
                         });
                     }
                 }
-                console.log(`   ✓ Size Images: ${sizeProduct.length} images`);
+                console.log(`   ✓ Size Images: ${sizeProduct.length} images uploaded to Cloudinary`);
 
                 // 7. Process Product Media (Images + Videos)
                 const productMedia = [];
@@ -323,9 +421,11 @@ async function seedProducts() {
                 for (let i = 1; i <= 10; i++) {
                     const productImage = productData[`Product Images ${i}`];
                     if (productImage && productImage.trim() !== '') {
+                        console.log(`      📤 Uploading product image ${i} to Cloudinary...`);
+                        const uploaded = await uploadImageToCloudinary(productImage.trim(), 'pawship catalog/products', 'image');
                         productMedia.push({
-                            imageUrl: productImage.trim(),
-                            imagePublicId: '-',
+                            imageUrl: uploaded.url,
+                            imagePublicId: uploaded.publicId,
                             type: 'image'
                         });
                     }
@@ -335,14 +435,16 @@ async function seedProducts() {
                 for (let i = 1; i <= 10; i++) {
                     const productVideo = productData[`Product Videos ${i}`];
                     if (productVideo && productVideo.trim() !== '') {
+                        console.log(`      📤 Uploading product video ${i} to Cloudinary...`);
+                        const uploaded = await uploadImageToCloudinary(productVideo.trim(), 'pawship catalog/products', 'video');
                         productMedia.push({
-                            imageUrl: productVideo.trim(),
-                            imagePublicId: '-',
+                            imageUrl: uploaded.url,
+                            imagePublicId: uploaded.publicId,
                             type: 'video'
                         });
                     }
                 }
-                console.log(`   ✓ Media: ${productMedia.length} items (images + videos)`);
+                console.log(`   ✓ Media: ${productMedia.length} items uploaded to Cloudinary (images + videos)`);
 
                 // 8. Process Variant Types
                 const variantTypeData = productData['Variant Type'];
@@ -440,9 +542,11 @@ async function seedProducts() {
                     let variantImage = null;
                     const variantImageUrl = variantRow['Variant Image'];
                     if (variantImageUrl && variantImageUrl.trim() !== '') {
+                        console.log(`      📤 Uploading variant image to Cloudinary...`);
+                        const uploaded = await uploadImageToCloudinary(variantImageUrl.trim(), 'pawship catalog/products/variants', 'image');
                         variantImage = {
-                            imageUrl: variantImageUrl.trim(),
-                            imagePublicId: '-'
+                            imageUrl: uploaded.url,
+                            imagePublicId: uploaded.publicId
                         };
                     }
 
