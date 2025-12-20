@@ -597,8 +597,12 @@ async function seedProducts() {
 
                 let createdCount = 0;
                 let skippedCount = 0;
+                const createdVariants = [];
 
-                const variantPromises = variants.map(async (variantRow, i) => {
+                // Process variants sequentially to maintain order from Excel
+                for (let i = 0; i < variants.length; i++) {
+                    const variantRow = variants[i];
+
                     // Parse variant attributes as object: { Size: "M", Color: "Boy" }
                     const attributesData = variantRow['Attributes'];
                     const attrs = {};
@@ -625,7 +629,7 @@ async function seedProducts() {
                         // No attributes, skip this variant
                         console.log(`      ⚠️  SKIPPED - Product: "${productName}" - No attributes to generate variant name`);
                         skippedCount++;
-                        return null;
+                        continue;
                     }
 
                     // Get SKU from Excel
@@ -633,7 +637,7 @@ async function seedProducts() {
                     if (!sku || sku.trim() === '') {
                         console.log(`      ⚠️  SKIPPED - Product: "${productName}", Variant: "${variantName}" - SKU is empty`);
                         skippedCount++;
-                        return null;
+                        continue;
                     }
 
                     const skuTrimmed = sku.trim();
@@ -643,7 +647,7 @@ async function seedProducts() {
                     if (existingSKU) {
                         console.log(`      ⚠️  SKIPPED - Product: "${productName}", Variant: "${variantName}" - SKU "${skuTrimmed}" already exists`);
                         skippedCount++;
-                        return null;
+                        continue;
                     }
 
                     // Parse variant image
@@ -677,9 +681,8 @@ async function seedProducts() {
                         HKD: priceHKD
                     };
 
-                    // Create variant
-                    createdCount++;
-                    return ProductVariant.create({
+                    // Create variant sequentially
+                    const variant = await ProductVariant.create({
                         codeRow: generateRandomCode(),
                         position: i + 1,
                         image: variantImage,
@@ -693,10 +696,10 @@ async function seedProducts() {
                         createdAt: new Date(),
                         updatedAt: new Date()
                     });
-                });
 
-                const results = await Promise.all(variantPromises);
-                const createdVariants = results.filter(v => v !== null);
+                    createdVariants.push(variant);
+                    createdCount++;
+                }
 
                 if (createdVariants.length === 0) {
                     // No variants created, delete the product
