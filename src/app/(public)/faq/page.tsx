@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
+import SingleBanner from "@/components/common/single-banner";
 
 export default function FAQPage() {
   const faqSections = [
@@ -133,22 +134,24 @@ export default function FAQPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-primary via-orange-400 to-orange-500 text-white py-16 md:py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-4">
-            <Badge className="bg-white text-primary mb-4">FAQ</Badge>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-              🐾 Frequently Asked Questions
+    <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Hero Section with Banner */}
+      <SingleBanner page="faq">
+        <div className="absolute inset-0 bg-black opacity-50"></div>
+        <div className="relative z-10 flex items-center justify-center h-full text-white">
+          <div className="max-w-4xl mx-auto text-center space-y-6">
+            <Badge className="bg-primary text-primary-foreground">
+              Help Center
+            </Badge>
+            <h1 className="text-4xl lg:text-6xl font-bold mb-6">
+              Frequently Asked <span className="text-primary">Questions</span>
             </h1>
-            <p className="text-lg md:text-xl text-white/90">
-              Find answers to the most common questions about our products,
-              orders, and services.
+            <p className="text-lg lg:text-xl">
+              Find answers to common questions about orders, shipping, products, and more.
             </p>
           </div>
         </div>
-      </div>
+      </SingleBanner>
 
       {/* FAQ Content */}
       <div className="container mx-auto px-4 py-12 md:py-16">
@@ -196,7 +199,7 @@ export default function FAQPage() {
                 happy to help you and your pawfriends 🐾💛
               </p>
               <Link
-                href="https://wa.me/6281234567890"
+                href="https://wa.me/628158843760"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold px-8 py-4 rounded-lg transition-colors"

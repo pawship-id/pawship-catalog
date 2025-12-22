@@ -13,7 +13,8 @@ export interface IBanner extends Document {
     | "about-us"
     | "contact-us"
     | "stores"
-    | "payment";
+    | "payment"
+    | "faq";
   desktopImageUrl: string;
   desktopImagePublicId: string;
   mobileImageUrl?: string;
@@ -55,6 +56,7 @@ const BannerSchema = new Schema<IBanner>(
         "contact-us",
         "stores",
         "payment",
+        "faq",
       ],
       required: [true, "Page is required"],
       default: "home",
