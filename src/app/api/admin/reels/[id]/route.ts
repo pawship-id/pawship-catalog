@@ -142,7 +142,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
 }
 
 // DELETE - Soft delete reel
-export async function DELETE(req: NextRequest, { params }: Context) {
+export async function PATCH(req: NextRequest, { params }: Context) {
   const session = await getServerSession(authOptions);
 
   if (!session || session.user.role !== "admin") {
@@ -168,7 +168,21 @@ export async function DELETE(req: NextRequest, { params }: Context) {
     }
 
     // Soft delete using mongoose-delete
-    await (reel as any).delete();
+    const deletedReel = await Reel.findByIdAndUpdate(
+      id,
+      {
+        deleted: true,
+        deletedAt: new Date(),
+      },
+      { new: true }
+    );
+
+    if (deletedReel.deletedCount === 0) {
+      return NextResponse.json(
+        { success: false, message: "Reel not found" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(
       {
