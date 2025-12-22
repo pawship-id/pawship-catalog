@@ -19,6 +19,7 @@ import {
   GalleryThumbnails,
   Warehouse,
   TicketPercent,
+  Film,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -48,6 +49,11 @@ const navigation = [
     name: "Banners",
     href: "/dashboard/banners",
     icon: GalleryThumbnails,
+  },
+  {
+    name: "reels",
+    href: "/dashboard/reels",
+    icon: Film,
   },
   {
     name: "Stocks",

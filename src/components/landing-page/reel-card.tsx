@@ -1,12 +1,13 @@
 "use client";
-import { Heart, Play } from "lucide-react";
+import { Play, Heart, Eye } from "lucide-react";
 import React, { useState } from "react";
 
 interface Reel {
-  id: number;
-  thumbnail: string;
-  views: string;
-  likes: string;
+  _id: string;
+  thumbnailUrl: string;
+  link: string;
+  likes: number;
+  views: number;
 }
 
 interface ReelCardProps {
@@ -16,21 +17,36 @@ interface ReelCardProps {
 export default function ReelCard({ reel }: ReelCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
+  const formatNumber = (num: number): string => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+    }
+    return num.toString();
+  };
+
+  const handleClick = () => {
+    window.open(reel.link, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div
       className="relative group cursor-pointer overflow-hidden rounded-xl bg-black aspect-[9/16]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={handleClick}
     >
       <img
-        src={reel.thumbnail}
-        alt={`Reel ${reel.id}`}
+        src={reel.thumbnailUrl}
+        alt="Reel thumbnail"
         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
       />
 
       {/* Overlay */}
       <div
-        className={`absolute inset-0  transition-all duration-300 ${
+        className={`absolute inset-0 transition-all duration-300 ${
           isHovered ? "bg-black/30" : ""
         }`}
       />
@@ -46,17 +62,17 @@ export default function ReelCard({ reel }: ReelCardProps) {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats overlay */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
         <div className="flex justify-between items-center text-white text-sm">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <Play className="w-4 h-4" />
-              <span>{reel.views}</span>
+              <span>{formatNumber(reel.views || 0)}</span>
             </div>
             <div className="flex items-center space-x-1">
               <Heart className="w-4 h-4" />
-              <span>{reel.likes}</span>
+              <span>{formatNumber(reel.likes || 0)}</span>
             </div>
           </div>
         </div>

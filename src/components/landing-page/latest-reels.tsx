@@ -1,92 +1,129 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import ReelCard from "./reel-card";
 
+interface Reel {
+  _id: string;
+  thumbnailUrl: string;
+  link: string;
+  likes: number;
+  views: number;
+}
+
 export default function LatestReels() {
-  const reelsData = [
-    {
-      id: 1,
-      thumbnail:
-        "https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&fit=crop",
-      views: "12.5K",
-      likes: "1.2K",
-    },
-    {
-      id: 2,
-      thumbnail:
-        "https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&fit=crop",
-      views: "8.3K",
-      likes: "856",
-    },
-    {
-      id: 3,
-      thumbnail:
-        "https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&fit=crop",
-      views: "15.7K",
-      likes: "2.1K",
-    },
-    {
-      id: 4,
-      thumbnail:
-        "https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&fit=crop",
-      views: "22.1K",
-      likes: "3.4K",
-    },
-    {
-      id: 5,
-      thumbnail:
-        "https://images.pexels.com/photos/1759622/pexels-photo-1759622.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&fit=crop",
-      views: "9.8K",
-      likes: "742",
-    },
-    {
-      id: 6,
-      thumbnail:
-        "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&fit=crop",
-      views: "18.6K",
-      likes: "2.8K",
-    },
-  ];
-
+  const [reels, setReels] = useState<Reel[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [cardsPerSlide, setCardsPerSlide] = useState(2); // default
+  const [visibleCards, setVisibleCards] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
 
-  // Update cards per slide based on screen size
+  // Fetch reels from database
   useEffect(() => {
-    const updateCardsPerSlide = () => {
-      if (window.innerWidth >= 1024) {
-        // lg breakpoint
-        setCardsPerSlide(6);
-      } else if (window.innerWidth >= 768) {
-        // md breakpoint
-        setCardsPerSlide(4);
-      } else if (window.innerWidth >= 640) {
-        // sm breakpoint
-        setCardsPerSlide(3);
-      } else {
-        setCardsPerSlide(2); // default for mobile
+    const fetchReels = async () => {
+      try {
+        const response = await fetch("/api/public/reels");
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setReels(result.data);
+        }
+      } catch (error) {
+        console.error("Error fetching reels:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    updateCardsPerSlide();
-    window.addEventListener("resize", updateCardsPerSlide);
-
-    return () => window.removeEventListener("resize", updateCardsPerSlide);
+    fetchReels();
   }, []);
 
-  // Reset to first slide when cards per slide changes
-  useEffect(() => {
-    setCurrentSlide(0);
-  }, [cardsPerSlide]);
-
-  const totalSlides = Math.ceil(reelsData.length / cardsPerSlide);
-  const needsSlider = reelsData.length > cardsPerSlide;
-
-  const getCurrentSlidereelsData = () => {
-    const startIndex = currentSlide * cardsPerSlide;
-    const endIndex = startIndex + cardsPerSlide;
-    return reelsData.slice(startIndex, endIndex);
+  // Calculate visible cards based on screen size
+  const getVisibleCards = () => {
+    if (typeof window === "undefined") return 6;
+    if (window.innerWidth >= 1024) return 6; // lg
+    if (window.innerWidth >= 768) return 4; // md
+    if (window.innerWidth >= 640) return 3; // sm
+    return 2; // mobile
   };
+
+  // Update visible cards on mount and resize
+  useEffect(() => {
+    setMounted(true);
+    setVisibleCards(getVisibleCards());
+
+    const handleResize = () => {
+      setVisibleCards(getVisibleCards());
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const totalSlides = Math.ceil(reels.length / visibleCards);
+
+  // Handle scroll events to update current slide indicator
+  const handleScroll = () => {
+    if (!sliderRef.current || isScrolling) return;
+
+    const container = sliderRef.current;
+    const scrollLeft = container.scrollLeft;
+    const cardWidth = container.scrollWidth / reels.length;
+    const slideIndex = Math.round(scrollLeft / (cardWidth * visibleCards));
+
+    setCurrentSlide(Math.min(slideIndex, totalSlides - 1));
+  };
+
+  // Scroll to specific slide when indicator is clicked
+  const scrollToSlide = (slideIndex: number) => {
+    if (!sliderRef.current) return;
+
+    setIsScrolling(true);
+    const container = sliderRef.current;
+    const cardWidth = container.scrollWidth / reels.length;
+    const scrollPosition = slideIndex * cardWidth * visibleCards;
+
+    container.scrollTo({
+      left: scrollPosition,
+      behavior: "smooth",
+    });
+
+    setTimeout(() => {
+      setIsScrolling(false);
+      setCurrentSlide(slideIndex);
+    }, 500);
+  };
+
+  if (loading) {
+    return (
+      <section className="pb-16">
+        <div className="container mx-auto px-4">
+          <div className="space-y-4 text-center mb-4">
+            <h2 className="text-3xl font-bold text-foreground">
+              Latest Reels 🐾
+            </h2>
+            <p className="text-muted-foreground">
+              Check out our latest content
+            </p>
+          </div>
+          <div className="flex gap-4 overflow-hidden mt-10">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="flex-shrink-0 aspect-[9/16] bg-gray-200 animate-pulse rounded-lg"
+                style={{ width: "calc(16.666% - 14px)", minWidth: "150px" }}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (reels.length === 0) {
+    return null;
+  }
 
   return (
     <section className="pb-16">
@@ -97,26 +134,71 @@ export default function LatestReels() {
           </h2>
           <p className="text-muted-foreground">Check out our latest content</p>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-10">
-          {getCurrentSlidereelsData().map((reel) => (
-            <ReelCard key={reel.id} reel={reel} />
-          ))}
+
+        {/* Horizontal Scroll Container */}
+        <div className="relative mt-10">
+          <div
+            ref={sliderRef}
+            className="overflow-x-auto pb-6 scrollbar-hide"
+            onScroll={handleScroll}
+            style={{
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
+          >
+            <div className="flex gap-4 px-2">
+              {reels.map((reel) => (
+                <div
+                  key={reel._id}
+                  className="flex-shrink-0"
+                  style={{
+                    width: mounted
+                      ? `calc((100vw - 32px - ${(visibleCards - 1) * 16}px) / ${visibleCards} - 20px)`
+                      : "calc(50% - 8px)",
+                    minWidth: mounted
+                      ? visibleCards === 2
+                        ? "160px"
+                        : visibleCards === 3
+                          ? "140px"
+                          : visibleCards === 4
+                            ? "180px"
+                            : "150px"
+                      : "160px",
+                    maxWidth: "200px",
+                  }}
+                >
+                  <ReelCard reel={reel} />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        {/* Slide Indicators - Only show if slider is needed */}
-        {needsSlider && (
-          <div className="flex justify-center space-x-2 mt-6">
+
+        {/* Page Indicators */}
+        {totalSlides > 0 && (
+          <div className="flex justify-center items-center space-x-2 mt-6">
             {Array.from({ length: totalSlides }, (_, index) => (
               <button
                 key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`w-3 h-3 rounded-full transition-colors ${
-                  index === currentSlide ? "bg-foreground" : "bg-gray-300"
+                onClick={() => scrollToSlide(index)}
+                className={`transition-all duration-300 cursor-pointer ${
+                  index === currentSlide
+                    ? "w-8 h-3 bg-primary rounded-full"
+                    : "w-3 h-3 bg-gray-300 hover:bg-gray-400 rounded-full"
                 }`}
+                aria-label={`Go to slide ${index + 1}`}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* Custom scrollbar styles */}
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </section>
   );
 }
