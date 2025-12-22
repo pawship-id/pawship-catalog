@@ -37,6 +37,7 @@ export interface IStatusLog {
 export interface IPaymentProof {
   imageUrl: string;
   imagePublicId: string;
+  orderInvoice?: string;
   note?: string;
   uploadedAt: Date;
   uploadedBy: string;

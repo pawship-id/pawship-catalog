@@ -10,6 +10,7 @@ export interface IStatusLog {
 export interface IPaymentProof {
   imageUrl: string;
   imagePublicId: string;
+  orderInvoice?: string;
   note?: string;
   uploadedAt: Date;
   uploadedBy: string;
@@ -117,6 +118,7 @@ const PaymentProofSchema = new Schema<IPaymentProof>(
   {
     imageUrl: { type: String, required: true },
     imagePublicId: { type: String, required: true },
+    orderInvoice: { type: String },
     note: { type: String },
     uploadedAt: { type: Date, default: Date.now },
     uploadedBy: { type: String, required: true },
