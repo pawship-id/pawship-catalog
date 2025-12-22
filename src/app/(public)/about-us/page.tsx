@@ -209,41 +209,21 @@ export default function AboutUsPage() {
           </div>
 
           {/* Campaign Images with Enhanced Layout */}
-          <div className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-orange-400/20 rounded-3xl transform rotate-3 group-hover:rotate-6 transition-transform duration-300"></div>
-                <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-                  <img
-                    src="/images/galery/pet-shelter-donation-campaign-with-happy-rescued-d.jpg"
-                    alt="Shelter donation campaign"
-                    className="h-80 w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                  <div className="absolute bottom-6 left-6 text-white">
-                    <h3 className="text-xl font-bold mb-2">Shelter Support</h3>
-                    <p className="text-sm opacity-90">
-                      Helping rescued pets find comfort
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-300/20 to-primary/20 rounded-3xl transform -rotate-3 group-hover:-rotate-6 transition-transform duration-300"></div>
-                <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-                  <img
-                    src="/images/galery/volunteers-helping-pets-at-animal-shelter.jpg"
-                    alt="Community giving back"
-                    className="h-80 w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                  <div className="absolute bottom-6 left-6 text-white">
-                    <h3 className="text-xl font-bold mb-2">Community Care</h3>
-                    <p className="text-sm opacity-90">
-                      Volunteers making a difference
-                    </p>
-                  </div>
+          <div className="max-w-4xl mx-auto flex justify-center">
+            <div className="relative group w-full max-w-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-orange-400/20 rounded-3xl transform rotate-3 group-hover:rotate-6 transition-transform duration-300"></div>
+              <div className="relative overflow-hidden rounded-3xl shadow-2xl">
+                <img
+                  src="/images/galery/pet-shelter-donation-campaign-with-happy-rescued-d.jpg"
+                  alt="Shelter donation campaign"
+                  className="h-80 w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div className="absolute bottom-6 left-6 text-white">
+                  <h3 className="text-xl font-bold mb-2">Shelter Support</h3>
+                  <p className="text-sm opacity-90">
+                    We donate part of our profit to help local shelters
+                  </p>
                 </div>
               </div>
             </div>

@@ -42,14 +42,14 @@ export default function StorePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative overflow-hidden rounded-xl shadow-lg group">
                   <img
-                    src="https://lh3.googleusercontent.com/gps-cs-s/AC9h4nq23fO4FSzR5hWwqxql3DEBz-BQOeabMAGCvz9o9C26i8QhFJ-pjx0rKzP2J7ugidDT-FLFYnUjZu44XGRDw78AtC2WkmIqDMg_xLyu0Biea5JqoZOgulnMtjNnj-zkarvsDcft=s1360-w1360-h1020-rw"
+                    src="/images/banner/stores2.jpeg"
                     alt="Pawship Store interior"
                     className="w-full h-32 lg:h-50 object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 </div>
                 <div className="relative overflow-hidden rounded-xl shadow-lg group">
                   <img
-                    src="https://lh3.googleusercontent.com/gps-cs-s/AC9h4npftY_TFGSO67FobuHxrelXZrdbjVnRgrgVmMFXN922W-gtc-U3cHMhIh6XWGEyBqRaRJYNuf5D9Q3d_E6SeLzTLEljqbz_nMj0klodRSsbgc8mpJCFlp58DoHIREqZRCQB8Vdn=s1360-w1360-h1020-rw"
+                    src="/images/banner/stores3.jpeg"
                     alt="Pawship Store products display"
                     className="w-full h-32 lg:h-50 object-cover transition-transform duration-500 group-hover:scale-110"
                   />

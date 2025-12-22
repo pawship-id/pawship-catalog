@@ -130,19 +130,19 @@ export function Footer() {
             <div className="space-y-3">
               <div className="flex items-center space-x-2 text-sm text-background/80">
                 <Mail className="h-4 w-4" />
-                <span>hello@pawship.id</span>
+                <span>pawship.id@gmail.com</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-background/80">
                 <Phone className="h-4 w-4" />
-                <span>+62 123 456 7890</span>
+                <span>+62 8158843760 / +62 81231351150 </span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-background/80">
                 <MapPin className="h-4 w-4" />
-                <span>Jakarta, Indonesia</span>
+                <span>Surabaya Indonesia</span>
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <p className="text-sm text-background/80">
                 Subscribe to our newsletter
               </p>
@@ -156,7 +156,7 @@ export function Footer() {
                   Subscribe
                 </Button>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 
