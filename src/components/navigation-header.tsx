@@ -116,6 +116,7 @@ export default function NavigationHeader() {
         { name: "Contact Us", href: "/contact-us" },
         { name: "Stores", href: "/stores" },
         { name: "Payments", href: "/payments" },
+        { name: "FAQ", href: "/faq" },
       ],
     },
   ];
@@ -234,13 +235,14 @@ export default function NavigationHeader() {
       {/* Announcement Bar */}
       <div className="bg-primary text-primary-foreground text-center py-2 text-sm">
         <p>
-          Join our Telegram and unlock exclusive access to member-only pricing!
-          <Button
-            variant="link"
+          Chat with us on WhatsApp for orders, updates & support
+          <Link
+            href={`https://wa.me/628158843760`}
+            target="_blank"
             className="text-primary-foreground underline p-0 ml-1 h-auto"
           >
-            Join Now
-          </Button>
+            Chat Now
+          </Link>
         </p>
       </div>
 

@@ -174,6 +174,7 @@ export default function TableBanner() {
       "contact-us": "Contact Us",
       stores: "Stores",
       payment: "Payment",
+      faq: "FAQ",
     };
     return pageMap[page] || page;
   };
@@ -206,6 +207,7 @@ export default function TableBanner() {
             <SelectItem value="contact-us">Contact Us</SelectItem>
             <SelectItem value="stores">Stores</SelectItem>
             <SelectItem value="payment">Payment</SelectItem>
+            <SelectItem value="faq">FAQ</SelectItem>
           </SelectContent>
         </Select>
       </div>

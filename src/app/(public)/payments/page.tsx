@@ -1,3 +1,5 @@
+"use client";
+
 import SingleBanner from "@/components/common/single-banner";
 import {
   Accordion,
@@ -6,9 +8,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import React from "react";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
+import React, { useState } from "react";
+import { UploadPaymentProofPublicModal } from "@/components/payments/upload-payment-proof-public-modal";
 
 export default function AboutUsPage() {
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const steps = [
     {
       title: "Add items to your cart",
@@ -64,8 +70,9 @@ export default function AboutUsPage() {
       title: "Upload proof via Website/Chat",
       description: "Submit your payment confirmation",
       details: [
-        "Upload manual payment proof using the form below",
-        "Include your order ID and payment details",
+        "Upload manual payment proof using the button below",
+        "Include your order invoice number if you have one",
+        "Our team will verify and update your order status",
       ],
     },
   ];
@@ -196,6 +203,19 @@ export default function AboutUsPage() {
                         ))}
                       </div>
                     )}
+
+                    {/* Upload Button for Step 4 */}
+                    {index === 3 && (
+                      <div className="mt-4 mx-6 md:ml-16 md:mr-0">
+                        <Button
+                          onClick={() => setIsUploadModalOpen(true)}
+                          className="gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload Payment Proof
+                        </Button>
+                      </div>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               ))}
@@ -242,6 +262,12 @@ export default function AboutUsPage() {
           </div>
         </div>
       </section>
+
+      {/* Upload Modal */}
+      <UploadPaymentProofPublicModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+      />
     </div>
   );
 }
