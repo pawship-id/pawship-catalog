@@ -155,7 +155,7 @@ export default function ContactUsPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900">
-                        WhatsApp for B2B
+                        WhatsApp for Resellers
                       </p>
                       <p className="text-gray-600 break-words">
                         +62 815 8843 760
@@ -168,7 +168,7 @@ export default function ContactUsPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900">
-                        WhatsApp for B2C
+                        WhatsApp for Retail
                       </p>
                       <p className="text-gray-600 break-words">
                         +62 812 3135 1150

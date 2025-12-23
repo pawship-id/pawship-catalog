@@ -2,6 +2,8 @@ const XLSX = require('xlsx');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
+const { v2: cloudinary } = require('cloudinary');
 
 // Load environment variables from .env file
 try {
@@ -45,6 +47,13 @@ try {
     console.log('⚠️  Error loading .env file:', error.message);
 }
 
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 // Since models are in TypeScript, we need to handle them differently
 // We'll define the models directly here using the existing schemas in DB
 let Product, ProductVariant, Category, Tag;
@@ -72,6 +81,93 @@ function generateSlug(text) {
     return text.toLowerCase().split(" ").join("-") + "-" + id;
 }
 
+// Helper function to extract Google Drive file ID from URL
+function extractGoogleDriveFileId(url) {
+    if (!url) return null;
+
+    // Handle different Google Drive URL formats
+    const patterns = [
+        /\/d\/([a-zA-Z0-9_-]+)/,           // /d/FILE_ID
+        /id=([a-zA-Z0-9_-]+)/,              // id=FILE_ID
+        /file\/d\/([a-zA-Z0-9_-]+)/,        // file/d/FILE_ID
+    ];
+
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+            return match[1];
+        }
+    }
+
+    return null;
+}
+
+// Helper function to download image from Google Drive and upload to Cloudinary
+async function uploadImageToCloudinary(imageUrl, folder = 'pawship catalog/products', resourceType = 'image') {
+    try {
+        // Check if URL is already from Cloudinary
+        if (imageUrl.includes('cloudinary.com') || imageUrl.includes('res.cloudinary.com')) {
+            console.log(`      ⏭️  Already Cloudinary URL, skipping upload...`);
+            return {
+                url: imageUrl,
+                publicId: '-'
+            };
+        }
+
+        // Check if it's a Google Drive link
+        const fileId = extractGoogleDriveFileId(imageUrl);
+
+        if (fileId) {
+            // It's a Google Drive link - download and upload
+            const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+            // Download the image
+            const response = await axios.get(directDownloadUrl, {
+                responseType: 'arraybuffer',
+                timeout: 30000, // 30 seconds timeout
+                maxRedirects: 5
+            });
+
+            // Convert to base64 for Cloudinary upload
+            const base64Image = Buffer.from(response.data, 'binary').toString('base64');
+            const dataURI = `data:${response.headers['content-type'] || 'image/jpeg'};base64,${base64Image}`;
+
+            // Upload to Cloudinary
+            const result = await cloudinary.uploader.upload(dataURI, {
+                folder: folder,
+                resource_type: resourceType,
+                use_filename: true,
+                unique_filename: true,
+            });
+
+            return {
+                url: result.secure_url,
+                publicId: result.public_id
+            };
+        } else {
+            // Not a Google Drive link - try to upload directly from URL
+            const result = await cloudinary.uploader.upload(imageUrl, {
+                folder: folder,
+                resource_type: resourceType,
+                use_filename: true,
+                unique_filename: true,
+            });
+
+            return {
+                url: result.secure_url,
+                publicId: result.public_id
+            };
+        }
+    } catch (error) {
+        console.error(`      ❌ Error uploading to Cloudinary: ${error.message}`);
+        // Return original URL as fallback
+        return {
+            url: imageUrl,
+            publicId: '-'
+        };
+    }
+}
+
 // Helper function to generate random code
 function generateRandomCode(length = 8) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -92,6 +188,106 @@ function capitalizeFirstLetter(str) {
 function parseArrayData(data) {
     if (!data || data.trim() === '') return [];
     return data.split(',').map(item => item.trim()).filter(item => item !== '');
+}
+
+// Helper function to format product description from Excel
+function formatProductDescription(description) {
+    if (!description || description.trim() === '') return '';
+
+    let formatted = description;
+
+    // Replace line breaks from Excel (\n or \r\n) with <br> tags
+    formatted = formatted.replace(/\r\n/g, '\n');
+
+    // Detect paragraph breaks (double line breaks) and mark them
+    formatted = formatted.replace(/\n\n+/g, '\n||PARAGRAPH||\n');
+
+    // Replace remaining single line breaks with <br>
+    formatted = formatted.replace(/\n/g, '<br>');
+
+    // Replace paragraph markers with double <br> for spacing
+    formatted = formatted.replace(/\|\|PARAGRAPH\|\|/g, '<br>');
+
+    // Detect bullet points or list items (lines starting with -, *, •, or numbers)
+    // Split by <br> to process each line
+    const lines = formatted.split('<br>');
+    const processedLines = lines.map(line => {
+        const trimmedLine = line.trim();
+
+        // Check if line starts with bullet point markers
+        if (trimmedLine.match(/^[-*•]\s+/)) {
+            // Remove the marker and wrap in list item
+            const content = trimmedLine.replace(/^[-*•]\s+/, '');
+            return `<li>${content}</li>`;
+        }
+
+        // Check if line starts with number (e.g., "1. ", "2. ")
+        if (trimmedLine.match(/^\d+\.\s+/)) {
+            // Remove the number and wrap in list item
+            const content = trimmedLine.replace(/^\d+\.\s+/, '');
+            return `<li data-numbered="true">${content}</li>`;
+        }
+
+        return line;
+    });
+
+    // Group consecutive list items into <ul> or <ol> tags
+    let result = '';
+    let inList = false;
+    let isNumberedList = false;
+
+    for (let i = 0; i < processedLines.length; i++) {
+        const line = processedLines[i];
+
+        if (line.includes('<li')) {
+            const isNumbered = line.includes('data-numbered="true"');
+
+            if (!inList) {
+                // Start a new list
+                inList = true;
+                isNumberedList = isNumbered;
+                result += isNumbered ? '<ol>' : '<ul>';
+            } else if (isNumberedList !== isNumbered) {
+                // Close previous list and start new one with different type
+                result += isNumberedList ? '</ol>' : '</ul>';
+                isNumberedList = isNumbered;
+                result += isNumbered ? '<ol>' : '<ul>';
+            }
+
+            // Clean the line for numbered lists
+            const cleanLine = line.replace(' data-numbered="true"', '');
+            result += cleanLine;
+        } else {
+            // Not a list item
+            if (inList) {
+                // Close the list
+                result += isNumberedList ? '</ol>' : '</ul>';
+                inList = false;
+            }
+            result += line;
+
+            // Add <br> between lines (except for list items)
+            if (i < processedLines.length - 1 && !processedLines[i + 1].includes('<li')) {
+                // Add <br> for spacing between non-list lines
+                if (line.trim() !== '' || processedLines[i + 1].trim() !== '') {
+                    result += '<br>';
+                }
+            }
+        }
+    }
+
+    // Close any open list at the end
+    if (inList) {
+        result += isNumberedList ? '</ol>' : '</ul>';
+    }
+
+    // Keep double <br> for paragraph spacing, but limit to max 2
+    result = result.replace(/(<br>){3,}/g, '<br><br>');
+
+    // Trim leading/trailing <br> tags
+    result = result.replace(/^(<br>)+|(<br>)+$/g, '');
+
+    return result;
 }
 
 // Connect to MongoDB
@@ -308,13 +504,15 @@ async function seedProducts() {
                 for (let i = 1; i <= 10; i++) {
                     const sizeImage = productData[`Sizes Product Images ${i}`];
                     if (sizeImage && sizeImage.trim() !== '') {
+                        console.log(`      📤 Uploading size image ${i} to Cloudinary...`);
+                        const uploaded = await uploadImageToCloudinary(sizeImage.trim(), 'pawship catalog/products/size', 'image');
                         sizeProduct.push({
-                            imageUrl: sizeImage.trim(),
-                            imagePublicId: '-'
+                            imageUrl: uploaded.url,
+                            imagePublicId: uploaded.publicId
                         });
                     }
                 }
-                console.log(`   ✓ Size Images: ${sizeProduct.length} images`);
+                console.log(`   ✓ Size Images: ${sizeProduct.length} images uploaded to Cloudinary`);
 
                 // 7. Process Product Media (Images + Videos)
                 const productMedia = [];
@@ -323,9 +521,11 @@ async function seedProducts() {
                 for (let i = 1; i <= 10; i++) {
                     const productImage = productData[`Product Images ${i}`];
                     if (productImage && productImage.trim() !== '') {
+                        console.log(`      📤 Uploading product image ${i} to Cloudinary...`);
+                        const uploaded = await uploadImageToCloudinary(productImage.trim(), 'pawship catalog/products', 'image');
                         productMedia.push({
-                            imageUrl: productImage.trim(),
-                            imagePublicId: '-',
+                            imageUrl: uploaded.url,
+                            imagePublicId: uploaded.publicId,
                             type: 'image'
                         });
                     }
@@ -335,14 +535,16 @@ async function seedProducts() {
                 for (let i = 1; i <= 10; i++) {
                     const productVideo = productData[`Product Videos ${i}`];
                     if (productVideo && productVideo.trim() !== '') {
+                        console.log(`      📤 Uploading product video ${i} to Cloudinary...`);
+                        const uploaded = await uploadImageToCloudinary(productVideo.trim(), 'pawship catalog/products', 'video');
                         productMedia.push({
-                            imageUrl: productVideo.trim(),
-                            imagePublicId: '-',
+                            imageUrl: uploaded.url,
+                            imagePublicId: uploaded.publicId,
                             type: 'video'
                         });
                     }
                 }
-                console.log(`   ✓ Media: ${productMedia.length} items (images + videos)`);
+                console.log(`   ✓ Media: ${productMedia.length} items uploaded to Cloudinary (images + videos)`);
 
                 // 8. Process Variant Types
                 const variantTypeData = productData['Variant Type'];
@@ -361,13 +563,21 @@ async function seedProducts() {
                 // 9. Generate Slug
                 const slug = generateSlug(productName);
 
-                // 10. Create Product
+                // 10. Format Product Description
+                const rawDescription = productData['Product Description'] || '';
+                const formattedDescription = formatProductDescription(rawDescription);
+
+                if (formattedDescription) {
+                    console.log(`   ✓ Description formatted (${rawDescription.length} chars → ${formattedDescription.length} chars with HTML)`);
+                }
+
+                // 11. Create Product
                 const product = await Product.create({
                     productName: productName,
                     slug: slug,
                     categoryId: category._id,
                     moq: parseInt(productData['MOQ']) || 1,
-                    productDescription: productData['Product Description'] || '',
+                    productDescription: formattedDescription,
                     tags: tagIds,
                     exclusive: exclusive,
                     preOrder: preOrder,
@@ -382,13 +592,17 @@ async function seedProducts() {
 
                 console.log(`   ✓ Product created (ID: ${product._id})`);
 
-                // 11. Create Product Variants (all variants from the array)
+                // 12. Create Product Variants (all variants from the array)
                 console.log(`   📋 Creating ${variants.length} variant(s)...`);
 
                 let createdCount = 0;
                 let skippedCount = 0;
+                const createdVariants = [];
 
-                const variantPromises = variants.map(async (variantRow, i) => {
+                // Process variants sequentially to maintain order from Excel
+                for (let i = 0; i < variants.length; i++) {
+                    const variantRow = variants[i];
+
                     // Parse variant attributes as object: { Size: "M", Color: "Boy" }
                     const attributesData = variantRow['Attributes'];
                     const attrs = {};
@@ -415,7 +629,7 @@ async function seedProducts() {
                         // No attributes, skip this variant
                         console.log(`      ⚠️  SKIPPED - Product: "${productName}" - No attributes to generate variant name`);
                         skippedCount++;
-                        return null;
+                        continue;
                     }
 
                     // Get SKU from Excel
@@ -423,7 +637,7 @@ async function seedProducts() {
                     if (!sku || sku.trim() === '') {
                         console.log(`      ⚠️  SKIPPED - Product: "${productName}", Variant: "${variantName}" - SKU is empty`);
                         skippedCount++;
-                        return null;
+                        continue;
                     }
 
                     const skuTrimmed = sku.trim();
@@ -433,16 +647,18 @@ async function seedProducts() {
                     if (existingSKU) {
                         console.log(`      ⚠️  SKIPPED - Product: "${productName}", Variant: "${variantName}" - SKU "${skuTrimmed}" already exists`);
                         skippedCount++;
-                        return null;
+                        continue;
                     }
 
                     // Parse variant image
                     let variantImage = null;
                     const variantImageUrl = variantRow['Variant Image'];
                     if (variantImageUrl && variantImageUrl.trim() !== '') {
+                        console.log(`      📤 Uploading variant image to Cloudinary...`);
+                        const uploaded = await uploadImageToCloudinary(variantImageUrl.trim(), 'pawship catalog/products/variants', 'image');
                         variantImage = {
-                            imageUrl: variantImageUrl.trim(),
-                            imagePublicId: '-'
+                            imageUrl: uploaded.url,
+                            imagePublicId: uploaded.publicId
                         };
                     }
 
@@ -465,9 +681,8 @@ async function seedProducts() {
                         HKD: priceHKD
                     };
 
-                    // Create variant
-                    createdCount++;
-                    return ProductVariant.create({
+                    // Create variant sequentially
+                    const variant = await ProductVariant.create({
                         codeRow: generateRandomCode(),
                         position: i + 1,
                         image: variantImage,
@@ -481,10 +696,10 @@ async function seedProducts() {
                         createdAt: new Date(),
                         updatedAt: new Date()
                     });
-                });
 
-                const results = await Promise.all(variantPromises);
-                const createdVariants = results.filter(v => v !== null);
+                    createdVariants.push(variant);
+                    createdCount++;
+                }
 
                 if (createdVariants.length === 0) {
                     // No variants created, delete the product

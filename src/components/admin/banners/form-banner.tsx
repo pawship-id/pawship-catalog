@@ -374,6 +374,7 @@ export default function FormBanner({
                 <SelectItem value="contact-us">Contact Us</SelectItem>
                 <SelectItem value="stores">Stores</SelectItem>
                 <SelectItem value="payment">Payment</SelectItem>
+                <SelectItem value="faq">FAQ</SelectItem>
               </SelectContent>
             </Select>
           </div>
