@@ -122,18 +122,18 @@ async function uploadImageToCloudinary(imageUrl, folder = 'pawship catalog/produ
             const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
 
             // Download the image
-            const response = await axios.get(directDownloadUrl, {
-                responseType: 'arraybuffer',
-                timeout: 30000, // 30 seconds timeout
-                maxRedirects: 5
-            });
+            // const response = await axios.get(directDownloadUrl, {
+            //     responseType: 'arraybuffer',
+            //     timeout: 30000, // 30 seconds timeout
+            //     maxRedirects: 5
+            // });
 
             // Convert to base64 for Cloudinary upload
-            const base64Image = Buffer.from(response.data, 'binary').toString('base64');
-            const dataURI = `data:${response.headers['content-type'] || 'image/jpeg'};base64,${base64Image}`;
+            // const base64Image = Buffer.from(response.data, 'binary').toString('base64');
+            // const dataURI = `data:${response.headers['content-type'] || 'image/jpeg'};base64,${base64Image}`;
 
             // Upload to Cloudinary
-            const result = await cloudinary.uploader.upload(dataURI, {
+            const result = await cloudinary.uploader.upload(directDownloadUrl, {
                 folder: folder,
                 resource_type: resourceType,
                 use_filename: true,
