@@ -79,14 +79,12 @@ export function ProductGallery({
             <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full">
               New Arrival
             </span>
-          ) : hasTag(product.tags, "best sellers") ? (
+          ) : hasTag(product.tags, "best sellers").isFound ? (
             <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
               Best Seller
             </span>
           ) : (
-            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-              Discount
-            </span>
+            ""
           )}
         </div>
 
