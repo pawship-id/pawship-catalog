@@ -16,9 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pawship CMS Admin Dashboard",
+  title: "Pawship CMS - Admin Dashboard",
   description: "Modern CMS Admin Dashboard for Pawship",
-  generator: "v0.app",
 };
 
 export default function RootLayout({

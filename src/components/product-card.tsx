@@ -8,8 +8,7 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { usePromo } from "@/context/PromoContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { getProductMinPrice } from "@/lib/helpers/promo-helper";
-import { TagData } from "@/lib/types/tag";
-import { isNewArrival } from "@/lib/helpers/product";
+import { hasTag, isNewArrival } from "@/lib/helpers/product";
 import { useSession } from "next-auth/react";
 import AddToCartModal from "./add-to-cart-modal";
 import { showSuccessAlert } from "@/lib/helpers/sweetalert2";
@@ -83,42 +82,23 @@ export default function ProductCard({
   );
 
   const minPrice = priceInfo.minPrice;
-  const hasDiscount = priceInfo.hasDiscount;
   const minOriginalPrice = priceInfo.minOriginalPrice;
-
-  // const discount =
-  //   product.originalPrice && product.originalPrice[currency]
-  //     ? Math.round(
-  //         ((product.originalPrice[currency] - product.price[currency]) /
-  //           product.originalPrice[currency]) *
-  //           100
-  //       )
-  //     : 0;
 
   return (
     <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col max-w-xs">
       {/* Badges */}
       <div className="absolute top-4 left-4 z-10 flex gap-2">
-        {
-          isNewArrival(product.createdAt) ? (
-            <span className="bg-emerald-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              New Arrivals
-            </span>
-          ) : product.tags?.some(
-              (tag: TagData) => tag.tagName.toLowerCase() === "best sellers"
-            ) ? (
-            <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              Best Sellers
-            </span>
-          ) : (
-            ""
-          )
-          // product.originalPrice && discount > 0 ? (
-          //   <span className="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-          //     -{discount}%
-          //   </span>
-          // ) : null
-        }
+        {isNewArrival(product.createdAt) ? (
+          <span className="bg-emerald-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+            New Arrivals
+          </span>
+        ) : hasTag(product.tags, "best sellers").isFound ? (
+          <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+            Best Sellers
+          </span>
+        ) : (
+          ""
+        )}
       </div>
 
       {/* Main Image */}

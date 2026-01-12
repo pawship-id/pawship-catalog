@@ -281,10 +281,19 @@ export default function ProductTabs({ product }: ProductTabsProps) {
             {activeTabSize === "how-to-measure" && (
               <div className="py-4">
                 <p className="text-wrap">
-                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Fugit
-                  quibusdam, optio necessitatibus dicta repellendus obcaecati ex
-                  velit sed harum excepturi sequi saepe sunt voluptate, laborum
-                  maxime non pariatur veniam porro.
+                  Measure using a soft ribbon or string around the neck or chest
+                  depending on the clothing type.
+                  <br></br>
+                  Allow extra ± 2 cm to ensure comfort for fur and movement.
+                  <br></br>
+                  Use our sizing chart to choose the right size for your
+                  pawfriend.
+                  <br></br>
+                  If your pet needs extra adjustments or falls between sizes:
+                  <br></br>
+                  👉 We offer custom sizing! Chat with our agent to customize
+                  fit (additional charges may apply). OR to be safe, take the
+                  bigger size!
                 </p>
               </div>
             )}
@@ -313,31 +322,15 @@ export default function ProductTabs({ product }: ProductTabsProps) {
 
         {expandedTab === "shipping" && (
           <div className="mt-2 pb-4 text-gray-600">
-            <h3 className="font-semibold text-gray-900 my-3">
-              Delivery Information
-            </h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-700">SEA Region:</span>
-                <span className="text-gray-600">
-                  Estimated delivery 3-5 business days
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-700">
-                  Other Regions:
-                </span>
-                <span className="text-gray-600">
-                  Estimated delivery 7-14 business days
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-700">
-                  Shipping Cost:
-                </span>
-                <span className="text-gray-600">Calculated at checkout</span>
-              </div>
-            </div>
+            <p className="text-wrap">Items are shipped within 1–3 days.</p>
+            <p className="text-wrap">
+              Pre-order items require 1-3 weeks (depending on workload &
+              production).
+            </p>
+            <p className="text-wrap">
+              Shipping fees will be confirmed during final order
+              checkout/WhatsApp confirmation.
+            </p>
           </div>
         )}
       </div>
