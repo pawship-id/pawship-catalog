@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
+import React, { useRef, useState, useEffect } from "react";
+import { Quote, Star } from "lucide-react";
 
 interface Testimonial {
   id: number;
@@ -158,60 +158,62 @@ const testimonials: Testimonial[] = [
 
 export default function Testimonial() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [itemsPerSlide, setItemsPerSlide] = useState(3);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
 
-  // ✅ Responsif: ganti jumlah item per slide berdasarkan lebar layar
+  // Calculate how many cards are visible based on screen size
+  const getVisibleCards = () => {
+    if (typeof window === "undefined") return 3;
+    if (window.innerWidth >= 1280) return 4; // xl - show 4 cards
+    if (window.innerWidth >= 768) return 3; // md - show 3 cards
+    return 2; // mobile - show 1 card
+  };
+
+  const [visibleCards, setVisibleCards] = useState(3);
+  const totalSlides = Math.ceil(testimonials.length / visibleCards);
+
   useEffect(() => {
-    const updateItemsPerSlide = () => {
-      if (window.innerWidth < 768) {
-        setItemsPerSlide(1); // Mobile
-      } else {
-        setItemsPerSlide(3); // Tablet & Desktop
-      }
+    setVisibleCards(getVisibleCards());
+
+    const handleResize = () => {
+      setVisibleCards(getVisibleCards());
     };
 
-    updateItemsPerSlide(); // run sekali saat mount
-    window.addEventListener("resize", updateItemsPerSlide);
-
-    return () => window.removeEventListener("resize", updateItemsPerSlide);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const totalSlides = Math.ceil(testimonials.length / itemsPerSlide);
+  // Handle scroll events to update current slide indicator
+  const handleScroll = () => {
+    if (!sliderRef.current || isScrolling) return;
 
-  useEffect(() => {
-    if (!isAutoPlaying) return;
+    const container = sliderRef.current;
+    const scrollLeft = container.scrollLeft;
+    const cardWidth = 350 + 24; // card width + gap
+    const slideIndex = Math.round(scrollLeft / (cardWidth * visibleCards));
 
-    const interval = setInterval(() => {
-      setCurrentSlide((prevSlide) =>
-        prevSlide === totalSlides - 1 ? 0 : prevSlide + 1
-      );
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, totalSlides]);
-
-  const goToSlide = (index: number) => {
-    setCurrentSlide(index);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
+    setCurrentSlide(Math.min(slideIndex, totalSlides - 1));
   };
 
-  const goToPrevious = () => {
-    setCurrentSlide(currentSlide === 0 ? totalSlides - 1 : currentSlide - 1);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
-  };
+  // Scroll to specific slide when indicator is clicked
+  const scrollToSlide = (slideIndex: number) => {
+    if (!sliderRef.current) return;
 
-  const goToNext = () => {
-    setCurrentSlide(currentSlide === totalSlides - 1 ? 0 : currentSlide + 1);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
-  };
+    setIsScrolling(true);
+    const container = sliderRef.current;
+    const cardWidth = 350 + 24; // card width + gap
+    const scrollPosition = slideIndex * cardWidth * visibleCards;
 
-  const getCurrentTestimonials = () => {
-    const startIndex = currentSlide * itemsPerSlide;
-    return testimonials.slice(startIndex, startIndex + itemsPerSlide);
+    container.scrollTo({
+      left: scrollPosition,
+      behavior: "smooth",
+    });
+
+    // Reset scrolling flag after animation
+    setTimeout(() => {
+      setIsScrolling(false);
+      setCurrentSlide(slideIndex);
+    }, 500);
   };
 
   return (
@@ -226,140 +228,104 @@ export default function Testimonial() {
             </p>
           </div>
 
-          {/* Carousel */}
-          <div className="relative mt-10">
-            <div className="flex items-center justify-center">
-              {/* Tombol Prev */}
-              {totalSlides > 1 && (
-                <button
-                  onClick={goToPrevious}
-                  className="hidden lg:flex bg-white rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-all duration-300 hover:scale-110 mr-8"
-                  aria-label="Previous testimonials"
+          {/* Horizontal Scroll Container */}
+          <div className="relative">
+            <div
+              ref={sliderRef}
+              onScroll={handleScroll}
+              className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory scrollbar-hide"
+              style={{
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+              }}
+            >
+              {testimonials.map((testimonial) => (
+                <div
+                  key={testimonial.id}
+                  className="bg-white rounded-xl p-6 shadow-sm relative hover:shadow-lg transition-all duration-300 border border-gray-100 flex-none w-[350px] snap-start flex flex-col"
                 >
-                  <ChevronLeft className="h-6 w-6 text-gray-600" />
-                </button>
-              )}
-
-              {/* Cards */}
-              <div
-                className={`grid gap-6 ${
-                  itemsPerSlide === 1
-                    ? "grid-cols-1"
-                    : "grid-cols-1 md:grid-cols-3"
-                }`}
-              >
-                {getCurrentTestimonials().map((testimonial) => (
-                  <div
-                    key={testimonial.id}
-                    className="bg-white rounded-xl p-6 shadow-sm relative hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
-                  >
-                    <div className="mb-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <h3 className="font-bold text-foreground text-lg">
-                          {testimonial.name}
-                        </h3>
-                        <img
-                          src="/images/verified.png"
-                          alt=""
-                          className="w-5 h-5"
-                        />
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        {testimonial.location}
-                      </p>
-                    </div>
-
-                    {/* Rating */}
-                    <div className="flex items-center mb-4">
-                      {Array.from({ length: 5 }).map((_, starIndex) => (
-                        <Star
-                          key={starIndex}
-                          className="w-5 h-5 text-yellow-400 fill-current"
-                        />
-                      ))}
-                    </div>
-
-                    {/* Quote Icon */}
-                    <div className="absolute top-4 right-4 opacity-10">
-                      <Quote className="h-12 w-12 text-gray-400" />
-                    </div>
-
-                    {/* Testimonial Image */}
-                    <a
-                      href={testimonial.picture}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block mb-4 cursor-pointer overflow-hidden rounded-lg hover:opacity-90 transition-opacity max-w-[250px] mx-auto"
-                    >
+                  <div className="mb-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <h3 className="font-bold text-foreground text-lg">
+                        {testimonial.name}
+                      </h3>
                       <img
-                        src={
-                          testimonial.picture ||
-                          "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg"
-                        }
-                        alt={`${testimonial.name}'s testimonial`}
-                        className="w-full aspect-video object-cover"
+                        src="/images/verified.png"
+                        alt=""
+                        className="w-5 h-5"
                       />
-                    </a>
-
-                    <blockquote className="text-gray-700 leading-relaxed mb-4">
-                      "{testimonial.content}"
-                    </blockquote>
+                    </div>
+                    <p className="text-muted-foreground text-sm">
+                      {testimonial.location}
+                    </p>
                   </div>
-                ))}
-              </div>
 
-              {/* Tombol Next */}
-              {totalSlides > 1 && (
-                <button
-                  onClick={goToNext}
-                  className="hidden lg:flex bg-white rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-all duration-300 hover:scale-110 ml-8"
-                  aria-label="Next testimonials"
-                >
-                  <ChevronRight className="h-6 w-6 text-gray-600" />
-                </button>
-              )}
+                  {/* Rating */}
+                  <div className="flex items-center mb-4">
+                    {Array.from({ length: 5 }).map((_, starIndex) => (
+                      <Star
+                        key={starIndex}
+                        className="w-5 h-5 text-yellow-400 fill-current"
+                      />
+                    ))}
+                  </div>
+
+                  {/* Quote Icon */}
+                  <div className="absolute top-4 right-4 opacity-10">
+                    <Quote className="h-12 w-12 text-gray-400" />
+                  </div>
+
+                  {/* Testimonial Image */}
+                  <a
+                    href={testimonial.picture}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block mb-4 cursor-pointer overflow-hidden rounded-lg hover:opacity-90 transition-opacity max-w-[250px] mx-auto"
+                  >
+                    <img
+                      src={
+                        testimonial.picture || "/images/No_Image_Available.jpg"
+                      }
+                      alt={`${testimonial.name}'s testimonial`}
+                      className="w-full aspect-video object-cover"
+                    />
+                  </a>
+
+                  {/* Content with fixed height */}
+                  <blockquote className="text-gray-700 leading-relaxed flex-1">
+                    "{testimonial.content}"
+                  </blockquote>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Dots */}
-          <div className="flex items-center justify-center mt-8 space-x-4">
-            {totalSlides > 1 && (
-              <>
+          {/* Page Indicators */}
+          {totalSlides > 1 && (
+            <div className="flex justify-center items-center space-x-2 mt-6">
+              {Array.from({ length: totalSlides }, (_, index) => (
                 <button
-                  onClick={goToPrevious}
-                  className="bg-white lg:hidden rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-all duration-300 hover:scale-110"
-                  aria-label="Previous testimonials"
-                >
-                  <ChevronLeft className="h-6 w-6 text-gray-600" />
-                </button>
-
-                <div className="flex space-x-2">
-                  {[...Array(totalSlides)].map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => goToSlide(index)}
-                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                        index === currentSlide
-                          ? "bg-gray-500 scale-125"
-                          : "bg-gray-300 hover:bg-gray-400"
-                      }`}
-                      aria-label={`Go to slide ${index + 1}`}
-                    />
-                  ))}
-                </div>
-
-                <button
-                  onClick={goToNext}
-                  className="bg-white lg:hidden rounded-full p-3 shadow-md border border-gray-200 hover:bg-gray-50 transition-all duration-300 hover:scale-110"
-                  aria-label="Next testimonials"
-                >
-                  <ChevronRight className="h-6 w-6 text-gray-600" />
-                </button>
-              </>
-            )}
-          </div>
+                  key={index}
+                  onClick={() => scrollToSlide(index)}
+                  className={`transition-all duration-300 cursor-pointer ${
+                    index === currentSlide
+                      ? "w-8 h-3 bg-primary rounded-full"
+                      : "w-3 h-3 bg-gray-300 hover:bg-gray-400 rounded-full"
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Custom scrollbar styles */}
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </section>
   );
 }
