@@ -7,71 +7,152 @@ interface Testimonial {
   name: string;
   content: string;
   location: string;
+  picture: string;
 }
 
 const testimonials: Testimonial[] = [
   {
     id: 1,
-    name: "Sarah Johnson",
+    name: "barkpup",
     content:
-      "Working with this reseller program has transformed our business. The exclusive pricing and support have been exceptional.",
-    location: "Jakarta, Indonesia",
+      "Bahannya lembut banget dan ringan, anabul aku kelihatan nyaman seharian pakai Pawship",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376755/WhatsApp_Image_2026-01-13_at_13.32.29_ahyvra.jpg",
   },
   {
     id: 2,
-    name: "Michael Chen",
+    name: "cloudypaws",
     content:
-      "The quality of products and the partnership support exceeded our expectations. Our customers love what we're offering.",
-    location: "London, United Kingdom",
+      "Awalnya ragu, tapi ternyata fit-nya pas dan nggak bikin anabul susah gerak.",
+    location: "Indonesia",
+    picture: "",
   },
   {
     id: 3,
-    name: "Emily Rodriguez",
+    name: "baileysthepom",
     content:
-      "The reseller program is incredibly well-structured. We've seen a 40% increase in revenue since joining.",
-    location: "Singapore, Singapore",
+      "Anabul aku sensitif, tapi pakai Pawship aman dan nggak bikin iritasi.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376755/WhatsApp_Image_2026-01-13_at_13.32.27_2_zidtce.jpg",
   },
   {
     id: 4,
-    name: "David Kim",
+    name: "aileemissmark",
     content:
-      "Outstanding products and even better support. The exclusive pricing gives us a real competitive advantage.",
-    location: "New York, United States",
+      "Bahannya adem, jadi anabul nggak gampang gerah walau dipakai lama.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376755/WhatsApp_Image_2026-01-13_at_13.32.27_gdqmen.jpg",
   },
   {
     id: 5,
-    name: "Aisha Rahman",
+    name: "tinywoofie",
     content:
-      "This program has helped us expand into new markets seamlessly. The training and resources provided are top-notch.",
-    location: "Kuala Lumpur, Malaysia",
+      "Warnanya cakep dan sesuai foto, kelihatan mahal tapi harganya masih masuk akal.",
+    location: "Indonesia",
+    picture: "",
   },
   {
     id: 6,
-    name: "Thomas Müller",
-    content:
-      "The reseller network is very supportive. We've built strong client relationships thanks to the excellent product lineup.",
-    location: "Berlin, Germany",
+    name: "mochiboo",
+    content: "Jahitannya rapi dan detailnya kelihatan niat.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376755/WhatsApp_Image_2026-01-13_at_13.32.27_1_tsrbx4.jpg",
   },
   {
     id: 7,
-    name: "Sophia Williams",
-    content:
-      "Our team appreciates the fast response and guidance. We feel like true partners rather than just resellers.",
+    name: "bubbalatte",
+    content: "Repeat order sih ini, karena kualitasnya konsisten.",
     location: "Toronto, Canada",
+    picture: "",
   },
   {
     id: 8,
-    name: "Hiroshi Tanaka",
-    content:
-      "High-quality products and reliable delivery have boosted our brand credibility. Customers trust us more than ever.",
-    location: "Tokyo, Japan",
+    name: "snugglebean",
+    content: "Bahannya halus dan nggak kaku, jadi anabul bebas gerak.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376755/WhatsApp_Image_2026-01-13_at_13.32.29_2_y6are9.jpg",
   },
   {
     id: 9,
-    name: "Carlos Mendes",
+    name: "marshymoo",
+    content: "Ukurannya pas sesuai size chart.",
+    location: "Indonesia",
+    picture: "",
+  },
+  {
+    id: 10,
+    name: "cinnabun.pet",
+    content: "Warnanya cakep dan sesuai foto.",
+    location: "Indonesia",
+    picture: "",
+  },
+  {
+    id: 11,
+    name: "sillybinkie",
+    content: "Bagus Banget bajunyaaa!.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376862/WhatsApp_Image_2026-01-13_at_12.54.40_xrexfi.jpg",
+  },
+  {
+    id: 12,
+    name: "moscow.barkery",
+    content: "Guanteng poll ini bahannya ok jugaaa.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376862/WhatsApp_Image_2026-01-13_at_13.32.25_eay6bm.jpg",
+  },
+  {
+    id: 13,
+    name: "kawaiisachi",
+    content: "Bisa custom baju, pengerjaan cepet. Admin super ramah.",
+    location: "Indonesia",
+    picture: "",
+  },
+  {
+    id: 14,
+    name: "fangfang",
     content:
-      "We’ve seen continuous growth since joining. The reseller program truly empowers small businesses like ours.",
-    location: "São Paulo, Brazil",
+      "pas dan bisa di adjust lagi bajunya menyesuaikan lingkar dada doggie.",
+    location: "Indonesia",
+    picture: "",
+  },
+  {
+    id: 15,
+    name: "poccothechoco",
+    content: "The fabric is super soft, my pet looks comfortable all day.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376863/WhatsApp_Image_2026-01-13_at_13.32.30_jw7xph.jpg",
+  },
+  {
+    id: 16,
+    name: "lunathepoodle",
+    content: "My pet can move freely and doesn’t feel restricted at all.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376863/WhatsApp_Image_2026-01-13_at_13.32.29_1_psqgn6.jpg",
+  },
+  {
+    id: 17,
+    name: "pawpow",
+    content: "Definitely repurchasing this for my pet.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376862/WhatsApp_Image_2026-01-13_at_13.32.28_s3ki2z.jpg",
+  },
+  {
+    id: 18,
+    name: "mstuesday",
+    content: "Easy to put on, no stress.",
+    location: "Indonesia",
+    picture:
+      "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376862/WhatsApp_Image_2026-01-13_at_13.32.26_gqlruq.jpg",
   },
 ];
 
@@ -202,6 +283,23 @@ export default function Testimonial() {
                     <div className="absolute top-4 right-4 opacity-10">
                       <Quote className="h-12 w-12 text-gray-400" />
                     </div>
+
+                    {/* Testimonial Image */}
+                    <a
+                      href={testimonial.picture}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block mb-4 cursor-pointer overflow-hidden rounded-lg hover:opacity-90 transition-opacity max-w-[250px] mx-auto"
+                    >
+                      <img
+                        src={
+                          testimonial.picture ||
+                          "https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg"
+                        }
+                        alt={`${testimonial.name}'s testimonial`}
+                        className="w-full aspect-video object-cover"
+                      />
+                    </a>
 
                     <blockquote className="text-gray-700 leading-relaxed mb-4">
                       "{testimonial.content}"
