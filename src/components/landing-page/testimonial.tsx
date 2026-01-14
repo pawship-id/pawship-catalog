@@ -126,7 +126,7 @@ const testimonials: Testimonial[] = [
     id: 15,
     name: "poccothechoco",
     content: "The fabric is super soft, my pet looks comfortable all day.",
-    location: "Indonesia",
+    location: "Singapore",
     picture:
       "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376863/WhatsApp_Image_2026-01-13_at_13.32.30_jw7xph.jpg",
   },
@@ -134,7 +134,7 @@ const testimonials: Testimonial[] = [
     id: 16,
     name: "lunathepoodle",
     content: "My pet can move freely and doesn’t feel restricted at all.",
-    location: "Indonesia",
+    location: "Hongkong",
     picture:
       "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376863/WhatsApp_Image_2026-01-13_at_13.32.29_1_psqgn6.jpg",
   },
@@ -142,7 +142,7 @@ const testimonials: Testimonial[] = [
     id: 17,
     name: "pawpow",
     content: "Definitely repurchasing this for my pet.",
-    location: "Indonesia",
+    location: "Hongkong",
     picture:
       "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376862/WhatsApp_Image_2026-01-13_at_13.32.28_s3ki2z.jpg",
   },
@@ -150,7 +150,7 @@ const testimonials: Testimonial[] = [
     id: 18,
     name: "mstuesday",
     content: "Easy to put on, no stress.",
-    location: "Indonesia",
+    location: "Singapore",
     picture:
       "https://res.cloudinary.com/deqpnzfwb/image/upload/v1768376862/WhatsApp_Image_2026-01-13_at_13.32.26_gqlruq.jpg",
   },
@@ -276,20 +276,20 @@ export default function Testimonial() {
                   </div>
 
                   {/* Testimonial Image */}
-                  <a
-                    href={testimonial.picture}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block mb-4 cursor-pointer overflow-hidden rounded-lg hover:opacity-90 transition-opacity max-w-[250px] mx-auto"
-                  >
-                    <img
-                      src={
-                        testimonial.picture || "/images/No_Image_Available.jpg"
-                      }
-                      alt={`${testimonial.name}'s testimonial`}
-                      className="w-full aspect-video object-cover"
-                    />
-                  </a>
+                  {testimonial.picture && (
+                    <a
+                      href={testimonial.picture}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block mb-4 cursor-pointer overflow-hidden rounded-lg hover:opacity-90 transition-opacity max-w-[250px] mx-auto"
+                    >
+                      <img
+                        src={testimonial.picture}
+                        alt={`${testimonial.name}'s testimonial`}
+                        className="w-full aspect-video object-cover"
+                      />
+                    </a>
+                  )}
 
                   {/* Content with fixed height */}
                   <blockquote className="text-gray-700 leading-relaxed flex-1">
