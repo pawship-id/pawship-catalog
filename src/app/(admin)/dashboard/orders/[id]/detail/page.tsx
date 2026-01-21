@@ -127,192 +127,278 @@ export default function DetailProduct() {
 
     const doc = new jsPDF();
 
-    // Add company logo/header (maintaining aspect ratio)
-    const logo = new Image();
-    logo.src = "/images/transparent-logo.png";
-    logo.onload = () => {
-      doc.addImage(logo, "PNG", 14, 10, 30, 30);
-    };
-    // Add logo (will be loaded synchronously for PDF generation)
-    doc.addImage("/images/transparent-logo.png", "PNG", 14, 10, 30, 30);
-
-    // Invoice Title
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("INVOICE", 150, 20);
-
-    // Invoice details
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Invoice #: ${order.invoiceNumber}`, 150, 28);
-    doc.text(
-      `Date: ${new Date(order.orderDate).toLocaleDateString("en-US", {
+    // Template data mapping from order
+    const templateData = {
+      invoice: order.invoiceNumber,
+      nama: order.shippingAddress.fullName,
+      date: new Date(order.orderDate).toLocaleDateString("en-US", {
         year: "numeric",
-        month: "long",
-        day: "numeric",
-      })}`,
-      150,
-      34,
-    );
+        month: "2-digit",
+        day: "2-digit",
+      }),
+      address: `${order.shippingAddress.address}${
+        order.shippingAddress.address
+          ? ", " + order.shippingAddress.address
+          : ""
+      }\n${order.shippingAddress.city}, ${order.shippingAddress.country} ${order.shippingAddress.zipCode}`,
+      phone_number: order.shippingAddress.phone,
+      email: order.shippingAddress.email || "",
+      currency: order.currency.toUpperCase(),
+      items: order.orderDetails.map((item) => {
+        const originalPrice = item.originalPrice[order.currency];
+        const quantity = item.quantity;
+        const subTotal = originalPrice * quantity;
+        const discountPercentage = item.discountPercentage || 0;
+        const totalDiscount = (subTotal * discountPercentage) / 100;
+        const totalAmount = subTotal - totalDiscount;
 
-    // Line separator
-    doc.setLineWidth(0.5);
-    doc.line(14, 45, 196, 45);
+        return {
+          sku: item.sku || "-",
+          qty: quantity,
+          originalPrice: currencyFormat(originalPrice, order.currency),
+          subTotal: currencyFormat(subTotal, order.currency),
+          discount: `${discountPercentage}%`,
+          totalDiscount: currencyFormat(totalDiscount, order.currency),
+          totalAmount: currencyFormat(totalAmount, order.currency),
+        };
+      }),
+    };
 
-    // Billing & Shipping Information
+    // Blue header bar (matching template color #002b79)
+    doc.setFillColor(0, 43, 121);
+    doc.rect(0, 0, 210, 55, "F");
+
+    // Invoice Title (left side, white text, large)
+    doc.setFontSize(35);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Invoice", 14, 25);
+
+    // Add company logo (white background box with logo)
+    doc.setFillColor(255, 255, 255);
+    doc.rect(14, 30, 40, 20, "F");
+    try {
+      doc.addImage("/images/transparent-logo.png", "PNG", 19, 33, 30, 14);
+    } catch (error) {
+      console.error("Error loading logo:", error);
+    }
+
+    // Company Information (right side, white text)
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("Ship To:", 14, 55);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Pawship Indonesia", 196, 18, { align: "right" });
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    let yPos = 62;
-    doc.text(order.shippingAddress.fullName, 14, yPos);
-    yPos += 5;
-    doc.text(order.shippingAddress.email, 14, yPos);
-    yPos += 5;
-    doc.text(order.shippingAddress.phone, 14, yPos);
-    yPos += 5;
-    doc.text(order.shippingAddress.address, 14, yPos);
-    yPos += 5;
-    doc.text(
-      `${order.shippingAddress.district}, ${order.shippingAddress.city}`,
-      14,
-      yPos,
-    );
-    yPos += 5;
-    doc.text(
-      `${order.shippingAddress.country} - ${order.shippingAddress.zipCode}`,
-      14,
-      yPos,
-    );
+    doc.text("Klampis Jaya A6, Surabaya", 196, 25, { align: "right" });
+    doc.text("+62 815 8843 760", 196, 38, { align: "right" });
+    doc.text("pawship.id@gmail.com", 196, 45, { align: "right" });
 
-    // Order Details (aligned to the right)
-    doc.setFontSize(12);
+    // Back to black text for body content
+    doc.setTextColor(0, 0, 0);
+
+    // Invoice Details Section (left)
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("Order Details:", 196, 55, { align: "right" });
+    doc.text("INVOICE DETAILS:", 14, 68);
 
-    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Type: ${order.orderType}`, 196, 62, { align: "right" });
-    doc.text(`Currency: ${order.currency.toUpperCase()}`, 196, 67, {
-      align: "right",
+    doc.setFontSize(9);
+    doc.text("Invoice #", 14, 75);
+    doc.text(order.invoiceNumber, 50, 75);
+
+    doc.text("Date of Issue", 14, 82);
+    doc.text(
+      new Date(order.orderDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }),
+      50,
+      82,
+    );
+
+    // Bill To Section (right side)
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("BILL TO:", 120, 68);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(order.shippingAddress.fullName, 120, 75);
+
+    // Address
+    const fullAddress = `${order.shippingAddress.address}${
+      order.shippingAddress.address ? ", " + order.shippingAddress.district : ""
+    }, ${order.shippingAddress.city}, ${order.shippingAddress.country} ${order.shippingAddress.zipCode}`;
+    const addressLines = doc.splitTextToSize(fullAddress, 75);
+    let addressY = 81;
+    addressLines.forEach((line: string) => {
+      doc.text(line, 120, addressY);
+      addressY += 5;
     });
 
-    // Items table
-    const tableStartY = yPos + 10;
+    doc.text(order.shippingAddress.phone, 120, addressY);
+    addressY += 5;
+    if (order.shippingAddress?.email) {
+      doc.text(order.shippingAddress.email, 120, addressY);
+      addressY += 5;
+    }
+    doc.text(order.currency.toUpperCase(), 120, addressY);
 
+    // Line separator before table (full width, blue color)
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(0, 43, 121);
+    doc.line(0, 105, 210, 105);
+
+    // Items table
+    const tableStartY = 110;
     const tableData = order.orderDetails.map((item) => {
       const originalPrice = item.originalPrice[order.currency];
-      const discountedPrice = item.discountedPrice
-        ? item.discountedPrice[order.currency]
-        : originalPrice;
-      const discount = item.discountPercentage
-        ? `${item.discountPercentage}%`
-        : "-";
+      const quantity = item.quantity;
+      const subTotal = originalPrice * quantity;
+      const discountPercentage = item.discountPercentage || 0;
+      const totalDiscount = (subTotal * discountPercentage) / 100;
+      const totalAmount = subTotal - totalDiscount;
 
       return [
-        `${item.productName}\n(${item.variantName})`,
-        item.quantity.toString(),
+        item.sku || "-",
+        quantity.toString(),
         currencyFormat(originalPrice, order.currency),
-        discount,
-        currencyFormat(discountedPrice, order.currency),
-        currencyFormat(item.subTotal, order.currency),
+        currencyFormat(subTotal, order.currency),
+        `${discountPercentage}%`,
+        currencyFormat(totalDiscount, order.currency),
+        currencyFormat(totalAmount, order.currency),
       ];
     });
 
     autoTable(doc, {
       startY: tableStartY,
       head: [
-        [
-          "Product",
-          "Qty",
-          "Original Price",
-          "Discount",
-          "Discounted Price",
-          "Subtotal",
-        ],
+        ["ITEM", "QTY", "PRICE", "TOTAL", "DISC", "TOTAL DISC", "TOTAL AMOUNT"],
       ],
       body: tableData,
-      theme: "grid",
+      theme: "plain",
       headStyles: {
-        fillColor: [59, 130, 246],
-        textColor: 255,
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
         fontStyle: "bold",
+        lineColor: [0, 43, 121],
+        lineWidth: { top: 0, bottom: 0.5, left: 0, right: 0 },
+        halign: "left",
+      },
+      bodyStyles: {
+        lineColor: [0, 43, 121],
+        lineWidth: { top: 0.1, bottom: 0.1, left: 0, right: 0 },
       },
       styles: {
-        fontSize: 9,
+        fontSize: 8,
         cellPadding: 3,
       },
       columnStyles: {
-        0: { cellWidth: 60 },
-        1: { cellWidth: 15, halign: "center" },
-        2: { cellWidth: 28, halign: "right" },
-        3: { cellWidth: 20, halign: "center" },
-        4: { cellWidth: 28, halign: "right" },
-        5: { cellWidth: 28, halign: "right" },
+        0: { cellWidth: 28 },
+        1: { cellWidth: 18, halign: "center" },
+        2: { cellWidth: 25, halign: "center" },
+        3: { cellWidth: 25, halign: "center" },
+        4: { cellWidth: 18, halign: "center" },
+        5: { cellWidth: 28, halign: "center" },
+        6: { cellWidth: 32, halign: "center" },
       },
     });
 
-    // Get the final Y position after table
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    // Calculate total discount from all items
+    const totalDiscountAmount = order.orderDetails.reduce((sum, item) => {
+      const originalPrice = item.originalPrice[order.currency];
+      const quantity = item.quantity;
+      const subTotal = originalPrice * quantity;
+      const discountPercentage = item.discountPercentage || 0;
+      const itemDiscount = (subTotal * discountPercentage) / 100;
+      return sum + itemDiscount;
+    }, 0);
 
-    // Summary
-    const summaryX = 130;
+    // Get the final Y position after table
+    const finalY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Left side - TERMS section
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("TERMS", 14, finalY);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text(
+      "All payments should be deposited before shipping",
+      14,
+      finalY + 6,
+    );
+
+    // Right side - Summary section
+    const summaryX = 120;
     let summaryY = finalY;
 
-    doc.setFontSize(10);
-    doc.text("Subtotal:", summaryX, summaryY);
-    doc.text(currencyFormat(order.totalAmount, order.currency), 185, summaryY, {
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+
+    // Subtotal
+    doc.text("Subtotal", summaryX, summaryY);
+    doc.text(
+      order.currency === "usd"
+        ? `$${order.totalAmount.toFixed(2)}`
+        : currencyFormat(order.totalAmount, order.currency),
+      196,
+      summaryY,
+      { align: "right" },
+    );
+
+    summaryY += 6;
+
+    // Discount
+    doc.text("Discount", summaryX, summaryY);
+    doc.text(
+      currencyFormat(totalDiscountAmount, order.currency),
+      196,
+      summaryY,
+      {
+        align: "right",
+      },
+    );
+
+    summaryY += 6;
+
+    // Tax
+    doc.setFont("helvetica", "bold");
+    doc.text("Tax", summaryX, summaryY);
+    doc.text(currencyFormat(0, order.currency), 196, summaryY, {
       align: "right",
     });
 
-    summaryY += 6;
-    doc.text("Shipping Cost:", summaryX, summaryY);
-    doc.text(
-      currencyFormat(order.shippingCost, order.currency),
-      185,
-      summaryY,
-      { align: "right" },
-    );
+    summaryY += 8;
 
-    if (order.discountShipping > 0) {
-      summaryY += 6;
-      doc.text("Discount Shipping:", summaryX, summaryY);
-      doc.text(
-        `- ${currencyFormat(order.discountShipping, order.currency)}`,
-        185,
-        summaryY,
-        { align: "right" },
-      );
-    }
+    // Total
+    doc.setFontSize(10);
+    doc.text("TOTAL", summaryX, summaryY);
+    const finalTotal =
+      order.totalAmount + order.shippingCost - (order.discountShipping || 0);
+    doc.text(currencyFormat(finalTotal, order.currency), 196, summaryY, {
+      align: "right",
+    });
 
-    // Line before total (reduced gap)
-    summaryY += 3;
-    doc.setLineWidth(0.3);
-    doc.line(summaryX, summaryY, 196, summaryY);
+    // Conditions/Instructions (left side, below TERMS)
+    const conditionsY = finalY + 20;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONDITIONS/INTRUCTIONS", 14, conditionsY);
 
-    summaryY += 5;
-    doc.setFontSize(12);
-    doc.text("Total:", summaryX, summaryY);
-    doc.text(
-      currencyFormat(
-        order.totalAmount + order.shippingCost - (order.discountShipping || 0),
-        order.currency,
-      ),
-      185,
-      summaryY,
-      { align: "right" },
-    );
-
-    // Footer
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text("Thank you for your business!", 105, 280, { align: "center" });
-    doc.text("This is a computer-generated invoice.", 105, 285, {
-      align: "center",
-    });
+    doc.text("Payment can be deposited to", 14, conditionsY + 6);
+    doc.text("BCA Yosefina Angelita", 14, conditionsY + 10);
+    doc.text("1520675597", 14, conditionsY + 14);
+
+    // Bottom blue bar (matching template)
+    doc.setFillColor(0, 43, 121);
+    doc.rect(0, 275, 210, 22, "F");
 
     // Save PDF
     doc.save(`Invoice-${order.invoiceNumber}.pdf`);

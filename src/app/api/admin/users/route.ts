@@ -8,19 +8,32 @@ export async function GET() {
 
   try {
     const users = await User.find({})
-      .select("fullName email phoneNumber role deleted")
+      .select(
+        "fullName email phoneNumber role deleted resellerCategoryId resellerProfile retailProfile",
+      )
+      .populate("resellerCategoryId", "resellerCategoryName currency isActive")
       .sort({ createdAt: -1 });
 
+    // Transform data to match expected interface
+    const transformedUsers = users.map((user: any) => ({
+      ...user.toObject(),
+      resellerCategory: user.resellerCategoryId,
+    }));
+
     return NextResponse.json(
-      { success: true, data: users, message: "Data users has been fetch" },
-      { status: 200 }
+      {
+        success: true,
+        data: transformedUsers,
+        message: "Data users has been fetch",
+      },
+      { status: 200 },
     );
   } catch (error) {
     console.log(error, "function GET /api/users/route.ts");
 
     return NextResponse.json(
       { success: false, message: "Failed to retrieve user data" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -39,7 +52,7 @@ export async function POST(req: NextRequest) {
         data: user,
         message: `User with email ${user.email} successfully created`,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error: any) {
     console.log(error, "function POST /api/users/route.ts");
@@ -56,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { success: false, message: errorMsg },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAll } from "@/lib/apiService";
 import { OrderData } from "@/lib/types/order";
-import { Search, X } from "lucide-react";
+import { Search, X, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import Link from "next/link";
 
 export default function OrderPage() {
   const [orders, setOrders] = useState<OrderData[]>([]);
@@ -33,6 +34,24 @@ export default function OrderPage() {
   const [loadingUpdateStatus, setLoadingUpdateStatus] = useState(false);
 
   const [activeTab, setActiveTab] = useState("all");
+
+  const countries = [
+    { country: "Indonesia", code: "ID" },
+    { country: "Singapore", code: "SG" },
+    { country: "Malaysia", code: "MY" },
+    { country: "Thailand", code: "TH" },
+    { country: "Philippines", code: "PH" },
+    { country: "Vietnam", code: "VN" },
+    { country: "Hong Kong", code: "HK" },
+    { country: "China", code: "CN" },
+    { country: "Japan", code: "JP" },
+    { country: "South Korea", code: "KR" },
+    { country: "Australia", code: "AU" },
+    { country: "New Zealand", code: "NZ" },
+    { country: "United States", code: "US" },
+    { country: "United Kingdom", code: "UK" },
+    { country: "Canada", code: "CA" },
+  ];
 
   const handleTabChange = (tabValue: string) => {
     setActiveTab(tabValue);
@@ -65,7 +84,7 @@ export default function OrderPage() {
   const applyFilters = (
     data: OrderData[],
     filters: typeof selectedFilter,
-    search: string
+    search: string,
   ) => {
     let filtered = [...data];
 
@@ -77,7 +96,7 @@ export default function OrderPage() {
     // Filter by orderType (tab)
     if (filters.orderType !== "all") {
       filtered = filtered.filter(
-        (order) => order.orderType === filters.orderType
+        (order) => order.orderType === filters.orderType,
       );
     }
 
@@ -102,7 +121,7 @@ export default function OrderPage() {
         const matchProduct = order.orderDetails?.some(
           (detail) =>
             detail.productName?.toLowerCase().includes(query) ||
-            detail.variantName?.toLowerCase().includes(query)
+            detail.variantName?.toLowerCase().includes(query),
         );
 
         return matchOrderId || matchName || matchPhone || matchProduct;
@@ -114,7 +133,7 @@ export default function OrderPage() {
 
   const handleUpdateStatus = async (
     orderId: string,
-    status: OrderData["status"]
+    status: OrderData["status"],
   ) => {
     setLoadingUpdateStatus(true);
 
@@ -125,7 +144,7 @@ export default function OrderPage() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -149,7 +168,7 @@ export default function OrderPage() {
     const totalB2C = orders.filter((o) => o.orderType === "B2C").length;
     const totalB2B = orders.filter((o) => o.orderType === "B2B").length;
     const pending = orders.filter(
-      (o) => o.status === "pending confirmation"
+      (o) => o.status === "pending confirmation",
     ).length;
 
     return { total, totalB2C, totalB2B, pending };
@@ -224,39 +243,48 @@ export default function OrderPage() {
 
           <div className="mb-4 mt-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-4">
-                <Select
-                  value={selectedFilter.status}
-                  onValueChange={(value) =>
-                    setSelectedFilter((prev) => ({ ...prev, status: value }))
-                  }
-                >
-                  <SelectTrigger className="w-48 border-1 border-border focus:border-primary">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending confirmation">
-                      Pending Confirmation
-                    </SelectItem>
-                    <SelectItem value="awaiting payment">
-                      Awaiting Payment
-                    </SelectItem>
-                    <SelectItem value="payment confirmed">
-                      Payment Confirmed
-                    </SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="shipped">Shipped</SelectItem>
-                  </SelectContent>
-                </Select>
-                {searchQuery && (
-                  <p className="text-sm text-muted-foreground">
-                    Found {filteredDataOrder.length} result
-                    {filteredDataOrder.length !== 1 ? "s" : ""}
-                  </p>
-                )}
+              <div className="flex gap-4">
+                <Button asChild>
+                  <Link href="/dashboard/orders/create">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Order
+                  </Link>
+                </Button>
+                <div className="flex items-center gap-4">
+                  <Select
+                    value={selectedFilter.status}
+                    onValueChange={(value) =>
+                      setSelectedFilter((prev) => ({ ...prev, status: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-48 border-1 border-border focus:border-primary">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending confirmation">
+                        Pending Confirmation
+                      </SelectItem>
+                      <SelectItem value="awaiting payment">
+                        Awaiting Payment
+                      </SelectItem>
+                      <SelectItem value="payment confirmed">
+                        Payment Confirmed
+                      </SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem value="shipped">Shipped</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {searchQuery && (
+                    <p className="text-sm text-muted-foreground">
+                      Found {filteredDataOrder.length} result
+                      {filteredDataOrder.length !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center space-x-2 w-full sm:w-auto">
+
+              <div className="flex items-center gap-2">
                 <div className="relative w-full max-w-sm">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input

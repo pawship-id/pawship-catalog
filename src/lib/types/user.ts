@@ -30,7 +30,7 @@ export interface ResellerProfile {
 }
 
 export interface RetailProfile {
-  address?: {
+  shippingAddress?: {
     address?: string;
     country?: string;
     city?: string;
@@ -51,6 +51,13 @@ export interface UserData {
   confirmPassword?: string;
   resellerProfile?: ResellerProfile;
   retailProfile?: RetailProfile;
+  resellerCategoryId?: string;
+  resellerCategory?: {
+    _id: string;
+    resellerCategoryName: string;
+    currency: string;
+    isActive: boolean;
+  };
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: string;
