@@ -56,7 +56,12 @@ export default function VariantSelectorModal({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <img
-                      src={variant.image?.imageUrl || "/placeholder.jpg"}
+                      src={
+                        variant.image?.imageUrl ||
+                        product.productMedia.find((m) => m.type === "image")
+                          ?.imageUrl ||
+                        "/placeholder.jpg"
+                      }
                       alt={variant.name}
                       className="w-16 h-16 object-cover rounded-lg"
                     />
