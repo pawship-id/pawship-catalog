@@ -144,33 +144,24 @@ export default function CreateOrderPage() {
 
   // Update order items when currency changes
   useEffect(() => {
+    // NOTE: originalPrice already contains all currencies from variant
+    // We only need to recalculate subtotals for the selected currency
     if (orderItems.length > 0) {
       const updatedItems = orderItems.map((item) => {
-        // Find the product to get variant price
-        const product = products.find((p) => p._id === item.productId);
-        if (!product) return item;
-
-        const variant = product.productVariantsData?.find(
-          (v) => v._id === item.variantId,
-        );
-        if (!variant) return item;
-
-        const newBasePrice = variant.price[currency] || 0;
-
-        // Update prices with new currency
-        const updatedItem: IOrderDetail = {
-          ...item,
-          originalPrice: { [currency]: newBasePrice },
-        };
+        const newBasePrice = item.originalPrice[currency] || 0;
+        const updatedItem: IOrderDetail = { ...item };
 
         // Recalculate discounted price if discount exists
         if (item.discountPercentage && item.discountPercentage > 0) {
           const discountedPrice =
             newBasePrice - (newBasePrice * item.discountPercentage) / 100;
-          updatedItem.discountedPrice = { [currency]: discountedPrice };
+          if (!updatedItem.discountedPrice) updatedItem.discountedPrice = {};
+          updatedItem.discountedPrice[currency] = discountedPrice;
           updatedItem.subTotal = discountedPrice * item.quantity;
         } else {
-          updatedItem.discountedPrice = undefined;
+          // No discount - set to null and 0
+          updatedItem.discountedPrice = null;
+          updatedItem.discountPercentage = 0;
           updatedItem.subTotal = newBasePrice * item.quantity;
         }
 
@@ -286,6 +277,7 @@ export default function CreateOrderPage() {
     const quantity = 1;
     const basePrice = variant.price[currency] || 0;
 
+    // NOTE: Store all currency prices from variant (not just selected currency)
     const tempItem: IOrderDetail = {
       productId: selectedProduct._id,
       productName: selectedProduct.productName,
@@ -296,9 +288,9 @@ export default function CreateOrderPage() {
       quantity: quantity,
       stock: variant.stock,
       preOrder: selectedProduct.preOrder,
-      originalPrice: { [currency]: basePrice },
-      discountedPrice: undefined,
-      discountPercentage: undefined,
+      originalPrice: variant.price, // All currencies from variant
+      discountedPrice: null, // null when no discount
+      discountPercentage: 0, // 0 when no discount
       image:
         variant.image ||
         selectedProduct.productMedia.find((m) => m.type === "image")!,
@@ -341,6 +333,7 @@ export default function CreateOrderPage() {
     const item = newItems[index];
 
     if (field === "originalPrice") {
+      // NOTE: Update only the selected currency, keep other currencies intact
       if (!item.originalPrice) item.originalPrice = {};
       item.originalPrice[currency] = parseFloat(value) || 0;
 
@@ -353,6 +346,9 @@ export default function CreateOrderPage() {
         item.discountedPrice[currency] = discountedPrice;
         item.subTotal = discountedPrice * item.quantity;
       } else {
+        // No discount - set to null and 0
+        item.discountedPrice = null;
+        item.discountPercentage = 0;
         item.subTotal = item.originalPrice[currency] * item.quantity;
       }
     } else if (field === "discountPercentage") {
@@ -367,28 +363,32 @@ export default function CreateOrderPage() {
         item.discountedPrice[currency] = discountedPrice;
         item.subTotal = discountedPrice * item.quantity;
       } else {
-        item.discountedPrice = undefined;
-        item.discountPercentage = undefined;
+        // No discount - set to null and 0
+        item.discountedPrice = null;
+        item.discountPercentage = 0;
         item.subTotal = item.originalPrice[currency] * item.quantity;
       }
     } else if (field === "discountedPrice") {
-      if (!item.discountedPrice) item.discountedPrice = {};
       const discountedPrice = parseFloat(value) || 0;
-      item.discountedPrice[currency] = discountedPrice;
+      const originalPrice = item.originalPrice[currency];
 
       // Recalculate discount percentage
-      const originalPrice = item.originalPrice[currency];
-      if (originalPrice > 0 && discountedPrice < originalPrice) {
+      if (
+        originalPrice > 0 &&
+        discountedPrice > 0 &&
+        discountedPrice < originalPrice
+      ) {
+        if (!item.discountedPrice) item.discountedPrice = {};
+        item.discountedPrice[currency] = discountedPrice;
         const discountAmount = originalPrice - discountedPrice;
         item.discountPercentage = (discountAmount / originalPrice) * 100;
+        item.subTotal = discountedPrice * item.quantity;
       } else {
+        // No valid discount - set to null and 0
+        item.discountedPrice = null;
         item.discountPercentage = 0;
-        item.discountedPrice = undefined;
+        item.subTotal = originalPrice * item.quantity;
       }
-
-      item.subTotal =
-        (item.discountedPrice?.[currency] || item.originalPrice[currency]) *
-        item.quantity;
     }
 
     setOrderItems(newItems);
@@ -518,8 +518,9 @@ export default function CreateOrderPage() {
             Back to Orders
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold">Create New Order</h1>
       </div>
+
+      <h1 className="text-2xl font-bold">Create New Order</h1>
 
       {/* Customer Selection */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -536,13 +537,13 @@ export default function CreateOrderPage() {
         {selectedCustomer ? (
           <div className="space-y-4">
             {/* Customer ID - Read-only display */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            {/* <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <Label className="text-sm text-gray-600">Customer ID</Label>
               <p className="font-mono text-sm mt-1">{customerId}</p>
               <p className="text-xs text-gray-500 mt-1">
                 This customer ID will be saved as userId in the order
               </p>
-            </div>
+            </div> */}
 
             {/* Customer Info Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 rounded-lg">

@@ -243,45 +243,48 @@ export default function OrderPage() {
 
           <div className="mb-4 mt-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-4">
-                <Select
-                  value={selectedFilter.status}
-                  onValueChange={(value) =>
-                    setSelectedFilter((prev) => ({ ...prev, status: value }))
-                  }
-                >
-                  <SelectTrigger className="w-48 border-1 border-border focus:border-primary">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending confirmation">
-                      Pending Confirmation
-                    </SelectItem>
-                    <SelectItem value="awaiting payment">
-                      Awaiting Payment
-                    </SelectItem>
-                    <SelectItem value="payment confirmed">
-                      Payment Confirmed
-                    </SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="shipped">Shipped</SelectItem>
-                  </SelectContent>
-                </Select>
-                {searchQuery && (
-                  <p className="text-sm text-muted-foreground">
-                    Found {filteredDataOrder.length} result
-                    {filteredDataOrder.length !== 1 ? "s" : ""}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
+              <div className="flex gap-4">
                 <Button asChild>
                   <Link href="/dashboard/orders/create">
                     <Plus className="h-4 w-4 mr-2" />
                     Create Order
                   </Link>
                 </Button>
+                <div className="flex items-center gap-4">
+                  <Select
+                    value={selectedFilter.status}
+                    onValueChange={(value) =>
+                      setSelectedFilter((prev) => ({ ...prev, status: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-48 border-1 border-border focus:border-primary">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending confirmation">
+                        Pending Confirmation
+                      </SelectItem>
+                      <SelectItem value="awaiting payment">
+                        Awaiting Payment
+                      </SelectItem>
+                      <SelectItem value="payment confirmed">
+                        Payment Confirmed
+                      </SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem value="shipped">Shipped</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {searchQuery && (
+                    <p className="text-sm text-muted-foreground">
+                      Found {filteredDataOrder.length} result
+                      {filteredDataOrder.length !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
                 <div className="relative w-full max-w-sm">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
