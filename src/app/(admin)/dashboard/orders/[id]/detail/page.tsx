@@ -24,12 +24,14 @@ import {
   Truck,
   User,
   Trash2,
-  FileImage,
   BanknoteArrowDown,
+  Download,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function DetailProduct() {
   const params = useParams();
@@ -119,6 +121,203 @@ export default function DetailProduct() {
       fetchOrder();
     }
   }, [id]);
+
+  const generateInvoicePDF = () => {
+    if (!order) return;
+
+    const doc = new jsPDF();
+
+    // Add company logo/header (maintaining aspect ratio)
+    const logo = new Image();
+    logo.src = "/images/transparent-logo.png";
+    logo.onload = () => {
+      doc.addImage(logo, "PNG", 14, 10, 30, 30);
+    };
+    // Add logo (will be loaded synchronously for PDF generation)
+    doc.addImage("/images/transparent-logo.png", "PNG", 14, 10, 30, 30);
+
+    // Invoice Title
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE", 150, 20);
+
+    // Invoice details
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Invoice #: ${order.invoiceNumber}`, 150, 28);
+    doc.text(
+      `Date: ${new Date(order.orderDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })}`,
+      150,
+      34,
+    );
+
+    // Line separator
+    doc.setLineWidth(0.5);
+    doc.line(14, 45, 196, 45);
+
+    // Billing & Shipping Information
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Ship To:", 14, 55);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    let yPos = 62;
+    doc.text(order.shippingAddress.fullName, 14, yPos);
+    yPos += 5;
+    doc.text(order.shippingAddress.email, 14, yPos);
+    yPos += 5;
+    doc.text(order.shippingAddress.phone, 14, yPos);
+    yPos += 5;
+    doc.text(order.shippingAddress.address, 14, yPos);
+    yPos += 5;
+    doc.text(
+      `${order.shippingAddress.district}, ${order.shippingAddress.city}`,
+      14,
+      yPos,
+    );
+    yPos += 5;
+    doc.text(
+      `${order.shippingAddress.country} - ${order.shippingAddress.zipCode}`,
+      14,
+      yPos,
+    );
+
+    // Order Details (aligned to the right)
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Order Details:", 196, 55, { align: "right" });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Type: ${order.orderType}`, 196, 62, { align: "right" });
+    doc.text(`Currency: ${order.currency.toUpperCase()}`, 196, 67, {
+      align: "right",
+    });
+
+    // Items table
+    const tableStartY = yPos + 10;
+
+    const tableData = order.orderDetails.map((item) => {
+      const originalPrice = item.originalPrice[order.currency];
+      const discountedPrice = item.discountedPrice
+        ? item.discountedPrice[order.currency]
+        : originalPrice;
+      const discount = item.discountPercentage
+        ? `${item.discountPercentage}%`
+        : "-";
+
+      return [
+        `${item.productName}\n(${item.variantName})`,
+        item.quantity.toString(),
+        currencyFormat(originalPrice, order.currency),
+        discount,
+        currencyFormat(discountedPrice, order.currency),
+        currencyFormat(item.subTotal, order.currency),
+      ];
+    });
+
+    autoTable(doc, {
+      startY: tableStartY,
+      head: [
+        [
+          "Product",
+          "Qty",
+          "Original Price",
+          "Discount",
+          "Discounted Price",
+          "Subtotal",
+        ],
+      ],
+      body: tableData,
+      theme: "grid",
+      headStyles: {
+        fillColor: [59, 130, 246],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+      columnStyles: {
+        0: { cellWidth: 60 },
+        1: { cellWidth: 15, halign: "center" },
+        2: { cellWidth: 28, halign: "right" },
+        3: { cellWidth: 20, halign: "center" },
+        4: { cellWidth: 28, halign: "right" },
+        5: { cellWidth: 28, halign: "right" },
+      },
+    });
+
+    // Get the final Y position after table
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Summary
+    const summaryX = 130;
+    let summaryY = finalY;
+
+    doc.setFontSize(10);
+    doc.text("Subtotal:", summaryX, summaryY);
+    doc.text(currencyFormat(order.totalAmount, order.currency), 185, summaryY, {
+      align: "right",
+    });
+
+    summaryY += 6;
+    doc.text("Shipping Cost:", summaryX, summaryY);
+    doc.text(
+      currencyFormat(order.shippingCost, order.currency),
+      185,
+      summaryY,
+      { align: "right" },
+    );
+
+    if (order.discountShipping > 0) {
+      summaryY += 6;
+      doc.text("Discount Shipping:", summaryX, summaryY);
+      doc.text(
+        `- ${currencyFormat(order.discountShipping, order.currency)}`,
+        185,
+        summaryY,
+        { align: "right" },
+      );
+    }
+
+    // Line before total (reduced gap)
+    summaryY += 3;
+    doc.setLineWidth(0.3);
+    doc.line(summaryX, summaryY, 196, summaryY);
+
+    summaryY += 5;
+    doc.setFontSize(12);
+    doc.text("Total:", summaryX, summaryY);
+    doc.text(
+      currencyFormat(
+        order.totalAmount + order.shippingCost - (order.discountShipping || 0),
+        order.currency,
+      ),
+      185,
+      summaryY,
+      { align: "right" },
+    );
+
+    // Footer
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text("Thank you for your business!", 105, 280, { align: "center" });
+    doc.text("This is a computer-generated invoice.", 105, 285, {
+      align: "center",
+    });
+
+    // Save PDF
+    doc.save(`Invoice-${order.invoiceNumber}.pdf`);
+  };
+
   return (
     <div>
       <div className="flex flex-wrap gap-2 items-center justify-between">
@@ -132,6 +331,16 @@ export default function DetailProduct() {
         {order && (
           <div className="flex gap-4">
             {getStatusBadge(order.status)}
+
+            <Button
+              size="sm"
+              // variant="outline"
+              className="cursor-pointer"
+              onClick={generateInvoicePDF}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Invoice
+            </Button>
 
             <Button
               size="sm"
@@ -364,7 +573,7 @@ export default function DetailProduct() {
                         order.totalAmount +
                           order.shippingCost -
                           (order.discountShipping || 0),
-                        order.currency
+                        order.currency,
                       )}
                     </span>
                   </div>
@@ -424,7 +633,7 @@ export default function DetailProduct() {
                                   day: "numeric",
                                   hour: "2-digit",
                                   minute: "2-digit",
-                                }
+                                },
                               )}
                             </span>
                           </div>
@@ -444,16 +653,16 @@ export default function DetailProduct() {
                           onClick={async () => {
                             if (
                               !confirm(
-                                "Are you sure you want to delete this payment proof?"
+                                "Are you sure you want to delete this payment proof?",
                               )
                             )
                               return;
                             try {
                               const res = await fetch(
                                 `/api/orders/payment-proof/${id}?imagePublicId=${encodeURIComponent(
-                                  proof.imagePublicId
+                                  proof.imagePublicId,
                                 )}`,
-                                { method: "DELETE" }
+                                { method: "DELETE" },
                               );
                               const result = await res.json();
                               if (result.success) {
@@ -549,7 +758,7 @@ export default function DetailProduct() {
                           <span className="text-foreground">
                             {currencyFormat(
                               item.originalPrice[order.currency],
-                              order.currency
+                              order.currency,
                             )}
                           </span>
                         </td>
@@ -567,7 +776,7 @@ export default function DetailProduct() {
                             <span className=" text-orange-600">
                               {currencyFormat(
                                 item.discountedPrice[order.currency],
-                                order.currency
+                                order.currency,
                               )}
                             </span>
                           ) : (
