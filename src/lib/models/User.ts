@@ -24,7 +24,7 @@ export interface IResellerProfile {
 }
 
 export interface IRetailProfile {
-  address?: {
+  shippingAddress?: {
     address?: string;
     country?: string;
     city?: string;
@@ -32,15 +32,6 @@ export interface IRetailProfile {
     zipCode?: string;
   };
   remarks?: string; // For internal use
-}
-
-export interface IAddress {
-  address: string;
-  city: string;
-  district: string;
-  zipCode: string;
-  country: string;
-  isDefault: boolean;
 }
 
 export interface IUser extends Document {
@@ -53,7 +44,6 @@ export interface IUser extends Document {
   resellerCategoryId?: Types.ObjectId;
   resellerProfile?: IResellerProfile;
   retailProfile?: IRetailProfile;
-  addresses?: IAddress[];
   deleted?: boolean;
   deletedAt?: Date;
   deletedBy?: Types.ObjectId;
@@ -119,7 +109,7 @@ const UserSchema = new Schema<IUser>(
       remarks: { type: String },
     },
     retailProfile: {
-      address: {
+      shippingAddress: {
         address: { type: String },
         country: { type: String },
         city: { type: String },
@@ -128,16 +118,6 @@ const UserSchema = new Schema<IUser>(
       },
       remarks: { type: String },
     },
-    addresses: [
-      {
-        address: { type: String, required: true },
-        city: { type: String, required: true },
-        district: { type: String, required: true },
-        zipCode: { type: String, required: true },
-        country: { type: String, required: true, default: "Indonesia" },
-        isDefault: { type: Boolean, default: false },
-      },
-    ],
     passwordResetToken: {
       type: String,
       select: false,
@@ -149,7 +129,7 @@ const UserSchema = new Schema<IUser>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // mongoose-delete plugin for soft delete
@@ -177,7 +157,7 @@ UserSchema.pre("save", async function (next) {
 
   if (!this.confirmPassword) {
     return next(
-      this.invalidate("confirmPassword", "Please input a confirm password")
+      this.invalidate("confirmPassword", "Please input a confirm password"),
     );
   }
 

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createData, getAll } from "@/lib/apiService";
-import { IOrderDetail, OrderForm } from "@/lib/types/order";
+import { IOrderDetail, OrderData, OrderForm } from "@/lib/types/order";
 import LoadingPage from "@/components/loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,9 @@ export default function CreateOrderPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<UserData | null>(
     null,
   );
+  // NOTE: customerId is the actual user ID that will be saved in order.userId
+  // This allows admin to create orders on behalf of specific customers
+  const [customerId, setCustomerId] = useState("");
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
 
@@ -80,11 +83,30 @@ export default function CreateOrderPage() {
     address: "",
   });
 
+  const countries = [
+    { country: "Indonesia", code: "ID" },
+    { country: "Singapore", code: "SG" },
+    { country: "Malaysia", code: "MY" },
+    { country: "Thailand", code: "TH" },
+    { country: "Philippines", code: "PH" },
+    { country: "Vietnam", code: "VN" },
+    { country: "Hong Kong", code: "HK" },
+    { country: "China", code: "CN" },
+    { country: "Japan", code: "JP" },
+    { country: "South Korea", code: "KR" },
+    { country: "Australia", code: "AU" },
+    { country: "New Zealand", code: "NZ" },
+    { country: "United States", code: "US" },
+    { country: "United Kingdom", code: "UK" },
+    { country: "Canada", code: "CA" },
+  ];
+
   // Fetch customers
   const fetchCustomers = async () => {
     try {
       setLoading(true);
       const response = await getAll<UserData>("/api/admin/users");
+
       if (response.data) {
         // Filter only retail and reseller users
         const filteredUsers = response.data.filter(
@@ -162,6 +184,8 @@ export default function CreateOrderPage() {
   // Select customer and populate shipping address
   const handleSelectCustomer = (customer: UserData) => {
     setSelectedCustomer(customer);
+    // NOTE: Set customerId from selected customer - this will be used as userId in order
+    setCustomerId(customer._id);
 
     // Set currency based on role
     if (customer.role === "retail") {
@@ -175,19 +199,17 @@ export default function CreateOrderPage() {
       setCurrency("IDR"); // Default fallback
     }
 
-    console.log(customer, "????");
-
     // Populate shipping address from customer profile
-    if (customer.role === "retail" && customer.retailProfile?.address) {
+    if (customer.role === "retail" && customer.retailProfile?.shippingAddress) {
       setShippingAddress({
         fullName: customer.fullName,
         email: customer.email,
         phone: customer.phoneNumber,
-        country: customer.retailProfile.address.country || "",
-        city: customer.retailProfile.address.city || "",
-        district: customer.retailProfile.address.district || "",
-        zipCode: customer.retailProfile.address.zipCode || "",
-        address: customer.retailProfile.address.address || "",
+        country: customer.retailProfile.shippingAddress.country || "",
+        city: customer.retailProfile.shippingAddress.city || "",
+        district: customer.retailProfile.shippingAddress.district || "",
+        zipCode: customer.retailProfile.shippingAddress.zipCode || "",
+        address: customer.retailProfile.shippingAddress.address || "",
       });
     } else if (
       customer.role === "reseller" &&
@@ -277,10 +299,9 @@ export default function CreateOrderPage() {
       originalPrice: { [currency]: basePrice },
       discountedPrice: undefined,
       discountPercentage: undefined,
-      image: variant.image || {
-        imageUrl: "",
-        imagePublicId: "",
-      },
+      image:
+        variant.image ||
+        selectedProduct.productMedia.find((m) => m.type === "image")!,
       subTotal: basePrice * quantity,
       moq: selectedProduct.moq,
     };
@@ -296,10 +317,9 @@ export default function CreateOrderPage() {
     setOrderItems((items) =>
       items.map((item) => {
         if (item.variantId === variantId) {
-          const currency = "USD";
           const price = item.discountedPrice
-            ? item.discountedPrice[currency]
-            : item.originalPrice[currency];
+            ? item.discountedPrice[currency] || 0
+            : item.originalPrice[currency] || 0;
           return {
             ...item,
             quantity: newQuantity,
@@ -399,15 +419,53 @@ export default function CreateOrderPage() {
       return;
     }
 
-    if (!shippingAddress.address || !shippingAddress.country) {
-      showErrorAlert("Error", "Please complete the shipping address");
+    // Validate all shipping address fields
+    if (!shippingAddress.fullName) {
+      showErrorAlert("Incomplete Address", "Please fill in Full Name");
+      return;
+    }
+
+    if (!shippingAddress.email) {
+      showErrorAlert("Incomplete Address", "Please fill in Email");
+      return;
+    }
+
+    if (!shippingAddress.phone) {
+      showErrorAlert("Incomplete Address", "Please fill in Phone");
+      return;
+    }
+
+    if (!shippingAddress.country) {
+      showErrorAlert("Incomplete Address", "Please fill in Country");
+      return;
+    }
+
+    if (!shippingAddress.city) {
+      showErrorAlert("Incomplete Address", "Please fill in City");
+      return;
+    }
+
+    if (!shippingAddress.district) {
+      showErrorAlert("Incomplete Address", "Please fill in District");
+      return;
+    }
+
+    if (!shippingAddress.zipCode) {
+      showErrorAlert("Incomplete Address", "Please fill in Zip Code");
+      return;
+    }
+
+    if (!shippingAddress.address) {
+      showErrorAlert("Incomplete Address", "Please fill in Street Address");
       return;
     }
 
     try {
       setSaving(true);
 
-      const orderData: OrderForm = {
+      // NOTE: For admin-created orders, we send customerId as userId
+      // The API will use this customerId instead of session user ID
+      const orderData: OrderForm & { userId?: string } = {
         orderDate: new Date(),
         invoiceNumber: `INV-${Date.now()}`, // Temporary, will be generated by backend
         totalAmount: orderItems.reduce((sum, item) => sum + item.subTotal, 0),
@@ -418,9 +476,13 @@ export default function CreateOrderPage() {
         shippingCost,
         discountShipping,
         currency,
+        userId: customerId, // Custom userId for admin-created orders
       };
 
-      const response = await createData("/api/admin/orders", orderData);
+      const response = await createData<OrderData, OrderForm>(
+        "/api/admin/orders",
+        orderData,
+      );
 
       if (response.success) {
         showSuccessAlert("Success", "Order created successfully");
@@ -472,35 +534,50 @@ export default function CreateOrderPage() {
         </div>
 
         {selectedCustomer ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 rounded-lg">
-            <div>
-              <Label className="text-sm text-gray-600">Name</Label>
-              <p className="font-medium">{selectedCustomer.fullName}</p>
+          <div className="space-y-4">
+            {/* Customer ID - Read-only display */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <Label className="text-sm text-gray-600">Customer ID</Label>
+              <p className="font-mono text-sm mt-1">{customerId}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                This customer ID will be saved as userId in the order
+              </p>
             </div>
-            <div>
-              <Label className="text-sm text-gray-600">Email</Label>
-              <p className="font-medium">{selectedCustomer.email}</p>
-            </div>
-            <div>
-              <Label className="text-sm text-gray-600">Role</Label>
-              <p className="font-medium capitalize">{selectedCustomer.role}</p>
-            </div>
-            <div>
-              <Label className="text-sm text-gray-600">Currency</Label>
-              <Select
-                value={currency}
-                onValueChange={(value) => setCurrency(value as TCurrency)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="SGD">SGD</SelectItem>
-                  <SelectItem value="IDR">IDR</SelectItem>
-                  <SelectItem value="HKD">HKD</SelectItem>
-                </SelectContent>
-              </Select>
+
+            {/* Customer Info Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 rounded-lg">
+              <div>
+                <Label className="text-sm text-gray-600">Name</Label>
+                <p className="font-medium">{selectedCustomer.fullName}</p>
+              </div>
+              <div>
+                <Label className="text-sm text-gray-600">Email</Label>
+                <p className="font-medium">{selectedCustomer.email}</p>
+              </div>
+              <div>
+                <Label className="text-sm text-gray-600">Role</Label>
+                <p className="font-medium capitalize">
+                  {selectedCustomer.role}
+                </p>
+              </div>
+              <div>
+                <Label className="text-sm text-gray-600 mb-2">Currency</Label>
+
+                <Select
+                  value={currency}
+                  onValueChange={(value) => setCurrency(value as TCurrency)}
+                >
+                  <SelectTrigger className="w-full h-auto border-gray-300 focus:border-primary/80 focus:ring-primary/80">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="SGD">SGD</SelectItem>
+                    <SelectItem value="IDR">IDR</SelectItem>
+                    <SelectItem value="HKD">HKD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         ) : (
@@ -584,17 +661,27 @@ export default function CreateOrderPage() {
                     <MapPin className="w-4 h-4" />
                     <span>Country *</span>
                   </Label>
-                  <Input
+                  <Select
                     value={shippingAddress.country}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setShippingAddress({
                         ...shippingAddress,
-                        country: e.target.value,
+                        country: value,
                       })
                     }
-                    className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
                     required
-                  />
+                  >
+                    <SelectTrigger className="w-full p-4 h-auto border-gray-300 focus:border-primary/80 focus:ring-primary/80">
+                      <SelectValue placeholder="Select your country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((c) => (
+                        <SelectItem key={c.code} value={c.country}>
+                          {c.country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -810,7 +897,7 @@ export default function CreateOrderPage() {
                             type="number"
                             min="1"
                             className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4 min-w-[50px] max-w-[70px]"
-                            value={item.quantity}
+                            value={item.quantity || 1}
                             onChange={(e) =>
                               handleQuantityChange(
                                 item.variantId,

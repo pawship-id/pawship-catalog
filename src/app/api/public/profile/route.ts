@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
-import ResellerCategory from "@/lib/models/ResellerCategory";
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,9 +28,16 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get first address if exists
-    const address =
-      user.addresses && user.addresses.length > 0 ? user.addresses[0] : null;
+    // Get address based on role
+    let address = null;
+    if (user.role === "retail" && user.retailProfile?.shippingAddress) {
+      address = user.retailProfile.shippingAddress;
+    } else if (
+      user.role === "reseller" &&
+      user.resellerProfile?.shippingAddress
+    ) {
+      address = user.resellerProfile.shippingAddress;
+    }
 
     // Get reseller category info if user is reseller
     let resellerCategory = null;
@@ -106,12 +112,18 @@ export async function PATCH(req: NextRequest) {
       user.resellerProfile.taxLegalInfo = body.taxId;
     }
 
-    // Update address
+    // Update address based on role
     if (body.address) {
-      if (!user.addresses || user.addresses.length === 0) {
-        user.addresses = [body.address];
-      } else {
-        user.addresses[0] = body.address;
+      if (user.role === "retail") {
+        if (!user.retailProfile) {
+          user.retailProfile = {};
+        }
+        user.retailProfile.shippingAddress = body.address;
+      } else if (user.role === "reseller") {
+        if (!user.resellerProfile) {
+          user.resellerProfile = {};
+        }
+        user.resellerProfile.shippingAddress = body.address;
       }
     }
 

@@ -30,7 +30,7 @@ export interface ResellerProfile {
 }
 
 export interface RetailProfile {
-  address?: {
+  shippingAddress?: {
     address?: string;
     country?: string;
     city?: string;
