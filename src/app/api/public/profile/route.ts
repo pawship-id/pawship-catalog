@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     if (!session || !session.user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { success: false, message: "User not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching profile:", error);
     return NextResponse.json(
       { success: false, message: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -75,7 +75,7 @@ export async function PATCH(req: NextRequest) {
     if (!session || !session.user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -88,7 +88,7 @@ export async function PATCH(req: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { success: false, message: "User not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -118,7 +118,7 @@ export async function PATCH(req: NextRequest) {
     await user.save({ validateBeforeSave: false });
 
     const updatedUser = await User.findById(session.user.id).select(
-      "-password"
+      "-password",
     );
 
     return NextResponse.json({
@@ -130,7 +130,7 @@ export async function PATCH(req: NextRequest) {
     console.error("Error updating profile:", error);
     return NextResponse.json(
       { success: false, message: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
