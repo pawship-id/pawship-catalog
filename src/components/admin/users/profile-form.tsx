@@ -34,7 +34,7 @@ export default function ProfileForm({
     initialData ||
       (role === "reseller"
         ? getEmptyResellerProfile()
-        : getEmptyRetailProfile())
+        : getEmptyRetailProfile()),
   );
 
   function getEmptyResellerProfile(): IResellerProfile {
@@ -60,7 +60,7 @@ export default function ProfileForm({
 
   function getEmptyRetailProfile(): IRetailProfile {
     return {
-      address: {
+      shippingAddress: {
         address: "",
         country: "",
         city: "",
@@ -226,7 +226,7 @@ export default function ProfileForm({
                   handleNestedChange(
                     "shippingAddress",
                     "country",
-                    e.target.value
+                    e.target.value,
                   )
                 }
                 placeholder="Enter country"
@@ -256,7 +256,7 @@ export default function ProfileForm({
                   handleNestedChange(
                     "shippingAddress",
                     "district",
-                    e.target.value
+                    e.target.value,
                   )
                 }
                 placeholder="Enter district"
@@ -273,7 +273,7 @@ export default function ProfileForm({
                   handleNestedChange(
                     "shippingAddress",
                     "zipCode",
-                    e.target.value
+                    e.target.value,
                   )
                 }
                 placeholder="Enter zip code"
@@ -326,6 +326,8 @@ export default function ProfileForm({
   }
 
   // Retail Profile Form
+  console.log(formData, ">>>>>");
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -344,9 +346,9 @@ export default function ProfileForm({
           <Label htmlFor="address">Address</Label>
           <Textarea
             id="address"
-            value={formData.address?.address || ""}
+            value={formData.shippingAddress?.address || ""}
             onChange={(e) =>
-              handleNestedChange("address", "address", e.target.value)
+              handleNestedChange("shippingAddress", "address", e.target.value)
             }
             placeholder="Enter complete address"
             rows={3}
@@ -358,9 +360,9 @@ export default function ProfileForm({
             <Label htmlFor="country">Country</Label>
             <Input
               id="country"
-              value={formData.address?.country || ""}
+              value={formData.shippingAddress?.country || ""}
               onChange={(e) =>
-                handleNestedChange("address", "country", e.target.value)
+                handleNestedChange("shippingAddress", "country", e.target.value)
               }
               placeholder="Enter country"
               className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
@@ -371,9 +373,9 @@ export default function ProfileForm({
             <Label htmlFor="city">City</Label>
             <Input
               id="city"
-              value={formData.address?.city || ""}
+              value={formData.shippingAddress?.city || ""}
               onChange={(e) =>
-                handleNestedChange("address", "city", e.target.value)
+                handleNestedChange("shippingAddress", "city", e.target.value)
               }
               placeholder="Enter city"
               className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
@@ -384,9 +386,13 @@ export default function ProfileForm({
             <Label htmlFor="district">District</Label>
             <Input
               id="district"
-              value={formData.address?.district || ""}
+              value={formData.shippingAddress?.district || ""}
               onChange={(e) =>
-                handleNestedChange("address", "district", e.target.value)
+                handleNestedChange(
+                  "shippingAddress",
+                  "district",
+                  e.target.value,
+                )
               }
               placeholder="Enter district"
               className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"
@@ -397,9 +403,9 @@ export default function ProfileForm({
             <Label htmlFor="zipCode">Zip Code</Label>
             <Input
               id="zipCode"
-              value={formData.address?.zipCode || ""}
+              value={formData.shippingAddress?.zipCode || ""}
               onChange={(e) =>
-                handleNestedChange("address", "zipCode", e.target.value)
+                handleNestedChange("shippingAddress", "zipCode", e.target.value)
               }
               placeholder="Enter zip code"
               className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5"

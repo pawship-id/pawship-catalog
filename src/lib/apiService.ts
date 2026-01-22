@@ -11,7 +11,7 @@ interface BaseModel {
  * @returns Array of data type T
  */
 export async function getAll<T extends BaseModel>(
-  url: string
+  url: string,
 ): Promise<ApiResponse<T[]>> {
   const response = await fetch(url, {
     cache: "no-store", // always take the latest data
@@ -36,7 +36,7 @@ export async function getAll<T extends BaseModel>(
  */
 export async function getById<T extends BaseModel>(
   url: string,
-  id: string
+  id: string,
 ): Promise<ApiResponse<T>> {
   const response = await fetch(`${url}/${id}`, {
     cache: "no-store",
@@ -61,7 +61,7 @@ export async function getById<T extends BaseModel>(
  */
 export async function createData<T extends BaseModel, D>(
   url: string,
-  data: D
+  data: D,
 ): Promise<ApiResponse<T>> {
   const isFormData = data instanceof FormData;
 
@@ -91,7 +91,7 @@ export async function createData<T extends BaseModel, D>(
 export async function updateData<T extends BaseModel, D>(
   url: string,
   id: string,
-  data: Partial<D>
+  data: Partial<D>,
 ): Promise<ApiResponse<T>> {
   const isFormData = data instanceof FormData;
 

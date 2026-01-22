@@ -63,6 +63,24 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
+  const countries = [
+    { country: "Indonesia", code: "ID" },
+    { country: "Singapore", code: "SG" },
+    { country: "Malaysia", code: "MY" },
+    { country: "Thailand", code: "TH" },
+    { country: "Philippines", code: "PH" },
+    { country: "Vietnam", code: "VN" },
+    { country: "Hong Kong", code: "HK" },
+    { country: "China", code: "CN" },
+    { country: "Japan", code: "JP" },
+    { country: "South Korea", code: "KR" },
+    { country: "Australia", code: "AU" },
+    { country: "New Zealand", code: "NZ" },
+    { country: "United States", code: "US" },
+    { country: "United Kingdom", code: "UK" },
+    { country: "Canada", code: "CA" },
+  ];
+
   // Change Password States
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -101,7 +119,7 @@ export default function ProfilePage() {
   // Helper function to update password data
   const updatePasswordData = (
     field: keyof typeof passwordData,
-    value: string
+    value: string,
   ) => {
     setPasswordData({ ...passwordData, [field]: value });
   };
@@ -442,15 +460,21 @@ export default function ProfilePage() {
                 {/* Country */}
                 <div className="space-y-2">
                   <Label htmlFor="addressCountry">Country</Label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="addressCountry"
-                      value={profile.address?.country || "Indonesia"}
-                      onChange={(e) => updateAddress("country", e.target.value)}
-                      className="pl-10 border-gray-300 focus:border-primary/80 focus:ring-primary/80"
-                    />
-                  </div>
+                  <Select
+                    value={profile.address?.country}
+                    onValueChange={(value) => updateAddress("country", value)}
+                  >
+                    <SelectTrigger className="w-full py-4 h-auto border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80">
+                      <SelectValue placeholder="Select your country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((c) => (
+                        <SelectItem key={c.code} value={c.country}>
+                          {c.country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

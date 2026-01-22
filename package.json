@@ -43,6 +43,8 @@
     "date-fns": "^4.1.0",
     "formidable": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^4.0.0",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.542.0",
     "mongoose": "^8.18.3",
     "mongoose-delete": "^1.0.2",

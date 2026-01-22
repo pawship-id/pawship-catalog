@@ -51,6 +51,8 @@ import ErrorPage from "@/components/admin/error-page";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductData } from "@/lib/types/product";
 import Link from "next/link";
+import ProductSelectorModal from "@/components/admin/orders/product-selector-modal";
+import VariantSelectorModal from "@/components/admin/orders/variant-selector-modal";
 
 export default function EditOrderPage() {
   const params = useParams();
@@ -72,7 +74,7 @@ export default function EditOrderPage() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productSearchQuery, setProductSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(
-    null
+    null,
   );
   const [showVariantSelection, setShowVariantSelection] = useState(false);
   const [variantQuantity, setVariantQuantity] = useState<{
@@ -102,7 +104,7 @@ export default function EditOrderPage() {
         discount: number;
         categoryProduct: string | string[];
       }>;
-    }
+    },
   ) => {
     if (
       !resellerPricing ||
@@ -163,7 +165,7 @@ export default function EditOrderPage() {
     quantity: number,
     categoryId: string,
     currentItems: IOrderDetail[],
-    resellerPricing?: any
+    resellerPricing?: any,
   ) => {
     let discountPercentage = 0;
     let finalPrice = basePrice;
@@ -172,13 +174,13 @@ export default function EditOrderPage() {
       const tierResult = calculateB2BDiscount(
         categoryId,
         currentItems,
-        resellerPricing
+        resellerPricing,
       );
 
       if (tierResult.discountPercentage > 0) {
         discountPercentage = tierResult.discountPercentage;
         finalPrice = Math.round(
-          basePrice - (basePrice * discountPercentage) / 100
+          basePrice - (basePrice * discountPercentage) / 100,
         );
       }
     }
@@ -213,13 +215,13 @@ export default function EditOrderPage() {
             try {
               const productResponse = await getById<ProductData>(
                 "/api/admin/products",
-                item.productId
+                item.productId,
               );
 
               if (productResponse.data) {
                 const product = productResponse.data;
                 const variant = product.productVariantsData?.find(
-                  (v) => v._id === item.variantId
+                  (v) => v._id === item.variantId,
                 );
 
                 if (variant) {
@@ -247,7 +249,7 @@ export default function EditOrderPage() {
             } catch (error) {
               console.error(
                 `Failed to fetch product ${item.productId}:`,
-                error
+                error,
               );
               // On error, keep original item with default values
               return {
@@ -256,7 +258,7 @@ export default function EditOrderPage() {
                 preOrder: item.preOrder || { enabled: false, leadTime: "" },
               };
             }
-          })
+          }),
         );
 
         setOriginalQuantities(origQty);
@@ -296,7 +298,7 @@ export default function EditOrderPage() {
     if (!canEditOrder()) {
       showErrorAlert(
         "Cannot Edit Order",
-        "You can only edit orders with 'Pending Confirmation' or 'Awaiting Payment' status."
+        "You can only edit orders with 'Pending Confirmation' or 'Awaiting Payment' status.",
       );
       return;
     }
@@ -317,19 +319,19 @@ export default function EditOrderPage() {
     if (!selectedProduct || !order) return;
 
     const variant = selectedProduct.productVariantsData?.find(
-      (v) => v._id === variantId
+      (v) => v._id === variantId,
     );
 
     if (!variant) return;
 
     // Check if this variant already exists in order
     const existingItem = editedItems.find(
-      (item) => item.variantId === variantId
+      (item) => item.variantId === variantId,
     );
     if (existingItem) {
       showErrorAlert(
         "Already Added",
-        "This product variant is already in the order."
+        "This product variant is already in the order.",
       );
       setShowVariantSelection(false);
       setShowAddProductModal(false);
@@ -367,7 +369,7 @@ export default function EditOrderPage() {
       quantity,
       selectedProduct.categoryId,
       itemsForCalculation,
-      selectedProduct.resellerPricing
+      selectedProduct.resellerPricing,
     );
 
     const newItem: IOrderDetail = {
@@ -387,7 +389,7 @@ export default function EditOrderPage() {
         item.quantity,
         item.categoryId || selectedProduct.categoryId,
         newItems,
-        item.resellerPricing
+        item.resellerPricing,
       );
 
       return {
@@ -416,7 +418,9 @@ export default function EditOrderPage() {
 
   // Filter products by search
   const filteredProducts = products.filter((product) =>
-    product.productName.toLowerCase().includes(productSearchQuery.toLowerCase())
+    product.productName
+      .toLowerCase()
+      .includes(productSearchQuery.toLowerCase()),
   );
 
   // Update item field
@@ -471,7 +475,7 @@ export default function EditOrderPage() {
   const updateItemField = (
     index: number,
     field: keyof IOrderDetail,
-    value: any
+    value: any,
   ) => {
     if (!canEditOrder()) return;
 
@@ -494,7 +498,7 @@ export default function EditOrderPage() {
         const maxAllowedQty = originalQty + actualAvailableStock;
         showWarningAlert(
           "Quantity exceeds available stock",
-          `Available stock is ${actualAvailableStock} pcs. Maximum quantity you can order is ${maxAllowedQty} pcs (${originalQty} already ordered + ${actualAvailableStock} available). Quantity has been set to maximum.`
+          `Available stock is ${actualAvailableStock} pcs. Maximum quantity you can order is ${maxAllowedQty} pcs (${originalQty} already ordered + ${actualAvailableStock} available). Quantity has been set to maximum.`,
         );
         qty = maxAllowedQty;
       }
@@ -528,7 +532,7 @@ export default function EditOrderPage() {
       if (originalPrice > 0 && discountedPrice < originalPrice) {
         const discountAmount = originalPrice - discountedPrice;
         item.discountPercentage = formatDecimal(
-          (discountAmount / originalPrice) * 100
+          (discountAmount / originalPrice) * 100,
         );
       } else {
         item.discountPercentage = 0;
@@ -555,7 +559,7 @@ export default function EditOrderPage() {
       if (!item.discountedPrice) item.discountedPrice = {};
       item.discountedPrice[order!.currency] = formatDecimal(discountedPrice);
       item.subTotal = formatDecimal(
-        item.discountedPrice[order!.currency] * qty
+        item.discountedPrice[order!.currency] * qty,
       );
     } else {
       item.discountedPrice = null;
@@ -574,7 +578,7 @@ export default function EditOrderPage() {
         item.quantity,
         item.categoryId,
         items,
-        item.resellerPricing
+        item.resellerPricing,
       );
 
       return {
@@ -599,7 +603,7 @@ export default function EditOrderPage() {
     totalAmount: number,
     shippingCost: number,
     discountShipping: number,
-    currency: string
+    currency: string,
   ) => {
     const finalTotal = totalAmount + shippingCost - discountShipping;
     const rate = exchangeRates[currency as keyof typeof exchangeRates] || 1;
@@ -614,7 +618,7 @@ export default function EditOrderPage() {
         total,
         order.shippingCost,
         order.discountShipping || 0,
-        order.currency
+        order.currency,
       );
       setOrder({ ...order, totalAmount: total, orderDetails: items, revenue });
     }
@@ -625,7 +629,7 @@ export default function EditOrderPage() {
     if (!canEditOrder()) {
       showErrorAlert(
         "Cannot Edit Order",
-        "You can only edit orders with 'Pending Confirmation' or 'Awaiting Payment' status."
+        "You can only edit orders with 'Pending Confirmation' or 'Awaiting Payment' status.",
       );
       return;
     }
@@ -633,7 +637,7 @@ export default function EditOrderPage() {
     if (editedItems.length === 1) {
       showErrorAlert(
         "Cannot Delete",
-        "Order must have at least one item. Consider canceling the order instead."
+        "Order must have at least one item. Consider canceling the order instead.",
       );
       return;
     }
@@ -660,13 +664,13 @@ export default function EditOrderPage() {
         (item) =>
           item.quantity === 0 ||
           !item.originalPrice[order!.currency] ||
-          item.originalPrice[order!.currency] === 0
+          item.originalPrice[order!.currency] === 0,
       );
 
       if (invalidItems.length > 0) {
         showErrorAlert(
           "Invalid Items",
-          "Please ensure all items have quantity greater than 0 and original price greater than 0."
+          "Please ensure all items have quantity greater than 0 and original price greater than 0.",
         );
         return;
       }
@@ -754,7 +758,9 @@ export default function EditOrderPage() {
                     disabled
                     onChange={(e) =>
                       setOrder((prev) =>
-                        prev ? { ...prev, invoiceNumber: e.target.value } : prev
+                        prev
+                          ? { ...prev, invoiceNumber: e.target.value }
+                          : prev,
                       )
                     }
                     value={order.invoiceNumber}
@@ -880,7 +886,7 @@ export default function EditOrderPage() {
                                     fullName: e.target.value,
                                   },
                                 }
-                              : prev
+                              : prev,
                           )
                         }
                         value={order.shippingAddress.fullName}
@@ -905,7 +911,7 @@ export default function EditOrderPage() {
                                     email: e.target.value,
                                   },
                                 }
-                              : prev
+                              : prev,
                           )
                         }
                         value={order.shippingAddress.email}
@@ -932,7 +938,7 @@ export default function EditOrderPage() {
                                     phone: e.target.value,
                                   },
                                 }
-                              : prev
+                              : prev,
                           )
                         }
                         className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
@@ -957,7 +963,7 @@ export default function EditOrderPage() {
                                     country: e.target.value,
                                   },
                                 }
-                              : prev
+                              : prev,
                           )
                         }
                         value={order.shippingAddress.country}
@@ -982,7 +988,7 @@ export default function EditOrderPage() {
                                     city: e.target.value,
                                   },
                                 }
-                              : prev
+                              : prev,
                           )
                         }
                         value={order.shippingAddress.city}
@@ -1007,7 +1013,7 @@ export default function EditOrderPage() {
                                     district: e.target.value,
                                   },
                                 }
-                              : prev
+                              : prev,
                           )
                         }
                         value={order.shippingAddress.district}
@@ -1032,7 +1038,7 @@ export default function EditOrderPage() {
                                     zipCode: e.target.value,
                                   },
                                 }
-                              : prev
+                              : prev,
                           )
                         }
                         value={order.shippingAddress.zipCode}
@@ -1058,7 +1064,7 @@ export default function EditOrderPage() {
                                   address: e.target.value,
                                 },
                               }
-                            : prev
+                            : prev,
                         )
                       }
                       className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
@@ -1103,7 +1109,7 @@ export default function EditOrderPage() {
                                 ...prev,
                                 shippingCost: parseFloat(e.target.value) || 0,
                               }
-                            : prev
+                            : prev,
                         )
                       }
                       value={order.shippingCost}
@@ -1131,7 +1137,7 @@ export default function EditOrderPage() {
                                 discountShipping:
                                   parseFloat(e.target.value) || 0,
                               }
-                            : prev
+                            : prev,
                         )
                       }
                       value={order.discountShipping || 0}
@@ -1149,7 +1155,7 @@ export default function EditOrderPage() {
                         order.totalAmount +
                           order.shippingCost -
                           (order.discountShipping || 0),
-                        order.currency
+                        order.currency,
                       )}
                     </span>
                   </div>
@@ -1260,7 +1266,7 @@ export default function EditOrderPage() {
                                 updateItemField(
                                   index,
                                   "quantity",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               disabled={!canEditOrder()}
@@ -1280,7 +1286,7 @@ export default function EditOrderPage() {
                                 updateItemField(
                                   index,
                                   "originalPrice",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               disabled={!canEditOrder()}
@@ -1301,7 +1307,7 @@ export default function EditOrderPage() {
                                 updateItemField(
                                   index,
                                   "discountPercentage",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               disabled={!canEditOrder()}
@@ -1324,7 +1330,7 @@ export default function EditOrderPage() {
                                 updateItemField(
                                   index,
                                   "discountedPrice",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               disabled={!canEditOrder()}
@@ -1343,7 +1349,7 @@ export default function EditOrderPage() {
                                 updateItemField(
                                   index,
                                   "subTotal",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               disabled
@@ -1416,183 +1422,22 @@ export default function EditOrderPage() {
             </div>
 
             {/* Add Product Modal */}
-            <Dialog
-              open={showAddProductModal}
-              onOpenChange={setShowAddProductModal}
-            >
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Add Product to Order</DialogTitle>
-                  <DialogDescription>
-                    Select a product to add to this order. You will then choose
-                    a variant.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="mt-4">
-                  <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <Input
-                      placeholder="Search products..."
-                      className="pl-10"
-                      value={productSearchQuery}
-                      onChange={(e) => setProductSearchQuery(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto">
-                    {products
-                      .filter((product) =>
-                        product.productName
-                          .toLowerCase()
-                          .includes(productSearchQuery.toLowerCase())
-                      )
-                      .map((product) => (
-                        <div
-                          key={product._id}
-                          onClick={() => handleSelectProduct(product)}
-                          className="border rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-gray-50 transition-all"
-                        >
-                          <div className="flex items-start space-x-3">
-                            <img
-                              src={
-                                product.productMedia?.[0]?.imageUrl ||
-                                "/placeholder.jpg"
-                              }
-                              alt={product.productName}
-                              className="w-20 h-20 object-cover rounded-lg"
-                            />
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-gray-900 mb-1">
-                                {product.productName}
-                              </h3>
-                              <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                                {product.productDescription}
-                              </p>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-500">
-                                  {product.productVariantsData?.length || 0}{" "}
-                                  variants
-                                </span>
-                                <span className="text-sm font-medium text-primary">
-                                  Click to select
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-
-                  {products.filter((product) =>
-                    product.productName
-                      .toLowerCase()
-                      .includes(productSearchQuery.toLowerCase())
-                  ).length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      No products found
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
+            <ProductSelectorModal
+              isOpen={showAddProductModal}
+              onClose={() => setShowAddProductModal(false)}
+              products={products}
+              onSelectProduct={handleSelectProduct}
+              loadingProducts={loadingProducts}
+            />
 
             {/* Variant Selection Modal */}
-            <Dialog
-              open={showVariantSelection}
-              onOpenChange={setShowVariantSelection}
-            >
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Select Variant</DialogTitle>
-                  <DialogDescription>
-                    Choose a variant for {selectedProduct?.productName}.
-                    Quantity will be set to 1 (you can adjust it in the table).
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="mt-4 space-y-3">
-                  {selectedProduct?.productVariantsData?.map((variant) => {
-                    const isOutOfStock = !variant.stock || variant.stock === 0;
-
-                    return (
-                      <div
-                        key={variant._id}
-                        onClick={() =>
-                          !isOutOfStock && handleAddVariant(variant._id)
-                        }
-                        className={`border rounded-lg p-4 transition-all ${
-                          isOutOfStock
-                            ? "opacity-50 bg-gray-100 cursor-not-allowed"
-                            : "hover:border-primary hover:bg-gray-50 cursor-pointer"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <img
-                              src={
-                                variant.image?.imageUrl || "/placeholder.jpg"
-                              }
-                              alt={variant.name}
-                              className="w-16 h-16 object-cover rounded-lg"
-                            />
-                            <div>
-                              <h4
-                                className={`font-semibold ${
-                                  isOutOfStock
-                                    ? "text-gray-500"
-                                    : "text-gray-900"
-                                }`}
-                              >
-                                {variant.name}
-                              </h4>
-                              <p
-                                className={`text-sm mt-1 ${
-                                  isOutOfStock
-                                    ? "text-red-600 font-medium"
-                                    : "text-gray-600"
-                                }`}
-                              >
-                                Stock: {variant.stock || 0}
-                                {isOutOfStock && " (Out of Stock)"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p
-                              className={`font-semibold ${
-                                isOutOfStock ? "text-gray-500" : "text-gray-900"
-                              }`}
-                            >
-                              {currencyFormat(
-                                variant.price?.[order.currency] || 0,
-                                order.currency
-                              )}
-                            </p>
-                            {!isOutOfStock ? (
-                              <span className="text-sm text-primary font-medium">
-                                Click to add
-                              </span>
-                            ) : (
-                              <span className="text-sm text-red-600 font-medium">
-                                Unavailable
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {(!selectedProduct?.productVariantsData ||
-                    selectedProduct.productVariantsData.length === 0) && (
-                    <div className="text-center py-8 text-gray-500">
-                      No variants available for this product
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
+            <VariantSelectorModal
+              isOpen={showVariantSelection}
+              onClose={() => setShowVariantSelection(false)}
+              product={selectedProduct}
+              onSelectVariant={handleAddVariant}
+              currency={order.currency}
+            />
           </div>
         )
       )}

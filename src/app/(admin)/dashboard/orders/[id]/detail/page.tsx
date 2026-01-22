@@ -24,12 +24,14 @@ import {
   Truck,
   User,
   Trash2,
-  FileImage,
   BanknoteArrowDown,
+  Download,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function DetailProduct() {
   const params = useParams();
@@ -119,6 +121,289 @@ export default function DetailProduct() {
       fetchOrder();
     }
   }, [id]);
+
+  const generateInvoicePDF = () => {
+    if (!order) return;
+
+    const doc = new jsPDF();
+
+    // Template data mapping from order
+    const templateData = {
+      invoice: order.invoiceNumber,
+      nama: order.shippingAddress.fullName,
+      date: new Date(order.orderDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }),
+      address: `${order.shippingAddress.address}${
+        order.shippingAddress.address
+          ? ", " + order.shippingAddress.address
+          : ""
+      }\n${order.shippingAddress.city}, ${order.shippingAddress.country} ${order.shippingAddress.zipCode}`,
+      phone_number: order.shippingAddress.phone,
+      email: order.shippingAddress.email || "",
+      currency: order.currency.toUpperCase(),
+      items: order.orderDetails.map((item) => {
+        const originalPrice = item.originalPrice[order.currency];
+        const quantity = item.quantity;
+        const subTotal = originalPrice * quantity;
+        const discountPercentage = item.discountPercentage || 0;
+        const totalDiscount = (subTotal * discountPercentage) / 100;
+        const totalAmount = subTotal - totalDiscount;
+
+        return {
+          sku: item.sku || "-",
+          qty: quantity,
+          originalPrice: currencyFormat(originalPrice, order.currency),
+          subTotal: currencyFormat(subTotal, order.currency),
+          discount: `${discountPercentage}%`,
+          totalDiscount: currencyFormat(totalDiscount, order.currency),
+          totalAmount: currencyFormat(totalAmount, order.currency),
+        };
+      }),
+    };
+
+    // Blue header bar (matching template color #002b79)
+    doc.setFillColor(0, 43, 121);
+    doc.rect(0, 0, 210, 55, "F");
+
+    // Invoice Title (left side, white text, large)
+    doc.setFontSize(35);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Invoice", 14, 25);
+
+    // Add company logo (white background box with logo)
+    doc.setFillColor(255, 255, 255);
+    doc.rect(14, 30, 40, 20, "F");
+    try {
+      doc.addImage("/images/transparent-logo.png", "PNG", 19, 33, 30, 14);
+    } catch (error) {
+      console.error("Error loading logo:", error);
+    }
+
+    // Company Information (right side, white text)
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Pawship Indonesia", 196, 18, { align: "right" });
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("Klampis Jaya A6, Surabaya", 196, 25, { align: "right" });
+    doc.text("+62 815 8843 760", 196, 38, { align: "right" });
+    doc.text("pawship.id@gmail.com", 196, 45, { align: "right" });
+
+    // Back to black text for body content
+    doc.setTextColor(0, 0, 0);
+
+    // Invoice Details Section (left)
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE DETAILS:", 14, 68);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("Invoice #", 14, 75);
+    doc.text(order.invoiceNumber, 50, 75);
+
+    doc.text("Date of Issue", 14, 82);
+    doc.text(
+      new Date(order.orderDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }),
+      50,
+      82,
+    );
+
+    // Bill To Section (right side)
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("BILL TO:", 120, 68);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(order.shippingAddress.fullName, 120, 75);
+
+    // Address
+    const fullAddress = `${order.shippingAddress.address}${
+      order.shippingAddress.address ? ", " + order.shippingAddress.district : ""
+    }, ${order.shippingAddress.city}, ${order.shippingAddress.country} ${order.shippingAddress.zipCode}`;
+    const addressLines = doc.splitTextToSize(fullAddress, 75);
+    let addressY = 81;
+    addressLines.forEach((line: string) => {
+      doc.text(line, 120, addressY);
+      addressY += 5;
+    });
+
+    doc.text(order.shippingAddress.phone, 120, addressY);
+    addressY += 5;
+    if (order.shippingAddress?.email) {
+      doc.text(order.shippingAddress.email, 120, addressY);
+      addressY += 5;
+    }
+    doc.text(order.currency.toUpperCase(), 120, addressY);
+
+    // Line separator before table (full width, blue color)
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(0, 43, 121);
+    doc.line(0, 105, 210, 105);
+
+    // Items table
+    const tableStartY = 110;
+    const tableData = order.orderDetails.map((item) => {
+      const originalPrice = item.originalPrice[order.currency];
+      const quantity = item.quantity;
+      const subTotal = originalPrice * quantity;
+      const discountPercentage = item.discountPercentage || 0;
+      const totalDiscount = (subTotal * discountPercentage) / 100;
+      const totalAmount = subTotal - totalDiscount;
+
+      return [
+        item.sku || "-",
+        quantity.toString(),
+        currencyFormat(originalPrice, order.currency),
+        currencyFormat(subTotal, order.currency),
+        `${discountPercentage}%`,
+        currencyFormat(totalDiscount, order.currency),
+        currencyFormat(totalAmount, order.currency),
+      ];
+    });
+
+    autoTable(doc, {
+      startY: tableStartY,
+      head: [
+        ["ITEM", "QTY", "PRICE", "TOTAL", "DISC", "TOTAL DISC", "TOTAL AMOUNT"],
+      ],
+      body: tableData,
+      theme: "plain",
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        fontStyle: "bold",
+        lineColor: [0, 43, 121],
+        lineWidth: { top: 0, bottom: 0.5, left: 0, right: 0 },
+        halign: "left",
+      },
+      bodyStyles: {
+        lineColor: [0, 43, 121],
+        lineWidth: { top: 0.1, bottom: 0.1, left: 0, right: 0 },
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 18, halign: "center" },
+        2: { cellWidth: 25, halign: "center" },
+        3: { cellWidth: 25, halign: "center" },
+        4: { cellWidth: 18, halign: "center" },
+        5: { cellWidth: 28, halign: "center" },
+        6: { cellWidth: 32, halign: "center" },
+      },
+    });
+
+    // Calculate total discount from all items
+    const totalDiscountAmount = order.orderDetails.reduce((sum, item) => {
+      const originalPrice = item.originalPrice[order.currency];
+      const quantity = item.quantity;
+      const subTotal = originalPrice * quantity;
+      const discountPercentage = item.discountPercentage || 0;
+      const itemDiscount = (subTotal * discountPercentage) / 100;
+      return sum + itemDiscount;
+    }, 0);
+
+    // Get the final Y position after table
+    const finalY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Left side - TERMS section
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("TERMS", 14, finalY);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text(
+      "All payments should be deposited before shipping",
+      14,
+      finalY + 6,
+    );
+
+    // Right side - Summary section
+    const summaryX = 120;
+    let summaryY = finalY;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+
+    // Subtotal
+    doc.text("Subtotal", summaryX, summaryY);
+    doc.text(
+      order.currency === "usd"
+        ? `$${order.totalAmount.toFixed(2)}`
+        : currencyFormat(order.totalAmount, order.currency),
+      196,
+      summaryY,
+      { align: "right" },
+    );
+
+    summaryY += 6;
+
+    // Discount
+    doc.text("Discount", summaryX, summaryY);
+    doc.text(
+      currencyFormat(totalDiscountAmount, order.currency),
+      196,
+      summaryY,
+      {
+        align: "right",
+      },
+    );
+
+    summaryY += 6;
+
+    // Tax
+    doc.setFont("helvetica", "bold");
+    doc.text("Tax", summaryX, summaryY);
+    doc.text(currencyFormat(0, order.currency), 196, summaryY, {
+      align: "right",
+    });
+
+    summaryY += 8;
+
+    // Total
+    doc.setFontSize(10);
+    doc.text("TOTAL", summaryX, summaryY);
+    const finalTotal =
+      order.totalAmount + order.shippingCost - (order.discountShipping || 0);
+    doc.text(currencyFormat(finalTotal, order.currency), 196, summaryY, {
+      align: "right",
+    });
+
+    // Conditions/Instructions (left side, below TERMS)
+    const conditionsY = finalY + 20;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONDITIONS/INTRUCTIONS", 14, conditionsY);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text("Payment can be deposited to", 14, conditionsY + 6);
+    doc.text("BCA Yosefina Angelita", 14, conditionsY + 10);
+    doc.text("1520675597", 14, conditionsY + 14);
+
+    // Bottom blue bar (matching template)
+    doc.setFillColor(0, 43, 121);
+    doc.rect(0, 275, 210, 22, "F");
+
+    // Save PDF
+    doc.save(`Invoice-${order.invoiceNumber}.pdf`);
+  };
+
   return (
     <div>
       <div className="flex flex-wrap gap-2 items-center justify-between">
@@ -132,6 +417,16 @@ export default function DetailProduct() {
         {order && (
           <div className="flex gap-4">
             {getStatusBadge(order.status)}
+
+            <Button
+              size="sm"
+              // variant="outline"
+              className="cursor-pointer"
+              onClick={generateInvoicePDF}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Invoice
+            </Button>
 
             <Button
               size="sm"
@@ -364,7 +659,7 @@ export default function DetailProduct() {
                         order.totalAmount +
                           order.shippingCost -
                           (order.discountShipping || 0),
-                        order.currency
+                        order.currency,
                       )}
                     </span>
                   </div>
@@ -424,7 +719,7 @@ export default function DetailProduct() {
                                   day: "numeric",
                                   hour: "2-digit",
                                   minute: "2-digit",
-                                }
+                                },
                               )}
                             </span>
                           </div>
@@ -444,16 +739,16 @@ export default function DetailProduct() {
                           onClick={async () => {
                             if (
                               !confirm(
-                                "Are you sure you want to delete this payment proof?"
+                                "Are you sure you want to delete this payment proof?",
                               )
                             )
                               return;
                             try {
                               const res = await fetch(
                                 `/api/orders/payment-proof/${id}?imagePublicId=${encodeURIComponent(
-                                  proof.imagePublicId
+                                  proof.imagePublicId,
                                 )}`,
-                                { method: "DELETE" }
+                                { method: "DELETE" },
                               );
                               const result = await res.json();
                               if (result.success) {
@@ -549,7 +844,7 @@ export default function DetailProduct() {
                           <span className="text-foreground">
                             {currencyFormat(
                               item.originalPrice[order.currency],
-                              order.currency
+                              order.currency,
                             )}
                           </span>
                         </td>
@@ -567,7 +862,7 @@ export default function DetailProduct() {
                             <span className=" text-orange-600">
                               {currencyFormat(
                                 item.discountedPrice[order.currency],
-                                order.currency
+                                order.currency,
                               )}
                             </span>
                           ) : (

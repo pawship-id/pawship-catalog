@@ -5,7 +5,6 @@ import {
   Plus,
   Trash2,
   ShoppingBag,
-  ArrowLeft,
   Mail,
   User,
   MapPin,
@@ -97,7 +96,7 @@ export default function CartPage() {
 
   const handleAddressChange = (
     field: keyof IShippingAddress,
-    value: string
+    value: string,
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -107,7 +106,7 @@ export default function CartPage() {
 
   const isAddressValid = () => {
     return Object.values(formData.shippingAddress).every(
-      (value) => value.trim() !== ""
+      (value) => value.trim() !== "",
     );
   };
 
@@ -133,7 +132,7 @@ export default function CartPage() {
         item.variantId,
         item.categoryId,
         updatedWithNewQty, // Pass updated cart items for accurate B2B calculation
-        item.resellerPricing
+        item.resellerPricing,
       );
 
       return {
@@ -155,9 +154,9 @@ export default function CartPage() {
       "cartItem",
       JSON.stringify(
         cartItem.map((c: any) =>
-          c.variantId === id ? { ...c, quantity: newQuantity } : c
-        )
-      )
+          c.variantId === id ? { ...c, quantity: newQuantity } : c,
+        ),
+      ),
     );
 
     // Trigger event to update cart badge in header
@@ -178,7 +177,7 @@ export default function CartPage() {
         item.variantId,
         item.categoryId,
         filter, // Pass filtered cart items for accurate B2B calculation
-        item.resellerPricing
+        item.resellerPricing,
       );
 
       return {
@@ -195,7 +194,7 @@ export default function CartPage() {
       orderDetails: recalculatedFilter,
       totalAmount: recalculatedFilter.reduce(
         (sum: number, element: any) => sum + element.subTotal,
-        0
+        0,
       ),
     }));
 
@@ -216,7 +215,7 @@ export default function CartPage() {
 
   const hasOutOfStock =
     formData.orderDetails.filter(
-      (el) => el.quantity > el.stock && !el.preOrder.enabled
+      (el) => el.quantity > el.stock && !el.preOrder.enabled,
     ).length !== 0;
 
   // Check MOQ per product for resellers
@@ -247,7 +246,7 @@ export default function CartPage() {
       {} as Record<
         string,
         { productName: string; moq: number; totalQty: number }
-      >
+      >,
     );
 
     // Check each product against MOQ
@@ -273,7 +272,7 @@ export default function CartPage() {
     if (!session || status !== "authenticated") {
       const result = await showConfirmAlert(
         "You need to log in to complete your order. Would you like to log in now?",
-        "Yes, Log In"
+        "Yes, Log In",
       );
       if (result.isConfirmed) {
         router.push("/login");
@@ -284,7 +283,7 @@ export default function CartPage() {
     if (hasOutOfStock) {
       showErrorAlert(
         undefined,
-        "there are items that are not available (out of stock)"
+        "there are items that are not available (out of stock)",
       );
       return;
     }
@@ -293,14 +292,14 @@ export default function CartPage() {
     if (moqWarnings.length > 0) {
       showErrorAlert(
         "MOQ Requirements Not Met",
-        "Please add more items to meet the minimum order quantity requirements shown below."
+        "Please add more items to meet the minimum order quantity requirements shown below.",
       );
       return;
     }
 
     const result = await showConfirmAlert(
       "You want to continue checkout? Make sure all data is correct.",
-      "Yes, Checkout Now"
+      "Yes, Checkout Now",
     );
 
     if (!result.isConfirmed) return;
@@ -308,7 +307,7 @@ export default function CartPage() {
     try {
       let { data } = await createData<OrderData, OrderForm>(
         "/api/public/orders",
-        formData
+        formData,
       );
 
       router.push(`/order-success/${data?._id}`);
@@ -321,7 +320,7 @@ export default function CartPage() {
       console.error(error);
       showConfirmAlert(
         "An error occurred during checkout. Please try again later.",
-        "Ok"
+        "Ok",
       );
     }
   };
@@ -342,7 +341,7 @@ export default function CartPage() {
         discount: number;
         categoryProduct: string | string[];
       }>;
-    }
+    },
   ) => {
     if (
       !resellerPricing ||
@@ -382,7 +381,7 @@ export default function CartPage() {
       }, 0);
 
       console.log(
-        `[B2B Discount] Category ${categoryId} | Tier: ${tier.name} | Min: ${tier.minimumQuantity} | Total Category Qty: ${totalCategoryQty} | Discount: ${tier.discount}%`
+        `[B2B Discount] Category ${categoryId} | Tier: ${tier.name} | Min: ${tier.minimumQuantity} | Total Category Qty: ${totalCategoryQty} | Discount: ${tier.discount}%`,
       );
 
       // Check if this tier is qualified and has higher discount
@@ -397,7 +396,7 @@ export default function CartPage() {
 
     if (bestTier) {
       console.log(
-        `[B2B Discount] Category ${categoryId} => Selected Tier: ${bestTier.name} | Discount: ${bestTier.discount}%`
+        `[B2B Discount] Category ${categoryId} => Selected Tier: ${bestTier.name} | Discount: ${bestTier.discount}%`,
       );
       return {
         discountPercentage: bestTier.discount,
@@ -412,7 +411,7 @@ export default function CartPage() {
   const calculateB2CDiscount = (
     basePrice: number,
     productId: string,
-    variantId: string
+    variantId: string,
   ) => {
     const promoResult = calculateFinalPrice(
       basePrice,
@@ -420,7 +419,7 @@ export default function CartPage() {
       productId,
       variantId,
       activePromos,
-      false
+      false,
     );
 
     if (promoResult.hasDiscount) {
@@ -444,7 +443,7 @@ export default function CartPage() {
     variantId: string,
     categoryId: string,
     currentCartItems: any[], // Pass current cart items for B2B calculation
-    resellerPricing?: any
+    resellerPricing?: any,
   ) => {
     let discountPercentage = 0;
     let finalPrice = basePrice;
@@ -454,13 +453,13 @@ export default function CartPage() {
       const tierResult = calculateB2BDiscount(
         categoryId,
         currentCartItems,
-        resellerPricing
+        resellerPricing,
       );
 
       if (tierResult.discountPercentage > 0) {
         discountPercentage = tierResult.discountPercentage;
         finalPrice = Math.round(
-          basePrice - (basePrice * discountPercentage) / 100
+          basePrice - (basePrice * discountPercentage) / 100,
         );
       }
     } else {
@@ -491,11 +490,11 @@ export default function CartPage() {
         cartItem.map(async (el: any) => {
           const { data } = await getById<ProductData>(
             "/api/public/products",
-            el.productId
+            el.productId,
           );
 
           const variant = data?.productVariantsData?.find(
-            (v) => v._id === el.variantId
+            (v) => v._id === el.variantId,
           );
 
           if (data && variant) {
@@ -519,12 +518,12 @@ export default function CartPage() {
             };
           }
           return null;
-        })
+        }),
       );
 
       // Filter out null values
       const validCartItems = cartItemsWithoutDiscount.filter(
-        (item) => item !== null
+        (item) => item !== null,
       );
 
       // Second pass: calculate discounts with complete cart data
@@ -538,7 +537,7 @@ export default function CartPage() {
           item.variantId,
           item.categoryId,
           validCartItems, // Pass complete cart items for B2B tier calculation
-          item.resellerPricing
+          item.resellerPricing,
         );
 
         return {
@@ -802,7 +801,7 @@ export default function CartPage() {
                                   onClick={() =>
                                     updateQuantity(
                                       item.variantId,
-                                      item.quantity - 1
+                                      item.quantity - 1,
                                     )
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -824,11 +823,11 @@ export default function CartPage() {
                                     ) {
                                       showWarningAlert(
                                         "Quantity exceeds available stock",
-                                        `Maximum available stock is ${item.stock} pcs`
+                                        `Maximum available stock is ${item.stock} pcs`,
                                       );
                                       updateQuantity(
                                         item.variantId,
-                                        item.stock
+                                        item.stock,
                                       );
                                     } else {
                                       updateQuantity(item.variantId, value);
@@ -841,7 +840,7 @@ export default function CartPage() {
                                   onClick={() =>
                                     updateQuantity(
                                       item.variantId,
-                                      item.quantity + 1
+                                      item.quantity + 1,
                                     )
                                   }
                                   className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -934,7 +933,7 @@ export default function CartPage() {
                                   onClick={() =>
                                     updateQuantity(
                                       item.variantId,
-                                      item.quantity - 1
+                                      item.quantity - 1,
                                     )
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -956,11 +955,11 @@ export default function CartPage() {
                                     ) {
                                       showWarningAlert(
                                         "Quantity exceeds available stock",
-                                        `Maximum available stock is ${item.stock} pcs`
+                                        `Maximum available stock is ${item.stock} pcs`,
                                       );
                                       updateQuantity(
                                         item.variantId,
-                                        item.stock
+                                        item.stock,
                                       );
                                     } else {
                                       updateQuantity(item.variantId, value);
@@ -973,7 +972,7 @@ export default function CartPage() {
                                   onClick={() =>
                                     updateQuantity(
                                       item.variantId,
-                                      item.quantity + 1
+                                      item.quantity + 1,
                                     )
                                   }
                                   className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1087,7 +1086,7 @@ export default function CartPage() {
                                   onClick={() =>
                                     updateQuantity(
                                       item.variantId,
-                                      item.quantity - 1
+                                      item.quantity - 1,
                                     )
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1109,11 +1108,11 @@ export default function CartPage() {
                                     ) {
                                       showWarningAlert(
                                         "Quantity exceeds available stock",
-                                        `Maximum available stock is ${item.stock} pcs`
+                                        `Maximum available stock is ${item.stock} pcs`,
                                       );
                                       updateQuantity(
                                         item.variantId,
-                                        item.stock
+                                        item.stock,
                                       );
                                     } else {
                                       updateQuantity(item.variantId, value);
@@ -1126,7 +1125,7 @@ export default function CartPage() {
                                   onClick={() =>
                                     updateQuantity(
                                       item.variantId,
-                                      item.quantity + 1
+                                      item.quantity + 1,
                                     )
                                   }
                                   className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
