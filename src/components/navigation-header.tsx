@@ -122,23 +122,35 @@ export default function NavigationHeader() {
   ];
 
   const toggleExpandedItem = (index: number) => {
-    setExpandedItems((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
+    setExpandedItems((prev) => {
+      const newState: { [key: number]: boolean } = {};
+      // Close all items first
+      Object.keys(prev).forEach((key) => {
+        newState[parseInt(key)] = false;
+      });
+      // Toggle the clicked one
+      newState[index] = !prev[index];
+      return newState;
+    });
   };
 
   const toggleExpandedSubItem = (key: string) => {
-    setExpandedSubItems((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setExpandedSubItems((prev) => {
+      const newState: { [key: string]: boolean } = {};
+      // Close all sub items first
+      Object.keys(prev).forEach((k) => {
+        newState[k] = false;
+      });
+      // Toggle the clicked one
+      newState[key] = !prev[key];
+      return newState;
+    });
   };
 
   const handleSignOut = async () => {
     const result = await showConfirmAlert(
       "You will be logged out of your account",
-      "Yes, logout!"
+      "Yes, logout!",
     );
 
     if (result.isConfirmed) {
@@ -159,14 +171,14 @@ export default function NavigationHeader() {
       if (response.data) {
         // Filter only collections with displayOnNavbar: true
         const filteredCollections = response.data.filter(
-          (el: CollectionData) => el.displayOnNavbar === true
+          (el: CollectionData) => el.displayOnNavbar === true,
         );
 
         let mappingCollections = filteredCollections.map(
           (el: CollectionData) => ({
             name: el.name,
             href: `/catalog?collection=${el.slug}`,
-          })
+          }),
         );
 
         setCollections([
@@ -535,12 +547,13 @@ export default function NavigationHeader() {
                                         (nestedItem, nestedIdx) => (
                                           <Link
                                             href={nestedItem.href}
+                                            onClick={() => setIsMenuOpen(false)}
                                             className="block text-xs text-muted-foreground hover:text-primary py-1"
                                             key={nestedIdx}
                                           >
                                             {nestedItem.name}
                                           </Link>
-                                        )
+                                        ),
                                       )}
                                     </div>
                                   )}
@@ -548,6 +561,7 @@ export default function NavigationHeader() {
                               ) : (
                                 <Link
                                   href={subItem.href || "/"}
+                                  onClick={() => setIsMenuOpen(false)}
                                   className="block text-sm text-muted-foreground hover:text-primary py-1"
                                 >
                                   {subItem.name}
@@ -561,6 +575,7 @@ export default function NavigationHeader() {
                   ) : (
                     <Link
                       href={item.href || "/"}
+                      onClick={() => setIsMenuOpen(false)}
                       className="text-foreground hover:text-primary transition-colors py-2"
                     >
                       {item.name}
