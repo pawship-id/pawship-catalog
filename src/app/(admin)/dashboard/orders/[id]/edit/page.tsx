@@ -349,6 +349,7 @@ export default function EditOrderPage() {
       variantId: variant._id,
       variantName: variant.name,
       quantity: quantity,
+      sku: variant.sku,
       originalPrice: variant.price,
       stock: variant.stock,
       preOrder: selectedProduct.preOrder,

@@ -42,6 +42,7 @@ export default function DetailProduct() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  console.log(order, "<<<<");
 
   const getOrderTypeBadge = (type: string) => {
     return type === "B2B" ? (
@@ -126,43 +127,6 @@ export default function DetailProduct() {
     if (!order) return;
 
     const doc = new jsPDF();
-
-    // Template data mapping from order
-    const templateData = {
-      invoice: order.invoiceNumber,
-      nama: order.shippingAddress.fullName,
-      date: new Date(order.orderDate).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }),
-      address: `${order.shippingAddress.address}${
-        order.shippingAddress.address
-          ? ", " + order.shippingAddress.address
-          : ""
-      }\n${order.shippingAddress.city}, ${order.shippingAddress.country} ${order.shippingAddress.zipCode}`,
-      phone_number: order.shippingAddress.phone,
-      email: order.shippingAddress.email || "",
-      currency: order.currency.toUpperCase(),
-      items: order.orderDetails.map((item) => {
-        const originalPrice = item.originalPrice[order.currency];
-        const quantity = item.quantity;
-        const subTotal = originalPrice * quantity;
-        const discountPercentage = item.discountPercentage || 0;
-        const totalDiscount = (subTotal * discountPercentage) / 100;
-        const totalAmount = subTotal - totalDiscount;
-
-        return {
-          sku: item.sku || "-",
-          qty: quantity,
-          originalPrice: currencyFormat(originalPrice, order.currency),
-          subTotal: currencyFormat(subTotal, order.currency),
-          discount: `${discountPercentage}%`,
-          totalDiscount: currencyFormat(totalDiscount, order.currency),
-          totalAmount: currencyFormat(totalAmount, order.currency),
-        };
-      }),
-    };
 
     // Blue header bar (matching template color #002b79)
     doc.setFillColor(0, 43, 121);
@@ -318,24 +282,44 @@ export default function DetailProduct() {
     }, 0);
 
     // Get the final Y position after table
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Check if TERMS + Summary + CONDITIONS section fits on current page without hitting footer
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const footerHeight = 15; // Height of blue footer
+    const footerStartY = pageHeight - footerHeight; // Where footer starts
+    const conditionsStartY = finalY + 15; // Where CONDITIONS title will be
+    const lastLineOfConditionsY = conditionsStartY + 14; // Position of "1520675597" (last line)
+    const marginBeforeFooter = 2; // Small margin before footer
+
+    // Check if the last line of conditions would overlap with footer
+    const willOverlapWithFooter =
+      lastLineOfConditionsY + marginBeforeFooter > footerStartY;
+
+    let actualStartY = finalY;
+
+    // If will overlap with footer, add new page
+    if (willOverlapWithFooter) {
+      doc.addPage();
+      actualStartY = 20;
+    }
 
     // Left side - TERMS section
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("TERMS", 14, finalY);
+    doc.text("TERMS", 14, actualStartY);
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.text(
       "All payments should be deposited before shipping",
       14,
-      finalY + 6,
+      actualStartY + 6,
     );
 
     // Right side - Summary section
     const summaryX = 120;
-    let summaryY = finalY;
+    let summaryY = actualStartY;
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
@@ -353,6 +337,19 @@ export default function DetailProduct() {
 
     summaryY += 6;
 
+    // Shipping Cost
+    doc.text("Shipping Cost", summaryX, summaryY);
+    doc.text(
+      order.currency === "usd"
+        ? `$${order.shippingCost.toFixed(2)}`
+        : currencyFormat(order.shippingCost, order.currency),
+      196,
+      summaryY,
+      { align: "right" },
+    );
+
+    summaryY += 6;
+
     // Discount
     doc.text("Discount", summaryX, summaryY);
     doc.text(
@@ -362,6 +359,19 @@ export default function DetailProduct() {
       {
         align: "right",
       },
+    );
+
+    summaryY += 6;
+
+    // Shipping Cost
+    doc.text("Shipping Discount", summaryX, summaryY);
+    doc.text(
+      order.currency === "usd"
+        ? `$${order.discountShipping.toFixed(2)}`
+        : currencyFormat(order.discountShipping, order.currency),
+      196,
+      summaryY,
+      { align: "right" },
     );
 
     summaryY += 6;
@@ -385,7 +395,7 @@ export default function DetailProduct() {
     });
 
     // Conditions/Instructions (left side, below TERMS)
-    const conditionsY = finalY + 20;
+    const conditionsY = actualStartY + 15;
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.text("CONDITIONS/INTRUCTIONS", 14, conditionsY);
@@ -397,8 +407,11 @@ export default function DetailProduct() {
     doc.text("1520675597", 14, conditionsY + 14);
 
     // Bottom blue bar (matching template)
+    const currentPageHeight = doc.internal.pageSize.getHeight();
+    const footerY = currentPageHeight - footerHeight;
+
     doc.setFillColor(0, 43, 121);
-    doc.rect(0, 275, 210, 22, "F");
+    doc.rect(0, footerY, 210, footerHeight, "F");
 
     // Save PDF
     doc.save(`Invoice-${order.invoiceNumber}.pdf`);
