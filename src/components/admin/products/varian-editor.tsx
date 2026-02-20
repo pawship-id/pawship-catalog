@@ -17,6 +17,7 @@ import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
 import { VariantRowForm, VariantType } from "@/lib/types/product";
 import ImageGalleryModal from "./image-gallery-modal";
 import VariantPriceModal from "./variant-price-modal";
+import { compressImageIfNeeded } from "@/lib/helpers/image-compression";
 
 type VariantEditorProps = {
   value: VariantRowForm[];
@@ -49,7 +50,7 @@ export function VariantEditor({
   const [inputValue, setInputValue] = useState("");
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [currentEditingRowId, setCurrentEditingRowId] = useState<string | null>(
-    null
+    null,
   );
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
   const [currentPriceEditingRow, setCurrentPriceEditingRow] =
@@ -57,12 +58,12 @@ export function VariantEditor({
 
   const typeNames = useMemo(
     () => variantTypes.map((t) => t.name),
-    [variantTypes]
+    [variantTypes],
   );
 
   const defaultOptions = ["Color", "Size"];
   const existingTypeNames = new Set(
-    variantTypes.map((t) => t.name.toLowerCase())
+    variantTypes.map((t) => t.name.toLowerCase()),
   );
 
   const [defaultStockPrice, setDefaultStockPrice] = useState({
@@ -150,7 +151,7 @@ export function VariantEditor({
   };
 
   const availableOptions = defaultOptions.filter(
-    (option) => !existingTypeNames.has(option.toLowerCase())
+    (option) => !existingTypeNames.has(option.toLowerCase()),
   );
 
   function updateRow(id: string, patch: Partial<VariantRowForm>) {
@@ -165,7 +166,7 @@ export function VariantEditor({
       value.map((r) => {
         const { [name]: _, ...rest } = r.attrs;
         return { ...r, attrs: rest, name: buildNameFromAttrs(rest, order) };
-      })
+      }),
     );
   }
 
@@ -175,7 +176,7 @@ export function VariantEditor({
 
     // Check if type already exists (case insensitive)
     const existing = variantTypes.find(
-      (t) => t.name.toLowerCase() === trimmedName.toLowerCase()
+      (t) => t.name.toLowerCase() === trimmedName.toLowerCase(),
     );
     if (existing) {
       showErrorAlert(undefined, `Variant type "${trimmedName}" already exists`);
@@ -214,7 +215,7 @@ export function VariantEditor({
           const { [prev.name]: v, ...rest } = r.attrs;
           const attrs = { ...rest, [name]: v };
           return { ...r, attrs, name: buildNameFromAttrs(attrs, order) };
-        })
+        }),
       );
     }
   }
@@ -258,20 +259,20 @@ export function VariantEditor({
             const errorBody = await response.json();
             console.error(
               `Failed to delete Cloudinary image for ID ${item.codeRow}:`,
-              errorBody.message || "Unknown error"
+              errorBody.message || "Unknown error",
             );
             return { success: false, codeRow: item.codeRow };
           }
 
           console.log(
-            `Cloudinary image successfully deleted for ID: ${item.codeRow}`
+            `Cloudinary image successfully deleted for ID: ${item.codeRow}`,
           );
           return { success: true, codeRow: item.codeRow };
         } catch (error) {
           // handle network errors or other errors
           console.error(
             `Network error while deleting image for ID ${item.codeRow}:`,
-            error
+            error,
           );
           return { success: false, codeRow: item.codeRow };
         }
@@ -308,7 +309,7 @@ export function VariantEditor({
     if (findRow?.image) {
       const result = await showConfirmAlert(
         "This variant image already exists. Are you sure you want to replace it?",
-        "Yes, replace it"
+        "Yes, replace it",
       );
 
       if (!result.isConfirmed) {
@@ -348,6 +349,9 @@ export function VariantEditor({
     if (!currentEditingRowId) return;
 
     try {
+      // Compress image if needed
+      const compressedFile = await compressImageIfNeeded(file);
+
       // Find row
       const findRow = value.find((el) => el.codeRow === currentEditingRowId);
 
@@ -355,7 +359,7 @@ export function VariantEditor({
       if (findRow?.image) {
         const result = await showConfirmAlert(
           "This variant image already exists. Are you sure you want to replace it with a new image?",
-          "Yes, replace it"
+          "Yes, replace it",
         );
 
         if (!result.isConfirmed) {
@@ -365,7 +369,7 @@ export function VariantEditor({
 
       // Upload new image
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", compressedFile);
       formData.append("folder", "products");
 
       const response = await fetch("/api/upload-file", {
@@ -412,7 +416,7 @@ export function VariantEditor({
 
   async function handleFileChange(
     e: React.ChangeEvent<HTMLInputElement>,
-    id: string
+    id: string,
   ) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -426,7 +430,7 @@ export function VariantEditor({
     if (findRow?.image) {
       let result = await showConfirmAlert(
         "This variant image already exists. Are you sure you want to replace it with a new image?",
-        "I'm sure"
+        "I'm sure",
       );
 
       if (!result.isConfirmed) {
@@ -437,9 +441,12 @@ export function VariantEditor({
     }
 
     try {
+      // Compress image if needed
+      const compressedFile = await compressImageIfNeeded(file);
+
       // append formData input image & folder
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", compressedFile);
       formData.append("folder", "products");
 
       // call API upload-file
@@ -477,7 +484,7 @@ export function VariantEditor({
     } catch (error) {
       console.log(
         error,
-        "function handleFileChange /components/admin/products/variant-editor.tsx"
+        "function handleFileChange /components/admin/products/variant-editor.tsx",
       );
     }
   }
@@ -661,7 +668,7 @@ export function VariantEditor({
                       onChange={(e) => {
                         const checked = e.target.checked;
                         onChange(
-                          value.map((v) => ({ ...v, selected: checked }))
+                          value.map((v) => ({ ...v, selected: checked })),
                         );
                       }}
                     />
