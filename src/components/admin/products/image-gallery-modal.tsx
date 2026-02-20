@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { compressImageIfNeeded } from "@/lib/helpers/image-compression";
 
 interface CloudinaryImage {
   publicId: string;
@@ -79,12 +80,18 @@ export default function ImageGalleryModal({
 
     try {
       setUploading(true);
-      await onUploadNew(selectedFile);
+      setError(null);
+
+      // Compress image if needed
+      const compressedFile = await compressImageIfNeeded(selectedFile);
+
+      await onUploadNew(compressedFile);
       setSelectedFile(null);
       // Close modal immediately after successful upload
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading:", error);
+      setError(error.message || "Failed to upload image");
       // Only refresh if upload failed and modal stays open
       await fetchImages();
     } finally {

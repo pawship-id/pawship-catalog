@@ -19,7 +19,7 @@ export async function GET() {
   try {
     const products = await Product.find({})
       .select(
-        "productName slug categoryId productDescription productMedia tags preOrder createdAt"
+        "productName slug categoryId productDescription productMedia tags preOrder createdAt",
       )
       .populate([
         {
@@ -43,14 +43,14 @@ export async function GET() {
         data: products,
         message: "Data products has been fetch",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.log(error, "function GET /api/admin/products/route.ts");
 
     return NextResponse.json(
       { success: false, message: "Failed to retrieve products data" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -64,6 +64,37 @@ export async function POST(req: NextRequest) {
     let productName = formData.get("productName") as string;
     let tagData = JSON.parse(formData.get("tags") as string);
 
+    // Validate file sizes
+    const MAX_FILE_SIZE = 1.5 * 1024 * 1024; // 1.5MB (allowing small buffer after compression)
+    const sizeProductFiles = formData.getAll("sizeProduct") as File[];
+    const productMediaFiles = formData.getAll("productMedia") as File[];
+
+    // Check size product files
+    for (const file of sizeProductFiles) {
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Size product image "${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Please use a smaller image.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    // Check product media files
+    for (const file of productMediaFiles) {
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Product media "${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Please use a smaller file.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const tags = await Promise.all(
       tagData.map(async (item: TagForm) => {
         let tag;
@@ -74,7 +105,7 @@ export async function POST(req: NextRequest) {
         }
 
         return tag._id;
-      })
+      }),
     );
 
     let data = {
@@ -92,11 +123,10 @@ export async function POST(req: NextRequest) {
       slug: generateSlug(productName),
     };
 
-    const sizeProductFiles = formData.getAll("sizeProduct") as File[];
     if (sizeProductFiles && sizeProductFiles.length > 0) {
       let uploadResults: UploadResult[] = await bulkUploadFileToCloudinary(
         sizeProductFiles,
-        "products/size"
+        "products/size",
       );
 
       data.sizeProduct = uploadResults.map((el) => ({
@@ -105,11 +135,10 @@ export async function POST(req: NextRequest) {
       }));
     }
 
-    const productMedia = formData.getAll("productMedia") as File[];
-    if (productMedia && productMedia.length) {
+    if (productMediaFiles && productMediaFiles.length) {
       let uploadResult: UploadResult[] = await bulkUploadFileToCloudinary(
-        productMedia,
-        "products"
+        productMediaFiles,
+        "products",
       );
 
       data.productMedia = uploadResult.map((el) => ({
@@ -122,13 +151,13 @@ export async function POST(req: NextRequest) {
     const product = await Product.create(data);
 
     const variantRows = JSON.parse(
-      (formData.get("variantRows") as string) || "[]"
+      (formData.get("variantRows") as string) || "[]",
     );
 
     // Check for duplicate SKUs within the submitted variants
     const skus = variantRows.map((v: VariantRowForm) => v.sku).filter(Boolean);
     const duplicateSKUs = skus.filter(
-      (sku: string, index: number) => skus.indexOf(sku) !== index
+      (sku: string, index: number) => skus.indexOf(sku) !== index,
     );
 
     if (duplicateSKUs.length > 0) {
@@ -137,7 +166,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: `Duplicate SKUs found in variants: ${duplicateSKUs.join(", ")}`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -156,7 +185,7 @@ export async function POST(req: NextRequest) {
             success: false,
             message: `SKU(s) already exist: ${existingSKUs.join(", ")}`,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -176,7 +205,7 @@ export async function POST(req: NextRequest) {
         data: product,
         message: `Product ${product.productName} successfully created`,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error: any) {
     console.log(error, "function POST /api/admin/products/route.ts");
@@ -193,7 +222,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { success: false, message: errorMsg },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }
