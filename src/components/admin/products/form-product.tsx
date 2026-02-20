@@ -38,6 +38,7 @@ import { useRouter } from "next/navigation";
 import TagInput from "./input-tag";
 import { TagForm } from "@/lib/types/tag";
 import Link from "next/link";
+import { compressImagesIfNeeded } from "@/lib/helpers/image-compression";
 
 interface ProductFormProps {
   initialData?: ProductData;
@@ -106,7 +107,7 @@ export default function FormProduct({
 
   const [loadingFetchCategory, setLoadingFetchCategory] = useState(false);
   const [errorFetchCategory, setErrorFetchCategory] = useState<string | null>(
-    null
+    null,
   );
   const [categoryList, setCategoryList] = useState<CategoryData[]>([]);
   const fetchCategories = async () => {
@@ -236,19 +237,19 @@ export default function FormProduct({
       // add variant types as JSON string
       formDataToSend.append(
         "variantTypes",
-        JSON.stringify(formData.variantTypes)
+        JSON.stringify(formData.variantTypes),
       );
 
       // convert variant rows to JSON string
       formDataToSend.append(
         "variantRows",
-        JSON.stringify(formData.variantRows)
+        JSON.stringify(formData.variantRows),
       );
 
       // add marketing links as JSON string
       formDataToSend.append(
         "marketingLinks",
-        JSON.stringify(formData.marketingLinks)
+        JSON.stringify(formData.marketingLinks),
       );
 
       // add delete media IDs for edit mode
@@ -266,13 +267,13 @@ export default function FormProduct({
       if (!isEditMode) {
         response = await createData<ProductData, FormData>(
           "/api/admin/products",
-          formDataToSend
+          formDataToSend,
         );
       } else {
         response = await updateData<ProductData, FormData>(
           "/api/admin/products",
           initialData?._id as string,
-          formDataToSend
+          formDataToSend,
         );
       }
 
@@ -335,7 +336,7 @@ export default function FormProduct({
           initialData.tags.map((tag: any) => ({
             isNew: false,
             tagName: tag.tagName || tag,
-          }))
+          })),
         );
       }
 
@@ -494,17 +495,33 @@ export default function FormProduct({
                 accept="image/*"
                 multiple
                 className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const files = Array.from(e.target.files || []);
 
                   if (files.length > 0) {
-                    setFormData((prev) => ({
-                      ...prev,
-                      sizeProduct: [...(prev.sizeProduct || []), ...files],
-                    }));
+                    try {
+                      // Compress images if needed
+                      const compressedFiles =
+                        await compressImagesIfNeeded(files);
 
-                    const urls = files.map((file) => URL.createObjectURL(file));
-                    setPreviewSizeProduct((prev) => [...prev, ...urls]);
+                      setFormData((prev) => ({
+                        ...prev,
+                        sizeProduct: [
+                          ...(prev.sizeProduct || []),
+                          ...compressedFiles,
+                        ],
+                      }));
+
+                      const urls = compressedFiles.map((file) =>
+                        URL.createObjectURL(file),
+                      );
+                      setPreviewSizeProduct((prev) => [...prev, ...urls]);
+                    } catch (error: any) {
+                      showErrorAlert(
+                        "Image Compression Failed",
+                        error.message || "Failed to compress image",
+                      );
+                    }
                   }
                 }}
               />
@@ -537,7 +554,7 @@ export default function FormProduct({
                           className="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-75 transition-opacity"
                           onClick={() => {
                             setCurrentSizeImageIndex(
-                              existingSizeProduct.length + index
+                              existingSizeProduct.length + index,
                             );
                             setShowSizeProductModal(true);
                           }}
@@ -546,12 +563,12 @@ export default function FormProduct({
                           type="button"
                           onClick={() => {
                             setPreviewSizeProduct((prev) =>
-                              prev.filter((_, i) => i !== index)
+                              prev.filter((_, i) => i !== index),
                             );
                             setFormData((prev) => ({
                               ...prev,
                               sizeProduct: (prev.sizeProduct || []).filter(
-                                (_, i) => i !== index
+                                (_, i) => i !== index,
                               ),
                             }));
                           }}
@@ -602,7 +619,7 @@ export default function FormProduct({
                               img.imagePublicId,
                             ]);
                             setExistingSizeProduct((prev) =>
-                              prev.filter((_, i) => i !== index)
+                              prev.filter((_, i) => i !== index),
                             );
                           }}
                           className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 transition-opacity"
@@ -664,7 +681,7 @@ export default function FormProduct({
                               ? prev - 1
                               : existingSizeProduct.length +
                                 previewSizeProduct.length -
-                                1
+                                1,
                           )
                         }
                         className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
@@ -680,7 +697,7 @@ export default function FormProduct({
                               previewSizeProduct.length -
                               1
                               ? prev + 1
-                              : 0
+                              : 0,
                           )
                         }
                         className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
@@ -712,29 +729,56 @@ export default function FormProduct({
                   }
                   accept="image/*,video/*"
                   className={`absolute inset-0 w-full h-full opacity-0 z-10 ${[...(formData.productMedia || []), ...existingProductMedia].length === 9 ? "cursor-not-allowed" : "cursor-pointer"}`}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const files = Array.from(e.target.files || []);
 
                     if (files.length) {
-                      // Calculate total existing media
-                      const totalExisting =
-                        (formData.productMedia || []).length +
-                        existingProductMedia.length;
-                      const remainingSlots = 9 - totalExisting;
+                      try {
+                        // Separate images and videos
+                        const images = files.filter((f) =>
+                          f.type.startsWith("image/"),
+                        );
+                        const videos = files.filter((f) =>
+                          f.type.startsWith("video/"),
+                        );
 
-                      // Limit to remaining slots
-                      const filesToProcess = files.slice(0, remainingSlots);
+                        // Compress images if needed
+                        const compressedImages =
+                          images.length > 0
+                            ? await compressImagesIfNeeded(images)
+                            : [];
 
-                      setFormData((prev) => {
-                        const existingMedia = prev.productMedia || [];
-                        const combinedMedia = [
-                          ...existingMedia,
-                          ...filesToProcess,
-                        ];
-                        return { ...prev, productMedia: combinedMedia };
-                      });
+                        // Combine compressed images with videos
+                        const processedFiles = [...compressedImages, ...videos];
 
-                      console.log("Selected files:", filesToProcess);
+                        // Calculate total existing media
+                        const totalExisting =
+                          (formData.productMedia || []).length +
+                          existingProductMedia.length;
+                        const remainingSlots = 9 - totalExisting;
+
+                        // Limit to remaining slots
+                        const filesToProcess = processedFiles.slice(
+                          0,
+                          remainingSlots,
+                        );
+
+                        setFormData((prev) => {
+                          const existingMedia = prev.productMedia || [];
+                          const combinedMedia = [
+                            ...existingMedia,
+                            ...filesToProcess,
+                          ];
+                          return { ...prev, productMedia: combinedMedia };
+                        });
+
+                        console.log("Selected files:", filesToProcess);
+                      } catch (error: any) {
+                        showErrorAlert(
+                          "Image Compression Failed",
+                          error.message || "Failed to compress image",
+                        );
+                      }
                     }
                   }}
                 />
@@ -766,7 +810,7 @@ export default function FormProduct({
                           className="w-full h-full object-cover cursor-pointer hover:opacity-75 transition-opacity"
                           onClick={() => {
                             setCurrentProductMediaIndex(
-                              existingProductMedia.length + index
+                              existingProductMedia.length + index,
                             );
                             setShowProductMediaModal(true);
                           }}
@@ -777,7 +821,7 @@ export default function FormProduct({
                             setFormData((prev) => ({
                               ...prev,
                               productMedia: prev.productMedia?.filter(
-                                (_, i) => i !== index
+                                (_, i) => i !== index,
                               ),
                             }))
                           }
@@ -823,8 +867,8 @@ export default function FormProduct({
                             // Remove from display
                             setExistingProductMedia((prev) =>
                               prev.filter(
-                                (m) => m.imagePublicId !== media.imagePublicId
-                              )
+                                (m) => m.imagePublicId !== media.imagePublicId,
+                              ),
                             );
                           }}
                           className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 transition-opacity"
@@ -865,7 +909,7 @@ export default function FormProduct({
                               formData.productMedia![
                                 currentProductMediaIndex -
                                   existingProductMedia.length
-                              ]
+                              ],
                             )
                       }
                       alt="Product media preview"
@@ -880,7 +924,7 @@ export default function FormProduct({
                               ? prev - 1
                               : existingProductMedia.length +
                                 (formData.productMedia?.length || 0) -
-                                1
+                                1,
                           )
                         }
                         className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
@@ -896,7 +940,7 @@ export default function FormProduct({
                               (formData.productMedia?.length || 0) -
                               1
                               ? prev + 1
-                              : 0
+                              : 0,
                           )
                         }
                         className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
