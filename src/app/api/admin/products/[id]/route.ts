@@ -385,7 +385,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
 }
 
 // DELETE: Soft delete product
-export async function DELETE(req: NextRequest, { params }: Context) {
+export async function PATCH(req: NextRequest, { params }: Context) {
   await dbConnect();
 
   try {
