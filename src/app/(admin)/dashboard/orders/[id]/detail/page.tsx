@@ -7,6 +7,7 @@ import { getById } from "@/lib/apiService";
 import { currencyFormat } from "@/lib/helpers";
 import { OrderData } from "@/lib/types/order";
 import { UploadPaymentProofModal } from "@/components/orders/upload-payment-proof-modal";
+import Image from "next/image";
 import {
   ArrowLeft,
   Calendar,
@@ -700,10 +701,12 @@ export default function DetailProduct() {
                     >
                       {/* Image */}
                       <div className="relative w-full h-48 bg-gray-100 cursor-pointer overflow-hidden">
-                        <img
+                        <Image
                           src={proof.imageUrl}
                           alt={`Payment proof ${index + 1}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-200"
+                          sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
                           onClick={() => window.open(proof.imageUrl, "_blank")}
                         />
                       </div>
@@ -830,11 +833,15 @@ export default function DetailProduct() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-3">
-                            <img
-                              src={item.image.imageUrl}
-                              alt={item.productName}
-                              className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                            />
+                            <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                              <Image
+                                src={item.image.imageUrl}
+                                alt={item.productName}
+                                fill
+                                className="object-cover"
+                                sizes="64px"
+                              />
+                            </div>
                             <div>
                               <p className="font-semibold text-sm mb-1 text-foreground">
                                 {item.productName}

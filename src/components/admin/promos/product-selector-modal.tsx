@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { X, Search } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -37,7 +38,7 @@ export default function ProductSelectorModal({
     const filtered = products.filter(
       (product) =>
         product.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        !excludeProductIds.includes(product._id)
+        !excludeProductIds.includes(product._id),
     );
     setFilteredProducts(filtered);
   }, [searchTerm, products, excludeProductIds]);
@@ -50,8 +51,8 @@ export default function ProductSelectorModal({
         setProducts(response.data.filter((p) => !p.deleted));
         setFilteredProducts(
           response.data.filter(
-            (p) => !p.deleted && !excludeProductIds.includes(p._id)
-          )
+            (p) => !p.deleted && !excludeProductIds.includes(p._id),
+          ),
         );
       }
     } catch (error) {
@@ -131,7 +132,7 @@ export default function ProductSelectorModal({
             <div className="space-y-2">
               {filteredProducts.map((product) => {
                 const isSelected = selectedProducts.some(
-                  (p) => p._id === product._id
+                  (p) => p._id === product._id,
                 );
                 return (
                   <label
@@ -140,7 +141,7 @@ export default function ProductSelectorModal({
                       "flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-colors",
                       isSelected
                         ? "border-primary bg-primary/5"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-gray-200 hover:border-gray-300",
                     )}
                   >
                     <Checkbox
@@ -149,14 +150,18 @@ export default function ProductSelectorModal({
                       className="border-gray-300"
                     />
                     <div className="flex items-center gap-4 flex-1">
-                      <img
-                        src={
-                          product.productMedia.find((m) => m.type === "image")
-                            ?.imageUrl || "/placeholder.png"
-                        }
-                        alt={product.productName}
-                        className="w-16 h-16 object-cover rounded"
-                      />
+                      <div className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0">
+                        <Image
+                          src={
+                            product.productMedia.find((m) => m.type === "image")
+                              ?.imageUrl || "/placeholder.png"
+                          }
+                          alt={product.productName}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      </div>
                       <div className="flex-1">
                         <h3 className="font-medium">{product.productName}</h3>
                         <p className="text-sm text-gray-500">

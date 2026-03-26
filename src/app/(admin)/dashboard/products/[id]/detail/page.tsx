@@ -18,6 +18,7 @@ import { ArrowLeft, Edit, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function DetailProduct() {
   const router = useRouter();
@@ -31,13 +32,13 @@ export default function DetailProduct() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [showModalPrice, setShowModalPrice] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<VariantRow | null>(
-    null
+    null,
   );
 
   const totalStock =
     product?.productVariantsData?.reduce(
       (acc, el) => acc + (el.stock || 0),
-      0
+      0,
     ) ?? 0;
 
   const fetchProductById = async () => {
@@ -100,16 +101,18 @@ export default function DetailProduct() {
               <div className="lg:col-span-1">
                 <div className="bg-muted rounded-lg aspect-square flex items-center justify-center">
                   <div className="space-y-4">
-                    <div className="bg-muted rounded-lg overflow-hidden aspect-square flex items-center justify-center">
+                    <div className="bg-muted rounded-lg overflow-hidden aspect-square relative flex items-center justify-center">
                       {product.productMedia.length > 0 ? (
                         product.productMedia[selectedImage].type === "image" ? (
-                          <img
+                          <Image
                             src={
                               product.productMedia[selectedImage].imageUrl ||
                               "/placeholder.svg"
                             }
                             alt={`Product Image ${product.productName}`}
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            sizes="(min-width: 1024px) 33vw, 100vw"
                           />
                         ) : (
                           <video
@@ -138,17 +141,19 @@ export default function DetailProduct() {
                           <button
                             key={index}
                             onClick={() => setSelectedImage(index)}
-                            className={`aspect-square rounded-md overflow-hidden border-2 transition-colors ${
+                            className={`relative aspect-square rounded-md overflow-hidden border-2 transition-colors ${
                               selectedImage === index
                                 ? "border-primary"
                                 : "border-muted"
                             }`}
                           >
                             {image.type === "image" ? (
-                              <img
+                              <Image
                                 src={image.imageUrl || "/placeholder.svg"}
                                 alt={`Product Image ${product.productName} ${index + 1}`}
-                                className="w-full h-full object-cover"
+                                fill
+                                className="object-cover"
+                                sizes="80px"
                               />
                             ) : (
                               <div className="relative w-full h-full">
@@ -283,12 +288,14 @@ export default function DetailProduct() {
                   {product.sizeProduct.map((size, index) => (
                     <div
                       key={index}
-                      className="aspect-square rounded-md overflow-hidden border border-gray-200 hover:border-primary transition-colors"
+                      className="relative aspect-square rounded-md overflow-hidden border border-gray-200 hover:border-primary transition-colors"
                     >
-                      <img
+                      <Image
                         src={size.imageUrl}
                         alt={`Size chart ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 1024px) 16vw, (min-width: 768px) 25vw, 50vw"
                       />
                     </div>
                   ))}
@@ -332,11 +339,13 @@ export default function DetailProduct() {
                           </TableCell>
                           <TableCell className="font-medium ">
                             {item.image ? (
-                              <div className="h-20 w-20 bg-muted rounded-md flex items-center justify-center">
-                                <img
+                              <div className="relative h-20 w-20 bg-muted rounded-md overflow-hidden flex items-center justify-center">
+                                <Image
                                   src={item.image.imageUrl}
                                   alt={item.name}
-                                  className="w-full h-full object-cover rounded-md"
+                                  fill
+                                  className="object-cover rounded-md"
+                                  sizes="80px"
                                 />
                               </div>
                             ) : (

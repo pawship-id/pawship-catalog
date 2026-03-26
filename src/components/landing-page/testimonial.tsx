@@ -1,6 +1,7 @@
 "use client";
 import React, { useRef, useState, useEffect } from "react";
 import { Quote, Star } from "lucide-react";
+import Image from "next/image";
 
 interface Testimonial {
   id: number;
@@ -249,10 +250,11 @@ export default function Testimonial() {
                       <h3 className="font-bold text-foreground text-lg">
                         {testimonial.name}
                       </h3>
-                      <img
+                      <Image
                         src="/images/verified.png"
                         alt=""
-                        className="w-5 h-5"
+                        width={20}
+                        height={20}
                       />
                     </div>
                     <p className="text-muted-foreground text-sm">
@@ -283,11 +285,15 @@ export default function Testimonial() {
                       rel="noopener noreferrer"
                       className="block mb-4 cursor-pointer overflow-hidden rounded-lg hover:opacity-90 transition-opacity max-w-[250px] mx-auto"
                     >
-                      <img
-                        src={testimonial.picture}
-                        alt={`${testimonial.name}'s testimonial`}
-                        className="w-full aspect-video object-cover"
-                      />
+                      <div className="relative w-full aspect-video overflow-hidden rounded-lg">
+                        <Image
+                          src={testimonial.picture}
+                          alt={`${testimonial.name}'s testimonial`}
+                          fill
+                          className="object-cover"
+                          sizes="250px"
+                        />
+                      </div>
                     </a>
                   )}
 

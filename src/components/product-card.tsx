@@ -11,6 +11,7 @@ import { getProductMinPrice } from "@/lib/helpers/promo-helper";
 import { hasTag, isNewArrival } from "@/lib/helpers/product";
 import { useSession } from "next-auth/react";
 import AddToCartModal from "./add-to-cart-modal";
+import Image from "next/image";
 import { showSuccessAlert } from "@/lib/helpers/sweetalert2";
 
 interface ProductCardProps {
@@ -78,7 +79,7 @@ export default function ProductCard({
     product._id,
     currency,
     activePromos,
-    isReseller
+    isReseller,
   );
 
   const minPrice = priceInfo.minPrice;
@@ -112,11 +113,13 @@ export default function ProductCard({
       >
         <div className="relative w-full h-full">
           {productMedia?.map((image, index) => (
-            <img
+            <Image
               key={index}
               src={image.imageUrl}
               alt={`Image product ${product.productName} - ${index + 1}`}
-              className={`aspect-square absolute w-full h-full inset-0 object-cover transition-opacity duration-500 ${
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+              className={`object-cover transition-opacity duration-500 ${
                 index === currentImageIndex ? "opacity-100" : "opacity-0"
               }`}
             />

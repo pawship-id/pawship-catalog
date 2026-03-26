@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Trash2, Settings } from "lucide-react";
+import Image from "next/image";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -35,7 +36,7 @@ export default function VariantDiscountItem({
   // Get summary of discounts
   const getDiscountSummary = () => {
     const discounts = currencies.map(
-      (currency) => variant.discountPercentage[currency] || 0
+      (currency) => variant.discountPercentage[currency] || 0,
     );
     const uniqueDiscounts = [...new Set(discounts)];
 
@@ -50,11 +51,15 @@ export default function VariantDiscountItem({
     <div>
       <div className="flex items-start gap-4">
         {/* Variant Image */}
-        <img
-          src={variant.image?.imageUrl || "/placeholder.png"}
-          alt={variant.variantName}
-          className="w-15 h-15 object-cover rounded border"
-        />
+        <div className="relative w-15 h-15 rounded overflow-hidden border flex-shrink-0">
+          <Image
+            src={variant.image?.imageUrl || "/placeholder.png"}
+            alt={variant.variantName}
+            fill
+            className="object-cover"
+            sizes="60px"
+          />
+        </div>
 
         {/* Variant Info & Controls */}
         <div className="flex-1">

@@ -1,6 +1,7 @@
 import SingleBanner from "@/components/common/single-banner";
 import { Badge } from "@/components/ui/badge";
 import React from "react";
+import Image from "next/image";
 
 export default function StorePage() {
   return (
@@ -31,9 +32,11 @@ export default function StorePage() {
             {/* Store Images */}
             <div className="space-y-4 lg:space-y-6">
               <div className="relative overflow-hidden rounded-3xl shadow-2xl group">
-                <img
+                <Image
                   src="/images/banner/about-us-banner-pawship-offline-store.jpeg"
                   alt="Pawship Store Surabaya exterior"
+                  width={800}
+                  height={400}
                   className="w-full h-64 lg:h-100 object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
@@ -41,16 +44,20 @@ export default function StorePage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative overflow-hidden rounded-xl shadow-lg group">
-                  <img
+                  <Image
                     src="/images/banner/stores2.jpeg"
                     alt="Pawship Store interior"
+                    width={400}
+                    height={200}
                     className="w-full h-32 lg:h-50 object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 </div>
                 <div className="relative overflow-hidden rounded-xl shadow-lg group">
-                  <img
+                  <Image
                     src="/images/banner/stores3.jpeg"
                     alt="Pawship Store products display"
+                    width={400}
+                    height={200}
                     className="w-full h-32 lg:h-50 object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
+import Image from "next/image";
 
 interface VideoTestimonial {
   id: string;
@@ -81,7 +82,7 @@ export default function Testimonial() {
 
         // Adjust currentSlide to prevent blank display
         const newTotalSlides = Math.ceil(
-          testimonials.length / newItemsPerSlide
+          testimonials.length / newItemsPerSlide,
         );
         if (currentSlide >= newTotalSlides) {
           setCurrentSlide(Math.max(0, newTotalSlides - 1));
@@ -102,7 +103,7 @@ export default function Testimonial() {
 
     const interval = setInterval(() => {
       setCurrentSlide((prevSlide) =>
-        prevSlide === totalSlides - 1 ? 0 : prevSlide + 1
+        prevSlide === totalSlides - 1 ? 0 : prevSlide + 1,
       );
     }, 5000);
 
@@ -173,10 +174,12 @@ export default function Testimonial() {
                     className="group relative bg-white rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-500 hover:-translate-y-1"
                   >
                     <div className="relative aspect-video overflow-hidden">
-                      <img
+                      <Image
                         src={testimonial.thumbnailUrl}
                         alt={testimonial.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-700"
+                        sizes="(min-width: 768px) 50vw, 100vw"
                       />
 
                       {/* Play Button Overlay */}

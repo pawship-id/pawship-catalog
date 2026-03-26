@@ -38,6 +38,7 @@ import { useRouter } from "next/navigation";
 import TagInput from "./input-tag";
 import { TagForm } from "@/lib/types/tag";
 import Link from "next/link";
+import Image from "next/image";
 import { compressImagesIfNeeded } from "@/lib/helpers/image-compression";
 
 interface ProductFormProps {
@@ -602,15 +603,21 @@ export default function FormProduct({
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
                     {existingSizeProduct.map((img, index) => (
                       <div key={`existing-${index}`} className="relative group">
-                        <img
-                          src={img.imageUrl}
-                          alt={`Size ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-75 transition-opacity"
+                        <div
+                          className="relative w-full h-32 rounded-lg overflow-hidden border border-gray-300 cursor-pointer hover:opacity-75 transition-opacity"
                           onClick={() => {
                             setCurrentSizeImageIndex(index);
                             setShowSizeProductModal(true);
                           }}
-                        />
+                        >
+                          <Image
+                            src={img.imageUrl}
+                            alt={`Size ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            sizes="(min-width: 768px) 25vw, 50vw"
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
@@ -847,10 +854,12 @@ export default function FormProduct({
                         key={media.imagePublicId}
                         className="relative group w-20 h-20 md:w-24 md:h-24 rounded-lg border border-gray-200 overflow-hidden"
                       >
-                        <img
+                        <Image
                           src={media.imageUrl}
                           alt={`Product media ${index + 1}`}
-                          className="w-full h-full object-cover cursor-pointer hover:opacity-75 transition-opacity"
+                          fill
+                          className="object-cover cursor-pointer hover:opacity-75 transition-opacity"
+                          sizes="96px"
                           onClick={() => {
                             setCurrentProductMediaIndex(index);
                             setShowProductMediaModal(true);
