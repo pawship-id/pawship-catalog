@@ -118,7 +118,7 @@ export default function OurGalery() {
           <div className="space-y-4">
             <div className="relative w-full h-64 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300">
               <Image
-                src="https://res.cloudinary.com/deqpnzfwb/image/upload/v1774511864/IMG_1_efv0om.jpg"
+                src="https://res.cloudinary.com/deqpnzfwb/image/upload/v1774515335/IMG_11_guti0f.jpg"
                 alt="Gallery 10"
                 fill
                 className="object-cover"
@@ -130,7 +130,7 @@ export default function OurGalery() {
           <div className="space-y-4">
             <div className="relative w-full h-64 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300">
               <Image
-                src="https://res.cloudinary.com/deqpnzfwb/image/upload/v1774512437/IMG_4_gunukc.jpg"
+                src="https://res.cloudinary.com/deqpnzfwb/image/upload/v1774515357/IMG_10_t1ftpf.png"
                 alt="Gallery 11"
                 fill
                 className="object-cover"
