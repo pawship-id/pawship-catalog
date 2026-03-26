@@ -13,7 +13,7 @@ export default function ResellerProgramHighlight() {
           <div className="relative">
             <div className="relative rounded-2xl overflow-hidden">
               <Image
-                src="/images/galery/happy-woman-hugging-white-poodle-on-yellow-couch.png"
+                src="https://res.cloudinary.com/deqpnzfwb/image/upload/v1774512295/IMG_5_isdo2p.jpg"
                 alt="Reseller Program"
                 width={600}
                 height={400}

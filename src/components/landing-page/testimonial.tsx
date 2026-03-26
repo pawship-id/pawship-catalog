@@ -252,7 +252,7 @@ export default function Testimonial() {
                       </h3>
                       <Image
                         src="/images/verified.png"
-                        alt=""
+                        alt="verified image"
                         width={20}
                         height={20}
                       />
@@ -277,6 +277,11 @@ export default function Testimonial() {
                     <Quote className="h-12 w-12 text-gray-400" />
                   </div>
 
+                  {/* Content with fixed height */}
+                  <blockquote className="text-gray-700 leading-relaxed flex-1">
+                    "{testimonial.content}"
+                  </blockquote>
+
                   {/* Testimonial Image */}
                   {testimonial.picture && (
                     <a
@@ -285,22 +290,16 @@ export default function Testimonial() {
                       rel="noopener noreferrer"
                       className="block mb-4 cursor-pointer overflow-hidden rounded-lg hover:opacity-90 transition-opacity max-w-[250px] mx-auto"
                     >
-                      <div className="relative w-full aspect-video overflow-hidden rounded-lg">
-                        <Image
-                          src={testimonial.picture}
-                          alt={`${testimonial.name}'s testimonial`}
-                          fill
-                          className="object-cover"
-                          sizes="250px"
-                        />
-                      </div>
+                      <Image
+                        src={testimonial.picture}
+                        alt={`${testimonial.name}'s testimonial`}
+                        width={250}
+                        height={141}
+                        className="w-full h-auto object-cover rounded-lg"
+                        sizes="150px"
+                      />
                     </a>
                   )}
-
-                  {/* Content with fixed height */}
-                  <blockquote className="text-gray-700 leading-relaxed flex-1">
-                    "{testimonial.content}"
-                  </blockquote>
                 </div>
               ))}
             </div>
