@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 interface StepCardProps {
   step: any;
@@ -11,10 +12,12 @@ export default function StepCard({ step }: StepCardProps) {
       <div className="bg-white rounded-xl shadow-md transition-shadow duration-300 overflow-hidden h-full flex flex-col">
         {/* Image */}
         <div className="relative h-80 overflow-hidden bg-black">
-          <img
+          <Image
             src={step.image}
             alt={step.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
+            sizes="320px"
           />
         </div>
 

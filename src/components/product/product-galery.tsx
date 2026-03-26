@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Heart, X } from "lucide-react";
+import Image from "next/image";
 import ShareButton from "./share-button";
 import { TagData } from "@/lib/types/tag";
 import { VariantRow } from "@/lib/types/product";
@@ -48,7 +49,7 @@ export function ProductGallery({
     }
 
     const index = productMedia.findIndex(
-      (item) => item.imageUrl === variantImageUrl
+      (item) => item.imageUrl === variantImageUrl,
     );
 
     setCurrentIndex(index !== -1 ? index : 0);
@@ -61,12 +62,12 @@ export function ProductGallery({
 
   const prev = () =>
     setCurrentIndex((prev) =>
-      prev === 0 ? productMedia.length - 1 : prev - 1
+      prev === 0 ? productMedia.length - 1 : prev - 1,
     );
 
   const next = () =>
     setCurrentIndex((prev) =>
-      prev === productMedia.length - 1 ? 0 : prev + 1
+      prev === productMedia.length - 1 ? 0 : prev + 1,
     );
 
   return (
@@ -111,7 +112,7 @@ export function ProductGallery({
         {/* Asset View Clickable */}
         <div
           onClick={() => setIsViewerOpen(true)}
-          className="w-full h-full cursor-pointer"
+          className="relative w-full h-full cursor-pointer"
         >
           {isVideo ? (
             <video
@@ -124,10 +125,12 @@ export function ProductGallery({
               className="w-full h-full object-cover"
             />
           ) : (
-            <img
+            <Image
               src={currentAsset.imageUrl}
               alt={product.productName}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              sizes="(min-width: 768px) 50vw, 100vw"
             />
           )}
         </div>
@@ -178,7 +181,13 @@ export function ProductGallery({
                   muted
                 />
               ) : (
-                <img src={m.imageUrl} className="w-full h-full object-cover" />
+                <Image
+                  src={m.imageUrl}
+                  alt={product.productName}
+                  fill
+                  className="object-cover"
+                  sizes="20vw"
+                />
               )}
             </button>
           ))}
@@ -227,11 +236,15 @@ export function ProductGallery({
                 className="max-w-full max-h-[90vh] rounded-lg"
               />
             ) : (
-              <img
-                src={currentAsset.imageUrl}
-                alt={product.productName}
-                className="max-w-full max-h-[90vh] object-contain rounded-lg"
-              />
+              <div className="relative w-full h-full">
+                <Image
+                  src={currentAsset.imageUrl}
+                  alt={product.productName}
+                  fill
+                  className="object-contain rounded-lg"
+                  sizes="100vw"
+                />
+              </div>
             )}
           </div>
         </div>

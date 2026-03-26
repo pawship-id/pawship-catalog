@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Clock, User, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 interface PaymentProof {
   imageUrl: string;
@@ -52,10 +53,12 @@ export function PaymentProofDetailModal({
           {/* Image */}
           <div className="flex justify-center">
             <div className="relative w-48 h-48 sm:w-64 sm:h-64 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-              <img
+              <Image
                 src={proof.imageUrl}
                 alt="Payment proof"
-                className="w-full h-full object-contain cursor-pointer"
+                fill
+                className="object-contain cursor-pointer"
+                sizes="(min-width: 640px) 256px, 192px"
                 onClick={() => window.open(proof.imageUrl, "_blank")}
               />
             </div>

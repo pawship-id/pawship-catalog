@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Upload, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { compressImageIfNeeded } from "@/lib/helpers/image-compression";
@@ -190,10 +191,12 @@ export default function ImageGalleryModal({
                   }}
                   className="relative aspect-square rounded-lg border-2 border-gray-200 hover:border-primary overflow-hidden group transition-all"
                 >
-                  <img
+                  <Image
                     src={image.secureUrl}
                     alt={image.publicId}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="150px"
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
                 </button>

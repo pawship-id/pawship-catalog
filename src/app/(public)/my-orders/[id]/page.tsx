@@ -159,7 +159,7 @@ export default function OrderDetailPage() {
   };
 
   const fetchProductSlugs = async (
-    orderDetails: OrderDetail["orderDetails"]
+    orderDetails: OrderDetail["orderDetails"],
   ) => {
     try {
       const productIds = orderDetails.map((item) => item.productId);
@@ -184,7 +184,7 @@ export default function OrderDetailPage() {
             console.error(`Error fetching product ${productId}:`, error);
             slugsMap[productId] = productId;
           }
-        })
+        }),
       );
 
       setProductSlugs(slugsMap);
@@ -397,7 +397,7 @@ export default function OrderDetailPage() {
                                     <span className="text-base font-bold text-orange-600">
                                       {currencyFormat(
                                         item.discountedPrice[order.currency],
-                                        order.currency
+                                        order.currency,
                                       )}
                                     </span>
                                     {item.originalPrice[order.currency] &&
@@ -414,7 +414,7 @@ export default function OrderDetailPage() {
                                               item.originalPrice[
                                                 order.currency
                                               ]) *
-                                              100
+                                              100,
                                           )}
                                           %
                                         </span>
@@ -423,7 +423,7 @@ export default function OrderDetailPage() {
                                   <span className="text-xs text-gray-500 line-through">
                                     {currencyFormat(
                                       item.originalPrice[order.currency],
-                                      order.currency
+                                      order.currency,
                                     )}
                                   </span>
                                 </>
@@ -431,7 +431,7 @@ export default function OrderDetailPage() {
                                 <span className="text-base font-bold text-gray-800">
                                   {currencyFormat(
                                     item.originalPrice[order.currency],
-                                    order.currency
+                                    order.currency,
                                   )}
                                 </span>
                               )}
@@ -525,7 +525,7 @@ export default function OrderDetailPage() {
                     order.totalAmount +
                       order.shippingCost -
                       (order.discountShipping || 0),
-                    order.currency
+                    order.currency,
                   )}
                 </span>
               </div>
@@ -571,16 +571,17 @@ export default function OrderDetailPage() {
                         <div className="flex items-center gap-2">
                           <a
                             href={`https://wa.me/?text=${encodeURIComponent(
-                              `Halo, saya sudah melakukan pembayaran untuk pesanan ${order.invoiceNumber}`
+                              `Halo, saya sudah melakukan pembayaran untuk pesanan ${order.invoiceNumber}`,
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md shadow-md transition-all duration-300"
                           >
-                            <img
+                            <Image
                               src="/images/icon-wa.png"
-                              className="w-5 h-5"
                               alt="WhatsApp Icon"
+                              width={20}
+                              height={20}
                             />
                             <span className="text-sm font-medium">
                               Chat via WhatsApp
@@ -613,10 +614,12 @@ export default function OrderDetailPage() {
                                 setShowProofDetail(true);
                               }}
                             >
-                              <img
+                              <Image
                                 src={proof.imageUrl}
                                 alt={`Payment proof ${index + 1}`}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform"
+                                sizes="(min-width: 640px) 150px, 120px"
                               />
                             </div>
                           ))}
@@ -652,7 +655,7 @@ export default function OrderDetailPage() {
         proofNumber={
           selectedProof
             ? order?.paymentProofs.findIndex(
-                (p) => p.imageUrl === selectedProof.imageUrl
+                (p) => p.imageUrl === selectedProof.imageUrl,
               )! + 1
             : undefined
         }
@@ -660,7 +663,7 @@ export default function OrderDetailPage() {
         onNext={() => {
           if (!order || !selectedProof) return;
           const currentIndex = order.paymentProofs.findIndex(
-            (p) => p.imageUrl === selectedProof.imageUrl
+            (p) => p.imageUrl === selectedProof.imageUrl,
           );
           if (currentIndex < order.paymentProofs.length - 1) {
             setSelectedProof(order.paymentProofs[currentIndex + 1]);
@@ -669,7 +672,7 @@ export default function OrderDetailPage() {
         onPrev={() => {
           if (!order || !selectedProof) return;
           const currentIndex = order.paymentProofs.findIndex(
-            (p) => p.imageUrl === selectedProof.imageUrl
+            (p) => p.imageUrl === selectedProof.imageUrl,
           );
           if (currentIndex > 0) {
             setSelectedProof(order.paymentProofs[currentIndex - 1]);

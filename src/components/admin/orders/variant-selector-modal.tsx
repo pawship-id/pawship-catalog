@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -55,16 +56,20 @@ export default function VariantSelectorModal({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <img
-                      src={
-                        variant.image?.imageUrl ||
-                        product.productMedia.find((m) => m.type === "image")
-                          ?.imageUrl ||
-                        "/placeholder.jpg"
-                      }
-                      alt={variant.name}
-                      className="w-16 h-16 object-cover rounded-lg"
-                    />
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                      <Image
+                        src={
+                          variant.image?.imageUrl ||
+                          product.productMedia.find((m) => m.type === "image")
+                            ?.imageUrl ||
+                          "/placeholder.jpg"
+                        }
+                        alt={variant.name}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </div>
                     <div>
                       <h4
                         className={`font-semibold ${

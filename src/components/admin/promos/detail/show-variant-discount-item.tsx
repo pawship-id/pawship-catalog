@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Eye } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { PromoData, PromoVariant } from "@/lib/types/promo";
 import ShowVariantPriceModal from "./show-variant-price-modal";
@@ -20,7 +21,7 @@ export default function ShowVariantDiscountItem({
   // Get summary of discounts
   const getDiscountSummary = () => {
     const discounts = currencies.map(
-      (currency) => variant.discountPercentage[currency] || 0
+      (currency) => variant.discountPercentage[currency] || 0,
     );
     const uniqueDiscounts = [...new Set(discounts)];
 
@@ -43,11 +44,15 @@ export default function ShowVariantDiscountItem({
     <div>
       <div className="flex items-start gap-4 mx-6">
         {/* Variant Image */}
-        <img
-          src={variant.image?.imageUrl || "/placeholder.png"}
-          alt={variant.variantName}
-          className="w-15 h-15 object-cover rounded border"
-        />
+        <div className="relative w-15 h-15 rounded overflow-hidden border flex-shrink-0">
+          <Image
+            src={variant.image?.imageUrl || "/placeholder.png"}
+            alt={variant.variantName}
+            fill
+            className="object-cover"
+            sizes="60px"
+          />
+        </div>
 
         {/* Variant Info & Controls */}
         <div className="flex-1">

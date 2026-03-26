@@ -17,6 +17,7 @@ import { updateData } from "@/lib/apiService";
 import { ApiResponse } from "@/lib/types/api";
 import { OrderData, IOrderDetail } from "@/lib/types/order";
 import { Trash2, Plus } from "lucide-react";
+import Image from "next/image";
 import { currencyFormat } from "@/lib/helpers";
 
 interface OrderFormProps {
@@ -58,7 +59,7 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
 
       showSuccessAlert(
         undefined,
-        response.message || "Order updated successfully"
+        response.message || "Order updated successfully",
       );
       router.push("/dashboard/orders");
     } catch (err: any) {
@@ -70,7 +71,7 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
 
   const handleShippingAddressChange = (
     field: keyof OrderData["shippingAddress"],
-    value: string
+    value: string,
   ) => {
     if (!formData) return;
 
@@ -86,7 +87,7 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
   const handleOrderDetailChange = (
     index: number,
     field: keyof IOrderDetail,
-    value: any
+    value: any,
   ) => {
     if (!formData) return;
 
@@ -108,7 +109,7 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
     // Calculate new total amount
     const newTotal = updatedDetails.reduce(
       (sum, item) => sum + item.subTotal,
-      0
+      0,
     );
 
     setFormData({
@@ -124,7 +125,7 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
     const updatedDetails = formData.orderDetails.filter((_, i) => i !== index);
     const newTotal = updatedDetails.reduce(
       (sum, item) => sum + item.subTotal,
-      0
+      0,
     );
 
     setFormData({
@@ -426,11 +427,15 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <img
-                    src={item.image.imageUrl}
-                    alt={item.productName}
-                    className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                  />
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                    <Image
+                      src={item.image.imageUrl}
+                      alt={item.productName}
+                      fill
+                      className="object-cover"
+                      sizes="64px"
+                    />
+                  </div>
                   <div>
                     <p className="font-semibold text-gray-900">
                       {item.productName}
@@ -462,7 +467,7 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
                       handleOrderDetailChange(
                         index,
                         "quantity",
-                        parseInt(e.target.value) || 1
+                        parseInt(e.target.value) || 1,
                       )
                     }
                     className="border-gray-300 focus:border-primary/80 focus:ring-primary/80"
@@ -477,7 +482,7 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
                   <Input
                     value={currencyFormat(
                       item.originalPrice[formData.currency],
-                      formData.currency
+                      formData.currency,
                     )}
                     disabled
                     className="bg-gray-50 border-gray-300"
@@ -492,7 +497,7 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
                     <Input
                       value={currencyFormat(
                         item.discountedPrice[formData.currency],
-                        formData.currency
+                        formData.currency,
                       )}
                       disabled
                       className="bg-gray-50 border-gray-300"
@@ -552,7 +557,7 @@ export default function FormOrder({ initialData, orderId }: OrderFormProps) {
             <span className="text-2xl font-bold text-primary">
               {currencyFormat(
                 formData.totalAmount + formData.shippingCost,
-                formData.currency
+                formData.currency,
               )}
             </span>
           </div>

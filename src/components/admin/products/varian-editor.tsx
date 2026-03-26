@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { showConfirmAlert, showErrorAlert } from "@/lib/helpers/sweetalert2";
 import { VariantRowForm, VariantType } from "@/lib/types/product";
 import ImageGalleryModal from "./image-gallery-modal";
+import Image from "next/image";
 import VariantPriceModal from "./variant-price-modal";
 import { compressImageIfNeeded } from "@/lib/helpers/image-compression";
 
@@ -705,13 +706,15 @@ export function VariantEditor({
                     <td className="px-2">
                       <div className="flex items-center gap-2">
                         {row.image?.imageUrl ? (
-                          <img
+                          <Image
                             src={
                               row.image.imageUrl ||
                               "/placeholder.svg?height=32&width=32&query=variant-image"
                             }
                             alt="Gambar variasi"
-                            className="h-8 w-8 rounded object-cover"
+                            width={32}
+                            height={32}
+                            className="rounded object-cover cursor-pointer"
                             onClick={() => handleFilePick(row.codeRow)}
                           />
                         ) : (

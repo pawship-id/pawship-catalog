@@ -1,6 +1,7 @@
 "use client";
 import { Play, Heart, Eye } from "lucide-react";
 import React, { useState } from "react";
+import Image from "next/image";
 
 interface Reel {
   _id: string;
@@ -38,10 +39,12 @@ export default function ReelCard({ reel }: ReelCardProps) {
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClick}
     >
-      <img
+      <Image
         src={reel.thumbnailUrl}
         alt="Reel thumbnail"
-        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+        fill
+        className="object-cover transition-transform duration-300 group-hover:scale-110"
+        sizes="(min-width: 768px) 20vw, 50vw"
       />
 
       {/* Overlay */}

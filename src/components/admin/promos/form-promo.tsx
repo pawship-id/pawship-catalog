@@ -14,6 +14,7 @@ import {
 } from "@/lib/types/promo";
 import { ProductData } from "@/lib/types/product";
 import ProductSelectorModal from "./product-selector-modal";
+import Image from "next/image";
 import VariantDiscountItem from "./variant-discount-item";
 import { createData, updateData } from "@/lib/apiService";
 
@@ -62,7 +63,7 @@ export default function FormPromo({
     // Convert selected products to PromoProduct format
     const promoProducts: PromoProduct[] = selectedProducts.map((product) => {
       const productImage = product.productMedia.find(
-        (el) => el.type === "image"
+        (el) => el.type === "image",
       );
 
       return {
@@ -117,7 +118,7 @@ export default function FormPromo({
   const handleVariantUpdate = (
     productId: string,
     variantId: string,
-    updatedVariant: PromoVariant
+    updatedVariant: PromoVariant,
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -126,10 +127,10 @@ export default function FormPromo({
           ? {
               ...product,
               variants: product.variants.map((v) =>
-                v.variantId === variantId ? updatedVariant : v
+                v.variantId === variantId ? updatedVariant : v,
               ),
             }
-          : product
+          : product,
       ),
     }));
   };
@@ -153,7 +154,7 @@ export default function FormPromo({
 
     // Check if at least one variant is active
     const hasActiveVariant = formData.products.some((product) =>
-      product.variants.some((v) => v.isActive)
+      product.variants.some((v) => v.isActive),
     );
     if (!hasActiveVariant) {
       return "At least one variant must be active";
@@ -177,7 +178,7 @@ export default function FormPromo({
         await updateData<PromoData, PromoForm>(
           "/api/admin/promos",
           initialData._id,
-          formData
+          formData,
         );
         alert("Promo updated successfully!");
       } else {
@@ -289,12 +290,15 @@ export default function FormPromo({
               {/* Product Header */}
               <div className="flex items-center justify-between border-b pb-3">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={product.image?.imageUrl || "/placeholder.png"}
-                    alt={product.productName}
-                    className="w-20 h-20 object-cover rounded border"
-                  />
-
+                  <div className="relative w-20 h-20 rounded overflow-hidden border flex-shrink-0">
+                    <Image
+                      src={product.image?.imageUrl || "/placeholder.png"}
+                      alt={product.productName}
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                  </div>
                   <div>
                     <h3 className="font-semibold text-base">
                       {product.productName}
@@ -326,7 +330,7 @@ export default function FormPromo({
                       handleVariantUpdate(
                         product.productId,
                         variant.variantId,
-                        updatedVariant
+                        updatedVariant,
                       )
                     }
                   />

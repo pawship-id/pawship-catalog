@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getAll, getById, updateData } from "@/lib/apiService";
 import { OrderData, IOrderDetail } from "@/lib/types/order";
 import LoadingPage from "@/components/loading";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1229,11 +1230,15 @@ export default function EditOrderPage() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-3">
-                            <img
-                              src={item.image.imageUrl}
-                              alt={item.productName}
-                              className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                            />
+                            <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                              <Image
+                                src={item.image.imageUrl}
+                                alt={item.productName}
+                                fill
+                                className="object-cover"
+                                sizes="64px"
+                              />
+                            </div>
                             <div>
                               <p className="font-semibold text-sm mb-1 text-foreground">
                                 {item.productName}

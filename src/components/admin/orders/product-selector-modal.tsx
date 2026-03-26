@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -68,14 +69,18 @@ export default function ProductSelectorModal({
                   className="border rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-gray-50 transition-all"
                 >
                   <div className="flex items-start space-x-3">
-                    <img
-                      src={
-                        product.productMedia?.find((m) => m.type === "image")
-                          ?.imageUrl || "/placeholder.jpg"
-                      }
-                      alt={product.productName}
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                      <Image
+                        src={
+                          product.productMedia?.find((m) => m.type === "image")
+                            ?.imageUrl || "/placeholder.jpg"
+                        }
+                        alt={product.productName}
+                        fill
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 mb-1">
                         {product.productName}
