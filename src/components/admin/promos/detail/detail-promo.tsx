@@ -15,6 +15,7 @@ import {
 import ErrorPage from "@/components/admin/error-page";
 import LoadingPage from "@/components/admin/loading-page";
 import ShowVariantDiscountItem from "./show-variant-discount-item";
+import Image from "next/image";
 
 interface DetailPromoProps {
   promoId: string;
@@ -75,7 +76,7 @@ export default function DetailPromo({ promoId }: DetailPromoProps) {
   const activeVariantsCount = promo?.products.reduce(
     (count, product) =>
       count + product.variants.filter((v) => v.isActive).length,
-    0
+    0,
   );
 
   return (
@@ -183,12 +184,17 @@ export default function DetailPromo({ promoId }: DetailPromoProps) {
                     >
                       <AccordionTrigger className="flex items-center justify-between pb-3 no-underline hover:no-underline cursor-pointer">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={product.image?.imageUrl || "/placeholder.png"}
-                            alt={product.productName}
-                            className="w-20 h-20 object-cover rounded border"
-                          />
-
+                          <div className="relative w-20 h-20 rounded overflow-hidden border flex-shrink-0">
+                            <Image
+                              src={
+                                product.image?.imageUrl || "/placeholder.png"
+                              }
+                              alt={product.productName}
+                              fill
+                              className="object-cover"
+                              sizes="80px"
+                            />
+                          </div>
                           <div>
                             <h3 className="font-semibold text-base">
                               {product.productName}

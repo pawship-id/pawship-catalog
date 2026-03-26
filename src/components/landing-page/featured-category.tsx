@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CategoryData } from "@/lib/types/category";
 import { getAll } from "@/lib/apiService";
 import Loading from "../loading";
+import Image from "next/image";
 
 export default function FeaturedCategory() {
   const [categories, setCategories] = useState<CategoryData[]>([]);
@@ -21,7 +22,7 @@ export default function FeaturedCategory() {
 
       if (response.data) {
         const filteredCategory = response.data.filter(
-          (el) => el.isDisplayed === true
+          (el) => el.isDisplayed === true,
         );
         setCategories(filteredCategory);
       }
@@ -59,11 +60,13 @@ export default function FeaturedCategory() {
                   className="flex flex-col lg:space-x-6 lg:flex-row items-center"
                 >
                   <div className="w-70 shrink-0 overflow-hidden rounded-l-xl">
-                    <div className="aspect-square w-full">
-                      <img
+                    <div className="aspect-square w-full relative">
+                      <Image
                         src={category.imageUrl}
                         alt={category.name}
-                        className="h-full w-full object-cover rounded-l-xl"
+                        fill
+                        className="object-cover rounded-l-xl"
+                        sizes="280px"
                       />
                     </div>
                   </div>

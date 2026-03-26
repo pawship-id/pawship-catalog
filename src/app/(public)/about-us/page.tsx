@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import Image from "next/image";
 import SingleBanner from "@/components/common/single-banner";
 
 export default function AboutUsPage() {
@@ -64,9 +65,11 @@ export default function AboutUsPage() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-orange-300/20 rounded-3xl transform rotate-6"></div>
               <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-                <img
+                <Image
                   src="https://i.pinimg.com/1200x/0f/41/82/0f4182d09adb53e3ef70131ffde3b35e.jpg"
                   alt="Our Community"
+                  width={800}
+                  height={384}
                   className="w-full h-96 object-cover hover:scale-105 transition-transform duration-500"
                 />
               </div>
@@ -178,9 +181,11 @@ export default function AboutUsPage() {
             <div className="relative lg:order-2">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-orange-300/20 rounded-3xl transform rotate-6"></div>
               <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-                <img
+                <Image
                   src="https://i.pinimg.com/736x/d0/dc/b6/d0dcb683a3d082cc1098f0aab92705d6.jpg"
                   alt="Our Community"
+                  width={800}
+                  height={384}
                   className="w-full h-96 object-cover hover:scale-105 transition-transform duration-500"
                 />
               </div>
@@ -213,9 +218,11 @@ export default function AboutUsPage() {
             <div className="relative group w-full max-w-2xl">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-orange-400/20 rounded-3xl transform rotate-3 group-hover:rotate-6 transition-transform duration-300"></div>
               <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-                <img
+                <Image
                   src="/images/galery/pet-shelter-donation-campaign-with-happy-rescued-d.jpg"
                   alt="Shelter donation campaign"
+                  width={800}
+                  height={320}
                   className="h-80 w-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>

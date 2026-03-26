@@ -24,6 +24,7 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
 import Link from "next/link";
+import Image from "next/image";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -72,7 +73,7 @@ export default function Sidebar() {
   const handleSignOut = async () => {
     const result = await showConfirmAlert(
       "You will be logged out of your account",
-      "Yes, logout!"
+      "Yes, logout!",
     );
 
     if (result.isConfirmed) {
@@ -130,7 +131,7 @@ export default function Sidebar() {
           "bg-sidebar border-r border-sidebar-border md:transition-all md:duration-300 h-full z-50",
           // Desktop: relative positioning, mobile: fixed positioning
           // "md:relative fixed left-0 top-0",
-          isCollapsed ? "w-16" : "w-64 md:relative fixed left-0 top-0"
+          isCollapsed ? "w-16" : "w-64 md:relative fixed left-0 top-0",
         )}
       >
         <div className="flex h-full flex-col">
@@ -139,9 +140,11 @@ export default function Sidebar() {
             {!isCollapsed && (
               <div className="flex items-center justify-center w-full">
                 <Link href="/">
-                  <img
+                  <Image
                     src="/images/transparent-logo-2.png"
                     alt="Pawship Logo"
+                    width={120}
+                    height={40}
                     className="h-10 w-auto"
                   />
                 </Link>
@@ -192,7 +195,7 @@ export default function Sidebar() {
                     "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
                     isActive
                       ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   )}
                   onClick={() => {
                     // Auto close sidebar on mobile when navigation item is clicked
@@ -217,7 +220,7 @@ export default function Sidebar() {
               onClick={handleSignOut}
               className={cn(
                 "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent",
-                isCollapsed && "justify-center"
+                isCollapsed && "justify-center",
               )}
             >
               <LogOut className="h-4 w-4" />

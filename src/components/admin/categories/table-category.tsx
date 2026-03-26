@@ -22,6 +22,7 @@ import DeleteButton from "@/components/admin/delete-button";
 import LoadingTable from "@/components/admin/loading-table";
 import ErrorTable from "@/components/admin/error-table";
 import Link from "next/link";
+import Image from "next/image";
 
 interface TableCategoryProps {
   searchQuery: string;
@@ -30,7 +31,7 @@ interface TableCategoryProps {
 export default function TableCategory({ searchQuery }: TableCategoryProps) {
   const [categories, setCategories] = useState<CategoryData[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<CategoryData[]>(
-    []
+    [],
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +82,7 @@ export default function TableCategory({ searchQuery }: TableCategoryProps) {
 
     const query = searchQuery.toLowerCase();
     const filtered = categories.filter((category) =>
-      category.name.toLowerCase().includes(query)
+      category.name.toLowerCase().includes(query),
     );
     setFilteredCategories(filtered);
   }, [searchQuery, categories]);
@@ -133,11 +134,13 @@ export default function TableCategory({ searchQuery }: TableCategoryProps) {
                 <TableRow key={item._id}>
                   <TableCell className="font-medium ">
                     {item.imageUrl ? (
-                      <div className="h-30 w-30 bg-muted rounded-md flex items-center justify-center">
-                        <img
+                      <div className="relative h-30 w-30 bg-muted rounded-md overflow-hidden flex items-center justify-center">
+                        <Image
                           src={item.imageUrl}
                           alt={item.name}
-                          className="w-full h-full object-cover rounded-md"
+                          fill
+                          className="object-cover rounded-md"
+                          sizes="120px"
                         />
                       </div>
                     ) : (
@@ -220,7 +223,7 @@ export default function TableCategory({ searchQuery }: TableCategoryProps) {
                   >
                     {page}
                   </Button>
-                )
+                ),
               )}
             </div>
             <Button

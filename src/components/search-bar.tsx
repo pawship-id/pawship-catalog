@@ -5,6 +5,7 @@ import { Search, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductData } from "@/lib/types/product";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface SearchBarProps {
   setIsSearchOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -104,17 +105,21 @@ export default function SearchBar({ setIsSearchOpen }: SearchBarProps) {
                         className="border rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-gray-50 transition-all"
                       >
                         <div className="flex items-start space-x-3">
-                          <img
-                            src={
-                              product.productMedia?.find(
-                                (m) => m.type === "image",
-                              )?.imageUrl ||
-                              product.productMedia?.[0]?.imageUrl ||
-                              "/placeholder.jpg"
-                            }
-                            alt={product.productName}
-                            className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                          />
+                          <div className="relative w-20 h-20 rounded-lg flex-shrink-0 overflow-hidden">
+                            <Image
+                              src={
+                                product.productMedia?.find(
+                                  (m) => m.type === "image",
+                                )?.imageUrl ||
+                                product.productMedia?.[0]?.imageUrl ||
+                                "/placeholder.jpg"
+                              }
+                              alt={product.productName}
+                              fill
+                              className="object-cover"
+                              sizes="80px"
+                            />
+                          </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-gray-900 mb-1">
                               {product.productName}

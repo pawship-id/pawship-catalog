@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import Link from "next/link";
+import Image from "next/image";
 import { getAll } from "@/lib/apiService";
 import { ProductData } from "@/lib/types/product";
 import LoadingTable from "@/components/admin/loading-table";
@@ -47,7 +48,7 @@ export default function TableProduct({
   const [error, setError] = useState<string | null>(null);
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(
-    null
+    null,
   );
   const [copied, setCopied] = useState(false);
 
@@ -111,14 +112,14 @@ export default function TableProduct({
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((product) =>
-        product.productName.toLowerCase().includes(query)
+        product.productName.toLowerCase().includes(query),
       );
     }
 
     // Filter by category
     if (selectedCategory !== "all") {
       filtered = filtered.filter(
-        (product) => product.categoryId === selectedCategory
+        (product) => product.categoryId === selectedCategory,
       );
     }
 
@@ -175,16 +176,18 @@ export default function TableProduct({
                       {item.productMedia?.length > 0 &&
                         (() => {
                           const firstImage = item.productMedia.find(
-                            (media) => media.type === "image"
+                            (media) => media.type === "image",
                           );
 
                           if (firstImage) {
                             return (
-                              <div className="w-25 h-25 bg-muted rounded-md flex items-center justify-center">
-                                <img
+                              <div className="relative w-25 h-25 bg-muted rounded-md overflow-hidden flex items-center justify-center">
+                                <Image
                                   src={firstImage.imageUrl}
                                   alt={item.productName}
-                                  className="w-full h-full object-cover rounded-md"
+                                  fill
+                                  className="object-cover rounded-md"
+                                  sizes="100px"
                                 />
                               </div>
                             );
@@ -283,7 +286,7 @@ export default function TableProduct({
                   >
                     {page}
                   </Button>
-                )
+                ),
               )}
             </div>
             <Button

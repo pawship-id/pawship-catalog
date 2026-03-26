@@ -38,6 +38,7 @@ import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 import { UserData } from "@/lib/types/user";
 import { ProductData, TCurrency } from "@/lib/types/product";
 import Link from "next/link";
+import Image from "next/image";
 import ProductSelectorModal from "@/components/admin/orders/product-selector-modal";
 import VariantSelectorModal from "@/components/admin/orders/variant-selector-modal";
 import { Textarea } from "@/components/ui/textarea";
@@ -874,11 +875,15 @@ export default function CreateOrderPage() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
-                          <img
-                            src={item.image.imageUrl || "/placeholder.png"}
-                            alt={item.productName}
-                            className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                          />
+                          <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                            <Image
+                              src={item.image.imageUrl || "/placeholder.png"}
+                              alt={item.productName}
+                              fill
+                              className="object-cover"
+                              sizes="64px"
+                            />
+                          </div>
                           <div>
                             <p className="font-semibold text-sm mb-1">
                               {item.productName}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,9 +20,11 @@ export function Footer() {
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <img
+              <Image
                 src="/images/transparent-logo.png"
                 alt="Paw Ship Logo"
+                width={120}
+                height={72}
                 className="h-18 w-auto"
               />
             </div>

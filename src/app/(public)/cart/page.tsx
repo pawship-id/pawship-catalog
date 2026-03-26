@@ -11,6 +11,7 @@ import {
   Phone,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Select,
   SelectContent,
@@ -743,11 +744,13 @@ export default function CartPage() {
                       {/* Desktop Cart Item - Full size for >= 750px */}
                       <div className="hidden min-[750px]:flex items-start space-x-4">
                         <Link href={`/product/${item.slug}`} className="block">
-                          <div className="relative w-30 h-30">
-                            <img
+                          <div className="relative w-30 h-30 overflow-hidden rounded-lg">
+                            <Image
                               src={item.image?.imageUrl}
                               alt={item.name}
-                              className="w-30 h-30 object-cover rounded-lg"
+                              fill
+                              className="object-cover"
+                              sizes="120px"
                             />
                           </div>
                         </Link>
@@ -875,11 +878,13 @@ export default function CartPage() {
                       {/* Compact Desktop Cart Item - For >= 490px && < 750px */}
                       <div className="hidden min-[490px]:max-[750px]:flex items-start space-x-3">
                         <Link href={`/product/${item.slug}`} className="block">
-                          <div className="relative w-25 h-25">
-                            <img
+                          <div className="relative w-25 h-25 overflow-hidden rounded-lg">
+                            <Image
                               src={item.image?.imageUrl}
                               alt={item.name}
-                              className="w-25 h-25 object-cover rounded-lg"
+                              fill
+                              className="object-cover"
+                              sizes="100px"
                             />
                           </div>
                         </Link>
@@ -1013,11 +1018,13 @@ export default function CartPage() {
                             href={`/product/${item.slug}`}
                             className="flex-shrink-0"
                           >
-                            <div className="relative w-25 h-25">
-                              <img
+                            <div className="relative w-25 h-25 overflow-hidden rounded-lg">
+                              <Image
                                 src={item.image?.imageUrl}
                                 alt={item.name}
-                                className="w-25 h-25 object-cover rounded-lg"
+                                fill
+                                className="object-cover"
+                                sizes="100px"
                               />
                             </div>
                           </Link>
