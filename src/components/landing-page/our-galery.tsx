@@ -10,8 +10,8 @@ export default function OurGalery() {
             Our Furry Friends 🐾
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Meet some of the amazing animals we've helped find their forever
-            homes
+            Meet our Pawfriends — happy, confident pets who trust Pawship every
+            day
           </p>
         </div>
 
