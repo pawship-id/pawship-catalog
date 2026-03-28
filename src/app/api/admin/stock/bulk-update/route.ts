@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "Unauthorized. Admin access required",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "No file uploaded. Please provide an Excel file",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
           message:
             "Invalid file type. Please upload an Excel file (.xlsx or .xls)",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "File too large. Maximum file size is 5MB",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "Excel file is empty",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -114,13 +114,12 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "Invalid Excel format. Required columns: sku, stock",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const csvData: { sku: string; stock: number }[] = [];
     const errors: string[] = [];
-
     for (let i = 1; i < jsonData.length; i++) {
       const row = jsonData[i] as any[];
 
@@ -167,7 +166,7 @@ export async function POST(req: NextRequest) {
           message: "Validation errors found in Excel file",
           errors: errors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -177,7 +176,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "Excel file has no valid data rows",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -197,9 +196,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Find variant by SKU
-      const variant = await ProductVariant.findOne({ sku }).populate(
-        "productId"
-      );
+      const variant = await ProductVariant.findOne({ sku });
 
       if (!variant) {
         // SKU tidak ditemukan, skip
@@ -255,7 +252,7 @@ export async function POST(req: NextRequest) {
         totalProcessed: csvData.length,
         message: `Successfully updated ${updatedCount} variants. ${skipped.length} SKUs were skipped.`,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: any) {
     console.error("Error in bulk stock update:", error);
@@ -264,7 +261,7 @@ export async function POST(req: NextRequest) {
         success: false,
         message: error.message || "Failed to update stock",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
