@@ -192,7 +192,39 @@ SKU-COLLAR-002,200
 SKU-HARNESS-001,75
 ```
 
-**Expected Result:** All rows updated successfully
+**Testing Behavior:** Stock REPLACEMENT (not addition)
+
+**Assumption:**
+
+- SKU-COLLAR-001 current stock: 100
+- SKU-COLLAR-002 current stock: 50
+- SKU-HARNESS-001 current stock: 200
+
+**Expected Result:**
+
+- SKU-COLLAR-001 stock becomes 150 (replaced, not 250)
+- SKU-COLLAR-002 stock becomes 200 (replaced, not 250)
+- SKU-HARNESS-001 stock becomes 75 (replaced, not 275)
+- All rows updated successfully
+
+---
+
+### 🔢 Zero Stock CSV (test-zero-stock.csv)
+
+```csv
+sku,stock
+SKU-COLLAR-001,0
+SKU-COLLAR-002,0
+```
+
+**Testing Behavior:** Stock = 0 should set items as out of stock
+
+**Expected Result:**
+
+- SKU-COLLAR-001 stock set to 0
+- SKU-COLLAR-002 stock set to 0
+- Updated count: 2
+- No SKUs skipped
 
 ---
 
@@ -258,12 +290,13 @@ sku,stock
 
 ### CSV Parsing Tests
 
-- [ ] ✅ Valid CSV with 10 rows → All updated
+- [ ] ✅ Valid CSV with 10 rows → All updated (replacement, not addition)
+- [ ] ✅ CSV with stock = 0 → Stock set to 0 (out of stock)
 - [ ] ⚠️ CSV with invalid SKU → SKU added to skipped list
 - [ ] ❌ CSV with negative stock → Error returned
 - [ ] ❌ CSV with non-numeric stock → Error returned
 - [ ] ❌ CSV with empty SKU → Error returned
-- [ ] ✅ CSV with unchanged stock → Skipped (optimization)
+- [ ] ✅ CSV where new stock = old stock → Still updated (logged)
 
 ### Database Tests
 
@@ -297,14 +330,20 @@ sku,stock
 // MongoDB Shell
 use pawship_db
 
-// Find variant yang baru di-update
+// BEFORE upload - check current stock
+db.productvariants.findOne({ sku: "SKU-COLLAR-001" })
+// Result: { sku: "SKU-COLLAR-001", stock: 100, ... }
+
+// Upload CSV with SKU-COLLAR-001,150
+
+// AFTER upload - verify replacement (not addition)
 db.productvariants.findOne({ sku: "SKU-COLLAR-001" })
 
 // Expected result:
 {
   _id: ObjectId("..."),
   sku: "SKU-COLLAR-001",
-  stock: 150,  // Should be updated value
+  stock: 150,  // Should be 150 (replaced), NOT 250 (100+150)
   ...
 }
 ```
@@ -318,14 +357,14 @@ db.back_in_stock_logs.find().sort({ updatedAt: -1 }).limit(10)
 // Find logs by SKU
 db.back_in_stock_logs.find({ sku: "SKU-COLLAR-001" })
 
-// Expected result:
+// Expected result (showing stock replacement):
 {
   _id: ObjectId("..."),
   productId: ObjectId("..."),
   variantId: ObjectId("..."),
   sku: "SKU-COLLAR-001",
-  oldStock: 50,
-  newStock: 150,
+  oldStock: 100,   // Previous stock
+  newStock: 150,   // New stock (replaced, not 100+150=250)
   updatedBy: "admin@pawship.com",
   updatedAt: ISODate("2025-01-15T10:30:00.000Z")
 }

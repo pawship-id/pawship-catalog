@@ -102,6 +102,7 @@ export function validateCSVFile(file: File): {
    - Bisa disesuaikan sesuai kebutuhan
 
 3. **Empty File Check:**
+
    ```typescript
    if (file.size === 0)
    ```
@@ -316,14 +317,14 @@ if (!parseResult.success) {
       message: "Failed to parse CSV file",
       errors: parseResult.errors,
     },
-    { status: 400 }
+    { status: 400 },
   );
 }
 
 if (parseResult.data.length === 0) {
   return NextResponse.json(
     { message: "CSV file is empty or has no valid data" },
-    { status: 400 }
+    { status: 400 },
   );
 }
 ```
@@ -422,6 +423,7 @@ for (const row of csvData) {
    - `$set`: update field stock dengan value baru
 
 4. **Prepare Logs:**
+
    ```typescript
    logsToInsert.push({...})
    ```
@@ -520,7 +522,7 @@ return NextResponse.json(
     totalProcessed: csvData.length,
     message: `Successfully updated ${updatedCount} variants. ${skipped.length} SKUs were skipped.`,
   },
-  { status: 200 }
+  { status: 200 },
 );
 ```
 
@@ -726,6 +728,7 @@ updatedAt: { index: true }
    - Prevent DOS attack dengan file besar
 
 3. **Input Validation:**
+
    ```typescript
    if (stock < 0) {
      errors.push("Stock cannot be negative");
@@ -738,7 +741,7 @@ updatedAt: { index: true }
 
 ## 🧪 Testing Scenarios
 
-### Test Case 1: Valid CSV
+### Test Case 1: Valid Excel - Stock Replacement
 
 ```csv
 sku,stock
@@ -746,7 +749,16 @@ SKU001,100
 SKU002,200
 ```
 
-**Expected:** All updated, updatedCount = 2, skipped = []
+**Assumptions:**
+
+- SKU001 current stock: 50
+- SKU002 current stock: 150
+
+**Expected Result:**
+
+- SKU001 stock becomes 100 (replaced, not added)
+- SKU002 stock becomes 200 (replaced, not added)
+- updatedCount = 2, skipped = []
 
 ### Test Case 2: Mixed Valid/Invalid
 
@@ -772,7 +784,21 @@ SKU001,-50
 
 **Expected:** errors = ["Row 2: Stock cannot be negative"]
 
-### Test Case 4: Empty CSV
+### Test Case 4: Zero Stock (Out of Stock)
+
+```csv
+sku,stock
+SKU001,0
+SKU002,0
+```
+
+**Expected:**
+
+- SKU001 stock set to 0 (marked as out of stock)
+- SKU002 stock set to 0 (marked as out of stock)
+- updatedCount = 2
+
+### Test Case 5: Empty Excel
 
 ```csv
 sku,stock

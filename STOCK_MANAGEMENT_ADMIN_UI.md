@@ -2,7 +2,9 @@
 
 ## Overview
 
-Halaman **Stock Management** di admin panel untuk melakukan bulk update stock produk via CSV upload dan melihat history perubahan stock.
+Halaman **Stock Management** di admin panel untuk melakukan bulk update stock produk via Excel upload dan melihat history perubahan stock.
+
+**Important:** Stock values in the uploaded file will **REPLACE** existing stock, not add to it. This is for setting absolute inventory counts.
 
 ---
 
@@ -20,7 +22,9 @@ Halaman **Stock Management** di admin panel untuk melakukan bulk update stock pr
 
 ### 1. Bulk Upload Stock
 
-- ✅ Upload CSV file untuk update stock
+- ✅ Upload Excel file untuk set/replace stock
+- ✅ Stock values replace current stock (not addition)
+- ✅ Can set stock to 0 (out of stock)
 - ✅ Drag & drop file support
 - ✅ File validation (type, size)
 - ✅ Real-time upload progress
@@ -514,7 +518,7 @@ className = "font-semibold text-gray-600";
 // Confirmation
 const confirm = await showConfirmAlert(
   "Upload CSV",
-  "Are you sure you want to upload this file?"
+  "Are you sure you want to upload this file?",
 );
 
 // Success

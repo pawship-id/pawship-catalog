@@ -189,12 +189,6 @@ export async function POST(req: NextRequest) {
     for (const row of csvData) {
       const { sku, stock } = row;
 
-      // Skip if stock is 0
-      if (stock === 0) {
-        skipped.push(sku);
-        continue;
-      }
-
       // Find variant by SKU
       const variant = await ProductVariant.findOne({ sku });
 
@@ -207,8 +201,8 @@ export async function POST(req: NextRequest) {
       // Get old stock value
       const oldStock = variant.stock || 0;
 
-      // Jumlah oldStock + stock
-      const newStock = stock + oldStock;
+      // Replace stock with new value (not addition)
+      const newStock = stock;
 
       // Prepare bulk update operation (update even if stock is the same)
       bulkOperations.push({
