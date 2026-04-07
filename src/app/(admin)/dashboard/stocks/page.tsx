@@ -32,7 +32,7 @@ export default function StockManagementPage() {
             Stock Management
           </h1>
           <p className="text-muted-foreground text-lg">
-            Bulk update product stock via XLXS upload
+            Set product stock quantities via XLSX upload
           </p>
         </div>
         <Button
@@ -141,6 +141,11 @@ export default function StockManagementPage() {
                   ⚠️ Important Notes
                 </h4>
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>
+                    <strong>Stock values will be REPLACED</strong> (not added to
+                    existing stock)
+                  </li>
+                  <li>Stock value of 0 will mark items as out of stock</li>
                   <li>SKUs not found in database will be skipped</li>
                   <li>Negative stock values are not allowed</li>
                   <li>All updates are logged for audit trail</li>
@@ -155,7 +160,8 @@ export default function StockManagementPage() {
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   <li>Download and use the template for correct format</li>
                   <li>Test with a small batch first (5-10 rows)</li>
-                  <li>Verify SKUs before uploading</li>
+                  <li>Verify SKUs and stock quantities before uploading</li>
+                  <li>Use actual inventory counts (not quantities to add)</li>
                   <li>Keep a backup of your XLSX (excel) file</li>
                   <li>Check the logs after upload to verify updates</li>
                 </ul>

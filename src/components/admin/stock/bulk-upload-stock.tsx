@@ -42,7 +42,7 @@ export default function BulkUploadStock() {
       if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
         showErrorAlert(
           "Invalid File",
-          "Please select an Excel file (.xlsx or .xls)"
+          "Please select an Excel file (.xlsx or .xls)",
         );
         return;
       }
@@ -73,8 +73,15 @@ export default function BulkUploadStock() {
     }
 
     const confirm = await showConfirmAlert(
-      `Are you sure you want to upload "${selectedFile.name}"? This will update stock for all matching SKUs.`,
-      "Upload CSV"
+      `⚠️ This will REPLACE current stock values with the quantities in "${selectedFile.name}".
+      
+      Important:
+      • Stock values will be SET to the numbers in the file (not added)
+      • Setting stock to 0 will mark items as out of stock
+      • This action cannot be undone
+      
+      Are you sure you want to continue?`,
+      "Confirm Stock Replacement",
     );
 
     if (!confirm.isConfirmed) return;

@@ -1,17 +1,19 @@
 # 📦 Bulk Stock Update API Documentation
 
-Fitur untuk melakukan update stock produk secara massal (bulk) melalui file CSV upload.
+Fitur untuk melakukan update stock produk secara massal (bulk) melalui file Excel (XLSX/XLS) upload.
 
 ## 🎯 Features
 
-- ✅ Upload CSV file dengan format `sku,stock`
-- ✅ Validasi file CSV (tipe, ukuran, format)
+- ✅ Upload Excel file dengan format `sku,stock`
+- ✅ Stock values REPLACE current stock (not addition)
+- ✅ Allows stock = 0 to mark items as out of stock
+- ✅ Validasi file Excel (tipe, ukuran, format)
 - ✅ Bulk update stock menggunakan `bulkWrite()` untuk performa optimal
 - ✅ Automatic logging ke collection `BackInStockLog`
 - ✅ Skip invalid SKU dan return list SKU yang di-skip
 - ✅ Validasi stock tidak boleh negatif
 - ✅ Authentication & authorization (admin only)
-- ✅ Download template CSV
+- ✅ Download template Excel
 - ✅ View stock update history dengan filtering
 
 ## 📁 File Structure
