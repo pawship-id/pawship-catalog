@@ -241,10 +241,20 @@ export default function FormProduct({
         JSON.stringify(formData.variantTypes),
       );
 
-      // convert variant rows to JSON string
+      // convert variant rows to JSON string, default stock to 0 if empty
+      const sanitizedVariantRows = formData.variantRows.map((row) => ({
+        ...row,
+        stock:
+          row.stock === undefined ||
+          row.stock === null ||
+          (row.stock as unknown as string) === "" ||
+          isNaN(Number(row.stock))
+            ? 0
+            : Number(row.stock),
+      }));
       formDataToSend.append(
         "variantRows",
-        JSON.stringify(formData.variantRows),
+        JSON.stringify(sanitizedVariantRows),
       );
 
       // add marketing links as JSON string

@@ -50,6 +50,7 @@ const ProductVariantSchema = new Schema<IProductVariant>(
     },
     stock: {
       type: Number,
+      default: 0,
     },
     price: {
       type: Schema.Types.Mixed,
@@ -60,7 +61,7 @@ const ProductVariantSchema = new Schema<IProductVariant>(
       required: true,
     },
   },
-  { timestamps: true, collection: "product_variants" }
+  { timestamps: true, collection: "product_variants" },
 );
 
 // mongoose-delete plugin for soft delete

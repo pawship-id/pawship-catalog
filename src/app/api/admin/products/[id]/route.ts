@@ -262,7 +262,12 @@ export async function PUT(req: NextRequest, { params }: Context) {
           name: variant.name,
           sku: variant.sku,
           price: variant.price,
-          stock: variant.stock,
+          stock:
+            variant.stock === undefined ||
+            variant.stock === null ||
+            isNaN(Number(variant.stock))
+              ? 0
+              : Number(variant.stock),
           discountedPrice: variant.discountedPrice,
           attrs: variant.attrs,
         };
@@ -314,6 +319,13 @@ export async function PUT(req: NextRequest, { params }: Context) {
         // Create new variant
         await ProductVariant.create({
           ...variant,
+          stock:
+            variant.stock === undefined ||
+            variant.stock === null ||
+            variant.stock === "" ||
+            isNaN(Number(variant.stock))
+              ? 0
+              : Number(variant.stock),
           productId: id,
         });
       }
