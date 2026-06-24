@@ -6,6 +6,7 @@ export interface VariantType {
 }
 
 export interface VariantRowForm {
+  _id?: string;
   codeRow: string;
   position: number;
   image?: {

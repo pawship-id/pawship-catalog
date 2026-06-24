@@ -102,6 +102,12 @@ export default function FormProduct({
   >([]);
   const [deleteMediaIds, setDeleteMediaIds] = useState<string[]>([]);
 
+  const [deleteVariantIds, setDeleteVariantIds] = useState<string[]>([]);
+
+  const handleDeleteVariants = (ids: string[]) => {
+    setDeleteVariantIds((prev) => [...prev, ...ids]);
+  };
+
   const [variantRows, setVariantRows] =
     useState<VariantRowForm[]>(getVariantRows());
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
@@ -271,6 +277,13 @@ export default function FormProduct({
       // add delete size IDs for edit mode
       if (isEditMode && deleteSizeIds.length > 0) {
         formDataToSend.append("deleteSizeIds", JSON.stringify(deleteSizeIds));
+      }
+
+      if (isEditMode && deleteVariantIds.length > 0) {
+        formDataToSend.append(
+          "deleteVariantIds",
+          JSON.stringify(deleteVariantIds),
+        );
       }
 
       let response: ApiResponse<ProductData>;
@@ -1153,6 +1166,7 @@ export default function FormProduct({
                       };
                     });
                   }}
+                  onDeleteVariants={handleDeleteVariants}
                   variantTypes={variantTypes}
                   onTypesChange={(next) => {
                     setVariantTypes(next);

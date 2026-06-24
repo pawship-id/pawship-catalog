@@ -23,6 +23,7 @@ import { compressImageIfNeeded } from "@/lib/helpers/image-compression";
 type VariantEditorProps = {
   value: VariantRowForm[];
   onChange: (rows: VariantRowForm[]) => void;
+  onDeleteVariants?: (ids: string[]) => void;
   variantTypes: VariantType[];
   onTypesChange: (types: VariantType[]) => void;
   className?: string;
@@ -42,6 +43,7 @@ function buildNameFromAttrs(attrs: Record<string, string>, order: string[]) {
 export function VariantEditor({
   value,
   onChange,
+  onDeleteVariants,
   variantTypes,
   onTypesChange,
   className,
@@ -285,6 +287,15 @@ export function VariantEditor({
 
     // wait for all Promise deletion to complete
     await Promise.all(deletionPromises);
+
+    // Report DB _id of deleted items so parent can soft-delete them
+    const deletedIds = itemsToDelete
+      .filter((item) => item._id)
+      .map((item) => item._id as string);
+
+    if (deletedIds.length > 0) {
+      onDeleteVariants?.(deletedIds);
+    }
 
     // update state: Delete rows that have 'selected: true'
     const remainingItems = value.filter((v) => !v.selected);
