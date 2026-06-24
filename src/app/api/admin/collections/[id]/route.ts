@@ -229,21 +229,24 @@ export async function DELETE(req: NextRequest, { params }: Context) {
 
     await dbConnect();
 
-    const deletedCollection = await Collection.findByIdAndUpdate(
-      id,
-      {
-        deleted: true,
-        deletedAt: new Date(),
-      },
-      { new: true }
-    );
+    const collection = await Collection.findById(id);
 
-    if (deletedCollection.deletedCount === 0) {
+    if (!collection) {
       return NextResponse.json(
         { message: "Collection not found" },
         { status: 404 }
       );
     }
+
+    const deletedCollection = await Collection.findByIdAndUpdate(
+      id,
+      {
+        deleted: true,
+        deletedAt: new Date(),
+        slug: `deleted-${id}-${collection.slug}`,
+      },
+      { new: true }
+    );
 
     return NextResponse.json(
       {

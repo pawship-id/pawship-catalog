@@ -249,9 +249,18 @@ export async function PUT(req: NextRequest, { params }: Context) {
     );
     const updateVariantImages = formData.get("updateVariantImages") as string;
 
-    // Delete marked variants
+    // Soft delete marked variants and prefix their SKU
     if (deleteVariantIds.length > 0) {
-      await ProductVariant.deleteMany({ _id: { $in: deleteVariantIds } });
+      for (const variantId of deleteVariantIds) {
+        const v = await ProductVariant.findById(variantId);
+        if (v) {
+          await ProductVariant.findByIdAndUpdate(variantId, {
+            deleted: true,
+            deletedAt: new Date(),
+            sku: `deleted-${variantId}-${v.sku}`,
+          });
+        }
+      }
     }
 
     // Update or create variants
@@ -415,6 +424,16 @@ export async function PATCH(req: NextRequest, { params }: Context) {
     // Soft delete using mongoose-delete plugin
     // @ts-ignore
     await product.delete();
+
+    // Cascade soft delete to all active variants and prefix their SKU
+    const activeVariants = await ProductVariant.find({ productId: id, deleted: { $ne: true } });
+    for (const variant of activeVariants) {
+      await ProductVariant.findByIdAndUpdate(variant._id, {
+        deleted: true,
+        deletedAt: new Date(),
+        sku: `deleted-${variant._id}-${variant.sku}`,
+      });
+    }
 
     // Note: We don't delete images from Cloudinary on soft delete
     // Images remain in Cloudinary for potential restore

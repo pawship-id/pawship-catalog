@@ -89,27 +89,30 @@ export async function PATCH(req: NextRequest, { params }: Context) {
   try {
     const { id } = await params;
 
-    const deletedUser = await User.findByIdAndUpdate(
-      id,
-      {
-        deleted: true,
-        deletedAt: new Date(),
-      },
-      { new: true }
-    );
+    const user = await User.findById(id);
 
-    if (deletedUser.deletedCount === 0) {
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "User not found" },
         { status: 404 }
       );
     }
 
+    const deletedUser = await User.findByIdAndUpdate(
+      id,
+      {
+        deleted: true,
+        deletedAt: new Date(),
+        email: `deleted-${id}-${user.email}`,
+      },
+      { new: true }
+    );
+
     return NextResponse.json(
       {
         success: true,
         data: deletedUser,
-        message: `User with email ${deletedUser.email} successfully deleted`,
+        message: `User with email ${user.email} successfully deleted`,
       },
       { status: 200 }
     );
