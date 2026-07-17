@@ -34,7 +34,10 @@ export interface IOrder extends Document {
   orderType: "B2C" | "B2B";
   currency: string;
   baseRupiah?: number; // Rupiah rate of `currency`, snapshotted when the order was created
-  revenue?: number; // Revenue in IDR
+  grossRevenue?: number; // Revenue in IDR before the product & shipping discount
+  netRevenue?: number; // Revenue in IDR after every discount
+  /** @deprecated Superseded by `netRevenue`. Only present on orders created before it existed; never written anymore. */
+  revenue?: number;
   statusLog: IStatusLog[];
   paymentProofs: IPaymentProof[];
   createdAt?: Date;
@@ -188,6 +191,14 @@ const OrderSchema = new Schema<IOrder>(
       default: "B2C",
     },
     baseRupiah: {
+      type: Number,
+      min: 0,
+    },
+    grossRevenue: {
+      type: Number,
+      min: 0,
+    },
+    netRevenue: {
       type: Number,
       min: 0,
     },

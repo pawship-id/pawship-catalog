@@ -1,7 +1,7 @@
 "use client";
 
 import type * as React from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   GripVertical,
   ImagePlus,
@@ -19,6 +19,8 @@ import ImageGalleryModal from "./image-gallery-modal";
 import Image from "next/image";
 import VariantPriceModal from "./variant-price-modal";
 import { compressImageIfNeeded } from "@/lib/helpers/image-compression";
+import { getAll } from "@/lib/apiService";
+import { CurrencyData } from "@/lib/types/currency";
 
 type VariantEditorProps = {
   value: VariantRowForm[];
@@ -74,24 +76,56 @@ export function VariantEditor({
     priceDefault: "",
   });
 
-  const currencyList = [
-    {
-      currency: "IDR",
-      rate: 1,
-    },
-    {
-      currency: "USD",
-      rate: 16000,
-    },
-    {
-      currency: "SGD",
-      rate: 11000,
-    },
-    {
-      currency: "HKD",
-      rate: 2000,
-    },
-  ];
+  // Currency dikelola di Dashboard > Currencies, jangan di-hardcode di sini
+  const [currencyList, setCurrencyList] = useState<
+    { currency: string; rate: number }[]
+  >([]);
+  const [currencyError, setCurrencyError] = useState<string | null>(null);
+  const [loadingCurrencies, setLoadingCurrencies] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchCurrencies = async () => {
+      try {
+        setLoadingCurrencies(true);
+        setCurrencyError(null);
+
+        const response = await getAll<CurrencyData>("/api/admin/currencies");
+        if (cancelled) return;
+
+        const list = (response.data || []).map((item) => ({
+          currency: item.name,
+          rate: item.baseRupiah,
+        }));
+
+        // Rupiah adalah base currency dan harga default diinput dalam IDR, jadi
+        // IDR harus selalu ada walau barisnya tidak ada di database — sama
+        // seperti fallback BASE_CURRENCY di currency-helper.ts
+        if (!list.some((item) => item.currency === "IDR")) {
+          list.push({ currency: "IDR", rate: 1 });
+        }
+
+        list.sort((a, b) => {
+          if (a.currency === "IDR") return -1;
+          if (b.currency === "IDR") return 1;
+          return a.currency.localeCompare(b.currency);
+        });
+
+        setCurrencyList(list);
+      } catch (err: any) {
+        if (!cancelled) setCurrencyError(err.message);
+      } finally {
+        if (!cancelled) setLoadingCurrencies(false);
+      }
+    };
+
+    fetchCurrencies();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleApply = () => {
     const hasSelectedRows = value.some((row) => row.selected);
@@ -105,6 +139,18 @@ export function VariantEditor({
     if (!hasSelectedRows) {
       showErrorAlert(undefined, "Please select row");
       return; // exit early if no rows are selected
+    }
+
+    // Tanpa currency, konversi harga akan menghasilkan objek kosong dan justru
+    // menghapus harga variant. Lebih baik berhenti dan beri tahu adminnya.
+    if (defaultStockPrice.priceDefault && !currencyList.length) {
+      showErrorAlert(
+        undefined,
+        currencyError
+          ? `Failed to load currencies: ${currencyError}`
+          : "Currencies are still loading, please wait a moment",
+      );
+      return;
     }
 
     const updatedRows = value.map((item) => {
@@ -130,10 +176,12 @@ export function VariantEditor({
         currencyList.forEach((el) => {
           if (el.currency === "IDR") {
             tempPrice[el.currency] = Number(defaultStockPrice.priceDefault);
-          } else {
+          } else if (el.rate > 0) {
             let price = Number(defaultStockPrice.priceDefault) / el.rate;
             tempPrice[el.currency] = Number(price.toFixed(1));
           }
+          // rate 0 dilewati — pembagiannya menghasilkan Infinity.
+          // Harganya bisa diisi manual lewat modal price.
         });
 
         updateData.price = tempPrice;
@@ -660,12 +708,18 @@ export function VariantEditor({
           <Button
             type="button"
             className="cursor-pointer"
-            disabled={value.length === 0}
+            disabled={value.length === 0 || loadingCurrencies}
             size="sm"
             onClick={handleApply}
           >
-            Apply
+            {loadingCurrencies ? "Loading..." : "Apply"}
           </Button>
+
+          {currencyError && (
+            <span className="text-sm text-destructive">
+              Failed to load currencies: {currencyError}
+            </span>
+          )}
         </div>
 
         <div className="w-full mb-2">

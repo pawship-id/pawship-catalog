@@ -533,7 +533,10 @@ export default function DetailProduct() {
                   </div>
                   <span className="text-xs mb-2">(convert rupiah amount)</span>
                   <p className="text-lg font-semibold text-foreground">
-                    {currencyFormat(order.revenue || 0, "IDR")}
+                    {currencyFormat(
+                      order.netRevenue ?? order.revenue ?? 0,
+                      "IDR"
+                    )}
                   </p>
                 </div>
               </div>

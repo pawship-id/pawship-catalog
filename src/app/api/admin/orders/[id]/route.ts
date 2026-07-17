@@ -1,7 +1,9 @@
 import {
   resolveBaseRupiah,
-  calculateRevenueFromBaseRupiah,
+  calculateOrderRevenue,
+  normalizeOrderMoney,
 } from "@/lib/helpers/currency-helper";
+import { OrderForm } from "@/lib/types/order";
 import Order from "@/lib/models/Order";
 import ProductVariant from "@/lib/models/ProductVariant";
 import dbConnect from "@/lib/mongodb";
@@ -49,7 +51,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
   await dbConnect();
   try {
     const { id } = await params;
-    const body = await req.json();
+    const body: OrderForm = await req.json();
 
     // Get original order to compare quantities
     const originalOrder = await Order.findById(id);
@@ -133,6 +135,13 @@ export async function PUT(req: NextRequest, { params }: Context) {
       }
     }
 
+    // Round monetary fields to the currency's precision so what is stored is
+    // exactly what the UI displays (no 3.8949999 / 1450.8000000000002)
+    const { orderDetails, totalAmount } = normalizeOrderMoney(
+      body.orderDetails,
+      originalOrder.currency
+    );
+
     // Keep the rate this order was placed with. Orders created before the
     // snapshot existed fall back to the current rate and get backfilled here.
     const baseRupiah = await resolveBaseRupiah(
@@ -140,12 +149,15 @@ export async function PUT(req: NextRequest, { params }: Context) {
       originalOrder.baseRupiah
     );
 
-    // Calculate revenue
-    const revenue = calculateRevenueFromBaseRupiah(
-      body.totalAmount,
-      body.shippingCost - body.discountShipping,
-      baseRupiah
-    );
+    // Calculate revenue from the normalized amounts
+    const { grossRevenue, netRevenue } = calculateOrderRevenue({
+      orderDetails,
+      currency: originalOrder.currency,
+      totalAmount,
+      shippingCost: body.shippingCost,
+      discountShipping: body.discountShipping,
+      baseRupiah,
+    });
 
     // Update order
     const updatedOrder = await Order.findByIdAndUpdate(
@@ -155,10 +167,11 @@ export async function PUT(req: NextRequest, { params }: Context) {
         shippingCost: body.shippingCost,
         discountShipping: body.discountShipping,
         shippingAddress: body.shippingAddress,
-        orderDetails: body.orderDetails,
-        totalAmount: body.totalAmount,
+        orderDetails,
+        totalAmount,
         baseRupiah,
-        revenue,
+        grossRevenue,
+        netRevenue,
       },
       { new: true, runValidators: true }
     );

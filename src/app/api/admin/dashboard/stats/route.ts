@@ -69,7 +69,9 @@ export async function GET(request: NextRequest) {
     const totalProducts = await Product.countDocuments({ status: "active" });
 
     // Get orders data
-    const orders = await Order.find(orderQuery).select("status revenue");
+    const orders = await Order.find(orderQuery).select(
+      "status netRevenue revenue"
+    );
 
     // Calculate total revenue (from awaiting payment, payment confirmed, processing, and shipped orders)
     const totalRevenue = orders
@@ -80,7 +82,8 @@ export async function GET(request: NextRequest) {
           order.status === "processing" ||
           order.status === "shipped"
       )
-      .reduce((sum, order) => sum + (order.revenue || 0), 0);
+      // `revenue` is the legacy field, still the only one on pre-netRevenue orders
+      .reduce((sum, order) => sum + (order.netRevenue ?? order.revenue ?? 0), 0);
 
     // Count orders by status
     const ordersByStatus = {

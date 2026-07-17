@@ -592,37 +592,13 @@ export default function EditOrderPage() {
     });
   };
 
-  // Exchange rates for revenue calculation (convert to IDR)
-  const exchangeRates = {
-    IDR: 1,
-    USD: 15800,
-    SGD: 11800,
-    HKD: 2000,
-  };
-
-  // Calculate revenue in IDR
-  const calculateRevenue = (
-    totalAmount: number,
-    shippingCost: number,
-    discountShipping: number,
-    currency: string,
-  ) => {
-    const finalTotal = totalAmount + shippingCost - discountShipping;
-    const rate = exchangeRates[currency as keyof typeof exchangeRates] || 1;
-    return Math.round(finalTotal * rate);
-  };
-
-  // Update order total amount and revenue
+  // Update order total amount.
+  // NOTE: revenue is owned by the API, which values the order with the
+  // baseRupiah snapshotted on it. Never recalculate it here.
   const updateOrderTotal = (items: IOrderDetail[]) => {
     const total = items.reduce((sum, item) => sum + item.subTotal, 0);
     if (order) {
-      const revenue = calculateRevenue(
-        total,
-        order.shippingCost,
-        order.discountShipping || 0,
-        order.currency,
-      );
-      setOrder({ ...order, totalAmount: total, orderDetails: items, revenue });
+      setOrder({ ...order, totalAmount: total, orderDetails: items });
     }
   };
 
@@ -694,7 +670,6 @@ export default function EditOrderPage() {
         shippingAddress: order!.shippingAddress,
         shippingCost: order!.shippingCost,
         discountShipping: order!.discountShipping || 0,
-        revenue: order!.revenue || 0,
         currency: order!.currency,
       });
 
@@ -822,7 +797,7 @@ export default function EditOrderPage() {
                     type="text"
                     className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-4"
                     disabled
-                    defaultValue={order.revenue || 0}
+                    defaultValue={order.netRevenue ?? order.revenue ?? 0}
                   />
                 </div>
               </div>

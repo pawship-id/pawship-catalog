@@ -134,6 +134,9 @@ export async function exportOrdersToExcel(
       (order.totalAmount ?? 0) +
       ((order.shippingCost ?? 0) - (order.discountShipping ?? 0));
 
+    // `revenue` legacy dipakai untuk order yang dibuat sebelum ada netRevenue
+    const netRevenue = order.netRevenue ?? order.revenue;
+
     details.forEach((detail, index) => {
       const isFirst = index === 0;
 
@@ -172,7 +175,12 @@ export async function exportOrdersToExcel(
         orderCell(grandTotal),
         orderCell(currency),
         // "" bukan 0 — revenue kosong yang diisi 0 merusak AVERAGE()
-        orderCell(typeof order.revenue === "number" ? order.revenue : ""),
+        // `revenue` legacy dipakai untuk order sebelum ada netRevenue
+        orderCell(
+          typeof netRevenue === "number" && Number.isFinite(netRevenue)
+            ? netRevenue
+            : ""
+        ),
       ]);
     });
 

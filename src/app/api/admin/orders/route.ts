@@ -8,7 +8,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import {
   getRateToIDR,
-  calculateRevenueFromBaseRupiah,
+  calculateOrderRevenue,
+  normalizeOrderMoney,
 } from "@/lib/helpers/currency-helper";
 
 export async function POST(req: NextRequest) {
@@ -25,27 +26,43 @@ export async function POST(req: NextRequest) {
 
     const body: OrderForm = await req.json();
 
+    // Round monetary fields to the currency's precision so what is stored is
+    // exactly what the UI displays (no 3.8949999 / 1450.8000000000002)
+    const { orderDetails, totalAmount } = normalizeOrderMoney(
+      body.orderDetails,
+      body.currency,
+    );
+
     // Snapshot the rupiah rate at order time, so a later rate change never
     // moves the revenue of this order
     const baseRupiah = await getRateToIDR(body.currency);
 
-    // Calculate revenue in IDR before saving to database
-    const revenue = calculateRevenueFromBaseRupiah(
-      body.totalAmount,
-      body.shippingCost,
+    // Calculate revenue in IDR from the normalized amounts
+    const { grossRevenue, netRevenue } = calculateOrderRevenue({
+      orderDetails,
+      currency: body.currency,
+      totalAmount,
+      shippingCost: body.shippingCost,
+      discountShipping: body.discountShipping || 0,
       baseRupiah,
-    );
+    });
 
     // NOTE: For admin-created orders, use customerId from body if provided
     // Otherwise fall back to session user ID (for backward compatibility)
     const userIdForOrder = (body as any).userId || session.user.id;
 
+    // `revenue` is legacy and derived — never trust a client supplied value
+    const { revenue: _ignoredRevenue, ...safeBody } = body as any;
+
     // Add userId from session and revenue
     const orderData = {
-      ...body,
+      ...safeBody,
+      orderDetails,
+      totalAmount,
       userId: userIdForOrder,
       baseRupiah,
-      revenue,
+      grossRevenue,
+      netRevenue,
       discountShipping: body.discountShipping || 0, // Set default 0 if not provided
     };
 
