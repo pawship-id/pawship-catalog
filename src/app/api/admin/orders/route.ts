@@ -6,7 +6,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateInvoiceNumber } from "@/lib/helpers/invoice";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { calculateRevenueInIDR } from "@/lib/helpers/currency-helper";
+import {
+  getRateToIDR,
+  calculateRevenueFromBaseRupiah,
+} from "@/lib/helpers/currency-helper";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
@@ -22,11 +25,15 @@ export async function POST(req: NextRequest) {
 
     const body: OrderForm = await req.json();
 
+    // Snapshot the rupiah rate at order time, so a later rate change never
+    // moves the revenue of this order
+    const baseRupiah = await getRateToIDR(body.currency);
+
     // Calculate revenue in IDR before saving to database
-    const revenue = await calculateRevenueInIDR(
+    const revenue = calculateRevenueFromBaseRupiah(
       body.totalAmount,
       body.shippingCost,
-      body.currency,
+      baseRupiah,
     );
 
     // NOTE: For admin-created orders, use customerId from body if provided
@@ -37,6 +44,7 @@ export async function POST(req: NextRequest) {
     const orderData = {
       ...body,
       userId: userIdForOrder,
+      baseRupiah,
       revenue,
       discountShipping: body.discountShipping || 0, // Set default 0 if not provided
     };

@@ -1,4 +1,7 @@
-import { calculateRevenueInIDR } from "@/lib/helpers/currency-helper";
+import {
+  resolveBaseRupiah,
+  calculateRevenueFromBaseRupiah,
+} from "@/lib/helpers/currency-helper";
 import Order from "@/lib/models/Order";
 import ProductVariant from "@/lib/models/ProductVariant";
 import dbConnect from "@/lib/mongodb";
@@ -130,11 +133,18 @@ export async function PUT(req: NextRequest, { params }: Context) {
       }
     }
 
+    // Keep the rate this order was placed with. Orders created before the
+    // snapshot existed fall back to the current rate and get backfilled here.
+    const baseRupiah = await resolveBaseRupiah(
+      originalOrder.currency,
+      originalOrder.baseRupiah
+    );
+
     // Calculate revenue
-    const revenue = await calculateRevenueInIDR(
+    const revenue = calculateRevenueFromBaseRupiah(
       body.totalAmount,
       body.shippingCost - body.discountShipping,
-      body.currency
+      baseRupiah
     );
 
     // Update order
@@ -147,6 +157,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
         shippingAddress: body.shippingAddress,
         orderDetails: body.orderDetails,
         totalAmount: body.totalAmount,
+        baseRupiah,
         revenue,
       },
       { new: true, runValidators: true }

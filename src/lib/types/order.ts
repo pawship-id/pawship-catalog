@@ -89,6 +89,7 @@ export interface OrderData {
   shippingCost: number;
   discountShipping: number;
   currency: string;
+  baseRupiah?: number; // Rupiah rate of `currency`, snapshotted when the order was created
   revenue?: number; // Revenue in IDR
   createdAt?: Date; // Set by mongoose timestamps, returned by the API
   statusLog: IStatusLog[];

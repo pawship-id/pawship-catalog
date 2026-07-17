@@ -7,7 +7,7 @@ import dbConnect from "@/lib/mongodb";
 export const BASE_CURRENCY = "IDR";
 
 /**
- * Get the rupiah rate of a currency from the database
+ * Get the current rupiah rate of a currency from the database
  * (managed in Dashboard > Currencies)
  * @param currency - The currency code (e.g. USD, SGD, HKD)
  * @returns Value of 1 unit of the currency in rupiah
@@ -42,33 +42,38 @@ export async function getRateToIDR(currency: string): Promise<number> {
 }
 
 /**
- * Convert amount from any currency to IDR
- * @param amount - The amount to convert
- * @param currency - The currency code (IDR, USD, SGD, HKD, ...)
- * @returns Amount in IDR
+ * Resolve which rupiah rate an order should be valued with.
+ *
+ * An order snapshots `baseRupiah` when it is created, so changing a rate later
+ * never moves the revenue of orders that were already placed. Orders created
+ * before the snapshot field existed fall back to the current rate.
+ *
+ * @param currency - The currency code of the order
+ * @param snapshot - The baseRupiah already stored on the order, if any
+ * @returns The rupiah rate to value the order with
  */
-export async function convertToIDR(
-  amount: number,
-  currency: string
+export async function resolveBaseRupiah(
+  currency: string,
+  snapshot?: number | null
 ): Promise<number> {
-  const rate = await getRateToIDR(currency);
+  if (typeof snapshot === "number" && Number.isFinite(snapshot) && snapshot > 0) {
+    return snapshot;
+  }
 
-  return Math.round(amount * rate);
+  return getRateToIDR(currency);
 }
 
 /**
- * Calculate revenue in IDR for an order
+ * Calculate revenue in IDR from a known rupiah rate
  * @param totalAmount - The total amount of the order
  * @param shippingCost - The shipping cost
- * @param currency - The currency code
- * @returns Revenue in IDR (totalAmount + shippingCost converted to IDR)
+ * @param baseRupiah - The rupiah rate the order is valued with
+ * @returns Revenue in IDR
  */
-export async function calculateRevenueInIDR(
+export function calculateRevenueFromBaseRupiah(
   totalAmount: number,
   shippingCost: number,
-  currency: string
-): Promise<number> {
-  const total = totalAmount + shippingCost;
-
-  return convertToIDR(total, currency);
+  baseRupiah: number
+): number {
+  return Math.round((totalAmount + shippingCost) * baseRupiah);
 }
