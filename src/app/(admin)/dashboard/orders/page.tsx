@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAll } from "@/lib/apiService";
 import { OrderData } from "@/lib/types/order";
-import { Search, X, Plus } from "lucide-react";
+import { Search, X, Plus, Download, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
+import { exportOrdersToExcel } from "@/lib/helpers/export-order-excel";
 import Link from "next/link";
 
 export default function OrderPage() {
@@ -32,6 +33,8 @@ export default function OrderPage() {
   });
 
   const [loadingUpdateStatus, setLoadingUpdateStatus] = useState(false);
+
+  const [exporting, setExporting] = useState(false);
 
   const [activeTab, setActiveTab] = useState("all");
 
@@ -163,6 +166,34 @@ export default function OrderPage() {
     }
   };
 
+  const handleExport = async () => {
+    if (!filteredDataOrder.length || exporting) return;
+
+    setExporting(true);
+
+    try {
+      const fileName = await exportOrdersToExcel(filteredDataOrder, {
+        orderType: selectedFilter.orderType,
+        status: selectedFilter.status,
+        search: searchQuery,
+      });
+
+      showSuccessAlert(
+        "Export Success",
+        `${filteredDataOrder.length} order${
+          filteredDataOrder.length !== 1 ? "s" : ""
+        } exported to ${fileName}`,
+      );
+    } catch (error: any) {
+      showErrorAlert(
+        "Export Failed",
+        error.message || "Failed to export orders",
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const getOrderStats = () => {
     const total = orders.length;
     const totalB2C = orders.filter((o) => o.orderType === "B2C").length;
@@ -249,6 +280,22 @@ export default function OrderPage() {
                     <Plus className="h-4 w-4 mr-2" />
                     Create Order
                   </Link>
+                </Button>
+                <Button
+                  onClick={handleExport}
+                  disabled={exporting || filteredDataOrder.length === 0}
+                >
+                  {exporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Excel ({filteredDataOrder.length})
+                    </>
+                  )}
                 </Button>
                 <div className="flex items-center gap-4">
                   <Select

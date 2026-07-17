@@ -90,6 +90,7 @@ export interface OrderData {
   discountShipping: number;
   currency: string;
   revenue?: number; // Revenue in IDR
+  createdAt?: Date; // Set by mongoose timestamps, returned by the API
   statusLog: IStatusLog[];
   paymentProofs: IPaymentProof[];
   deleted?: boolean;
