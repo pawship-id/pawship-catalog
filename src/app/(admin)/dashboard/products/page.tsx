@@ -4,17 +4,53 @@ import FilterCategory from "@/components/admin/products/filter-category";
 import TableProduct from "@/components/admin/products/table-product";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Download, Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
+import { ProductData } from "@/lib/types/product";
+import { exportProductsToExcel } from "@/lib/helpers/export-product-excel";
+import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 
 export default function ProductPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [filteredProducts, setFilteredProducts] = useState<ProductData[]>([]);
+  const [exporting, setExporting] = useState(false);
 
   const handleAddProduct = () => {
     // Clear variant rows from localStorage
     localStorage.removeItem("variantRows");
+  };
+
+  const handleFilteredChange = useCallback((products: ProductData[]) => {
+    setFilteredProducts(products);
+  }, []);
+
+  const handleExport = async () => {
+    if (!filteredProducts.length || exporting) return;
+
+    setExporting(true);
+
+    try {
+      const fileName = await exportProductsToExcel(filteredProducts, {
+        category: selectedCategory,
+        search: searchQuery,
+      });
+
+      showSuccessAlert(
+        "Export Success",
+        `${filteredProducts.length} product${
+          filteredProducts.length !== 1 ? "s" : ""
+        } exported to ${fileName}`,
+      );
+    } catch (error: any) {
+      showErrorAlert(
+        "Export Failed",
+        error.message || "Failed to export products",
+      );
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -35,6 +71,22 @@ export default function ProductPage() {
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Link>
+            </Button>
+            <Button
+              onClick={handleExport}
+              disabled={exporting || filteredProducts.length === 0}
+            >
+              {exporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Excel ({filteredProducts.length})
+                </>
+              )}
             </Button>
             <FilterCategory
               selectedCategory={selectedCategory}
@@ -66,6 +118,7 @@ export default function ProductPage() {
       <TableProduct
         searchQuery={searchQuery}
         selectedCategory={selectedCategory}
+        onFilteredChange={handleFilteredChange}
       />
     </div>
   );

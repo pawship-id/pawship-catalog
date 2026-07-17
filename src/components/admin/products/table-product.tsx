@@ -36,11 +36,13 @@ import { Input } from "@/components/ui/input";
 interface TableProductProps {
   searchQuery: string;
   selectedCategory: string;
+  onFilteredChange?: (products: ProductData[]) => void;
 }
 
 export default function TableProduct({
   searchQuery,
   selectedCategory,
+  onFilteredChange,
 }: TableProductProps) {
   const [products, setProducts] = useState<ProductData[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ProductData[]>([]);
@@ -124,6 +126,10 @@ export default function TableProduct({
     }
 
     setFilteredProducts(filtered);
+    onFilteredChange?.(filtered);
+    // onFilteredChange sengaja tidak masuk deps: parent mengoper arrow baru tiap
+    // render, sehingga memasukkannya akan memicu loop set-state tanpa henti.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedCategory, products]);
 
   if (loading) {

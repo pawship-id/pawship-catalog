@@ -1,4 +1,10 @@
 import { IOrderDetail, OrderData } from "@/lib/types/order";
+import {
+  applyNumberFormats,
+  priceIn,
+  slugify,
+  toDateCell,
+} from "@/lib/helpers/excel-helper";
 
 export interface ExportFilters {
   orderType: string; // "all" | "B2C" | "B2B"
@@ -67,28 +73,6 @@ const NUMBER_FORMATS: Record<number, string> = {
   26: "#,##0",
 };
 
-// orderDate melewati JSON, jadi tiba sebagai ISO string walau tipenya Date
-const toDateCell = (value: unknown): Date | string => {
-  if (!value) return "";
-  const date = new Date(value as string);
-  return isNaN(date.getTime()) ? "" : date;
-};
-
-// originalPrice/discountedPrice adalah map per-currency ({ IDR: 75000, SGD: 6.5 }),
-// bukan angka — tipenya `any` di OrderData sehingga tidak ketahuan dari signature.
-const priceIn = (price: any, currency: string): number | "" => {
-  if (price === null || price === undefined) return "";
-  if (typeof price === "number") return price; // jaga-jaga kalau ada data lama
-  const value = price[currency];
-  return typeof value === "number" ? value : "";
-};
-
-const slug = (text: string) =>
-  text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
 export const buildFileName = (
   filters: ExportFilters,
   now: Date = new Date(),
@@ -99,10 +83,10 @@ export const buildFileName = (
     parts.push(filters.orderType);
   }
   if (filters.status && filters.status !== "all") {
-    parts.push(slug(filters.status));
+    parts.push(slugify(filters.status));
   }
 
-  const query = slug(filters.search ?? "").slice(0, 20);
+  const query = slugify(filters.search ?? "").slice(0, 20);
   if (query) parts.push(`search-${query}`);
 
   parts.push(now.toLocaleDateString("en-CA"));
@@ -210,14 +194,7 @@ export async function exportOrdersToExcel(
   worksheet["!cols"] = COL_WIDTHS;
   worksheet["!merges"] = merges;
 
-  const range = XLSX.utils.decode_range(worksheet["!ref"]!);
-
-  for (let row = 1; row <= range.e.r; row++) {
-    for (const [column, format] of Object.entries(NUMBER_FORMATS)) {
-      const cell = worksheet[XLSX.utils.encode_cell({ r: row, c: +column })];
-      if (cell && cell.v !== "") cell.z = format;
-    }
-  }
+  applyNumberFormats(XLSX, worksheet, NUMBER_FORMATS);
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
