@@ -5,7 +5,7 @@ import { OrderForm } from "@/lib/types/order";
 import { NextRequest, NextResponse } from "next/server";
 import { generateInvoiceNumber } from "@/lib/helpers/invoice";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { calculateRevenueInIDR } from "@/lib/helpers/currency-helper";
 
 export async function POST(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const body: OrderForm = await req.json();
 
     // Calculate revenue in IDR before saving to database
-    const revenue = calculateRevenueInIDR(
+    const revenue = await calculateRevenueInIDR(
       body.totalAmount,
       body.shippingCost,
       body.currency,

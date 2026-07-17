@@ -2,7 +2,7 @@ import Product from "@/lib/models/Product";
 import dbConnect from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import User from "@/lib/models/User";
 
 interface Context {

@@ -131,7 +131,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
     }
 
     // Calculate revenue
-    const revenue = calculateRevenueInIDR(
+    const revenue = await calculateRevenueInIDR(
       body.totalAmount,
       body.shippingCost - body.discountShipping,
       body.currency

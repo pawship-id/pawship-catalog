@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Banner from "@/lib/models/Banner";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { uploadFileToCloudinary } from "@/lib/helpers/cloudinary";
 import { writeFile } from "fs/promises";
 import { join } from "path";

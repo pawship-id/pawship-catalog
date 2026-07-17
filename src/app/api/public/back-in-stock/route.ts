@@ -3,7 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import BackInStockLog from "@/lib/models/BackInStockLog";
 import Product from "@/lib/models/Product";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import User from "@/lib/models/User";
 import ResellerCategory from "@/lib/models/ResellerCategory";
 

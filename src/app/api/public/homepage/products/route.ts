@@ -4,7 +4,7 @@ import Product from "@/lib/models/Product";
 import Collection from "@/lib/models/Collection";
 import { isNewArrival } from "@/lib/helpers/product";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import User from "@/lib/models/User";
 import ResellerCategory from "@/lib/models/ResellerCategory";
 

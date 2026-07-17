@@ -5,7 +5,7 @@ import Collection from "@/lib/models/Collection";
 import { isNewArrival } from "@/lib/helpers/product";
 import Category from "@/lib/models/Category";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import User from "@/lib/models/User";
 
 // GET - Fetch products for catalog page with various filters
