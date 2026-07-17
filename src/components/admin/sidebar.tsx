@@ -20,6 +20,7 @@ import {
   Warehouse,
   TicketPercent,
   Film,
+  Coins,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { showConfirmAlert } from "@/lib/helpers/sweetalert2";
@@ -65,6 +66,11 @@ const navigation = [
     name: "Promotion",
     href: "/dashboard/promos",
     icon: TicketPercent,
+  },
+  {
+    name: "Currencies",
+    href: "/dashboard/currencies",
+    icon: Coins,
   },
   { name: "Website", href: "/", icon: Globe },
 ];
