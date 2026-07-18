@@ -90,6 +90,7 @@ export interface OrderData {
   discountShipping: number;
   currency: string;
   baseRupiah?: number; // Rupiah rate of `currency`, snapshotted when the order was created
+  snapshoot_baserupiah?: number; // Previous `baseRupiah` kept when an admin overrides the rate
   grossRevenue?: number; // Revenue in IDR before the product & shipping discount
   netRevenue?: number; // Revenue in IDR after every discount
   /** @deprecated Superseded by `netRevenue`. Only present on orders created before it existed; never written anymore. */

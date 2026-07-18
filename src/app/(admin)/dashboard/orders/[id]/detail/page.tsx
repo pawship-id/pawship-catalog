@@ -7,6 +7,7 @@ import { getById } from "@/lib/apiService";
 import { currencyFormat } from "@/lib/helpers";
 import { OrderData } from "@/lib/types/order";
 import { UploadPaymentProofModal } from "@/components/orders/upload-payment-proof-modal";
+import { OverrideBaseRupiahModal } from "@/components/orders/override-base-rupiah-modal";
 import Image from "next/image";
 import {
   ArrowLeft,
@@ -26,6 +27,7 @@ import {
   User,
   Trash2,
   BanknoteArrowDown,
+  Coins,
   Download,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -43,6 +45,7 @@ export default function DetailProduct() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
   console.log(order, "<<<<");
 
   const getOrderTypeBadge = (type: string) => {
@@ -454,6 +457,15 @@ export default function DetailProduct() {
             <Button
               size="sm"
               className="cursor-pointer"
+              onClick={() => setShowOverrideModal(true)}
+            >
+              <Coins className="h-4 w-4 mr-2" />
+              Override Base Rupiah
+            </Button>
+
+            <Button
+              size="sm"
+              className="cursor-pointer"
               onClick={() => router.push(`/dashboard/orders/${order._id}/edit`)}
             >
               <Edit className="h-4 w-4 mr-2" />
@@ -469,6 +481,19 @@ export default function DetailProduct() {
           isOpen={showUploadModal}
           onClose={() => setShowUploadModal(false)}
           orderId={id}
+          onSuccess={fetchOrder}
+        />
+      )}
+
+      {/* Override Base Rupiah Modal */}
+      {id && order && (
+        <OverrideBaseRupiahModal
+          isOpen={showOverrideModal}
+          onClose={() => setShowOverrideModal(false)}
+          orderId={id}
+          currency={order.currency}
+          currentBaseRupiah={order.baseRupiah}
+          snapshootBaseRupiah={order.snapshoot_baserupiah}
           onSuccess={fetchOrder}
         />
       )}
@@ -538,6 +563,29 @@ export default function DetailProduct() {
                       "IDR"
                     )}
                   </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center space-x-2 text-gray-600">
+                    <Coins className="w-4 h-4" />
+                    <span className="text-sm font-medium">Base Rupiah</span>
+                  </div>
+                  <span className="text-xs mb-2">(rate berlaku saat ini)</span>
+                  <p className="text-lg font-semibold text-foreground">
+                    {order.baseRupiah != null
+                      ? `${currencyFormat(
+                          order.baseRupiah,
+                          "IDR"
+                        )} / ${order.currency.toUpperCase()}`
+                      : "-"}
+                  </p>
+                  {order.snapshoot_baserupiah != null && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Rupiah saat beli:{" "}
+                      {currencyFormat(order.snapshoot_baserupiah, "IDR")} /{" "}
+                      {order.currency.toUpperCase()}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
