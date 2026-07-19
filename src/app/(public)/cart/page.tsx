@@ -22,8 +22,6 @@ import {
 import { createData, getById } from "@/lib/apiService";
 import { ProductData } from "@/lib/types/product";
 import { useCurrency } from "@/context/CurrencyContext";
-import { usePromo } from "@/context/PromoContext";
-import { calculateFinalPrice } from "@/lib/helpers/promo-helper";
 import { useSession } from "next-auth/react";
 import LoadingPage from "@/components/loading";
 import {
@@ -43,7 +41,6 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const { data: session, status } = useSession();
-  const { activePromos, loading: promosLoading } = usePromo();
 
   const { currency, format } = useCurrency();
   console.log(currency);
@@ -408,28 +405,10 @@ export default function CartPage() {
     return { discountPercentage: 0, tierName: null };
   };
 
-  // B2C: Calculate promo discount for retail customers (per variant)
-  const calculateB2CDiscount = (
-    basePrice: number,
-    productId: string,
-    variantId: string,
-  ) => {
-    const promoResult = calculateFinalPrice(
-      basePrice,
-      currency,
-      productId,
-      variantId,
-      activePromos,
-      false,
-    );
-
-    if (promoResult.hasDiscount) {
-      return {
-        discountPercentage: promoResult.discountPercentage,
-        finalPrice: promoResult.finalPrice,
-      };
-    }
-
+  // B2C: retail customers see the base price in the cart. Promotions are now
+  // applied via code at checkout (through the Promotion Engine), not
+  // automatically per variant in the cart.
+  const calculateB2CDiscount = (basePrice: number) => {
     return {
       discountPercentage: 0,
       finalPrice: basePrice,
@@ -464,8 +443,8 @@ export default function CartPage() {
         );
       }
     } else {
-      // B2C: Use promo-based discount calculation per variant
-      const promoResult = calculateB2CDiscount(basePrice, productId, variantId);
+      // B2C: base price in cart (promotions applied via code at checkout)
+      const promoResult = calculateB2CDiscount(basePrice);
       discountPercentage = promoResult.discountPercentage;
       finalPrice = promoResult.finalPrice;
     }
@@ -482,9 +461,6 @@ export default function CartPage() {
     setIsLoading(true);
     try {
       const cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
-
-      // Debug log to verify promos are loaded
-      console.log("Fetching cart with activePromos:", activePromos.length);
 
       // First pass: fetch all product data without calculating discounts
       const cartItemsWithoutDiscount = await Promise.all(
@@ -562,14 +538,14 @@ export default function CartPage() {
   };
 
   useEffect(() => {
-    // Only fetch cart items when session is loaded AND promos are loaded
-    if (status !== "loading" && !promosLoading) {
+    // Only fetch cart items when the session is loaded
+    if (status !== "loading") {
       fetchCartItem();
     } else {
-      // Keep loading state true while waiting for session or promos
+      // Keep loading state true while waiting for the session
       setIsLoading(true);
     }
-  }, [currency, status, promosLoading, activePromos]);
+  }, [currency, status]);
 
   // Sync currency with formData when currency changes
   useEffect(() => {
@@ -615,8 +591,8 @@ export default function CartPage() {
     fetchUserProfile();
   }, [status, session]);
 
-  // Show loading while session or promos are loading
-  if (isLoading || promosLoading) {
+  // Show loading while the session is loading
+  if (isLoading) {
     return <LoadingPage />;
   }
 

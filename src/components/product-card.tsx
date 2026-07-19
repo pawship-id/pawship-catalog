@@ -5,9 +5,7 @@ import { Button } from "./ui/button";
 import { ProductData, VariantRow } from "@/lib/types/product";
 import { useRouter } from "next/navigation";
 import { useCurrency } from "@/context/CurrencyContext";
-import { usePromo } from "@/context/PromoContext";
 import { useFavorites } from "@/context/FavoritesContext";
-import { getProductMinPrice } from "@/lib/helpers/promo-helper";
 import { hasTag, isNewArrival } from "@/lib/helpers/product";
 import { useSession } from "next-auth/react";
 import AddToCartModal from "./add-to-cart-modal";
@@ -28,7 +26,6 @@ export default function ProductCard({
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const { currency, format } = useCurrency();
   const { data: session } = useSession();
-  const { activePromos } = usePromo();
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const router = useRouter();
@@ -71,19 +68,14 @@ export default function ProductCard({
 
   const variants: VariantRow[] | undefined = product.productVariantsData;
 
-  const isReseller = session?.user.role === "reseller";
-
-  // Calculate prices using promo helper
-  const priceInfo = getProductMinPrice(
-    variants || [],
-    product._id,
-    currency,
-    activePromos,
-    isReseller,
-  );
-
-  const minPrice = priceInfo.minPrice;
-  const minOriginalPrice = priceInfo.minOriginalPrice;
+  // Minimum base price across variants for the selected currency.
+  // Promotions are now applied via code at checkout, so the catalog shows the
+  // base price with no automatic strikethrough.
+  const variantPrices = (variants || [])
+    .map((v) => v.price?.[currency])
+    .filter((p: any): p is number => typeof p === "number" && p > 0);
+  const minPrice = variantPrices.length ? Math.min(...variantPrices) : 0;
+  const minOriginalPrice: number | null = null;
 
   return (
     <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col max-w-xs">

@@ -11,6 +11,7 @@ import {
   calculateOrderRevenue,
   normalizeOrderMoney,
 } from "@/lib/helpers/currency-helper";
+import { recordOrderPromotionUsages } from "@/lib/helpers/promotion-service";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     const baseRupiah = await getRateToIDR(body.currency);
 
     // Calculate revenue in IDR from the normalized amounts
+    const promotionDiscount = (body as any).promotionDiscount || 0;
     const { grossRevenue, netRevenue } = calculateOrderRevenue({
       orderDetails,
       currency: body.currency,
@@ -45,6 +47,7 @@ export async function POST(req: NextRequest) {
       shippingCost: body.shippingCost,
       discountShipping: body.discountShipping || 0,
       baseRupiah,
+      promotionDiscount,
     });
 
     // NOTE: For admin-created orders, use customerId from body if provided
@@ -64,6 +67,8 @@ export async function POST(req: NextRequest) {
       grossRevenue,
       netRevenue,
       discountShipping: body.discountShipping || 0, // Set default 0 if not provided
+      promotionDiscount,
+      appliedPromotions: (body as any).appliedPromotions || [],
     };
 
     // Generate unique invoice number based on shipping address country
@@ -100,6 +105,9 @@ export async function POST(req: NextRequest) {
         await variantProduct.save();
       }
     }
+
+    // Record promotion usage (audit + quota) for any applied promotions
+    await recordOrderPromotionUsages(order);
 
     return NextResponse.json(
       {

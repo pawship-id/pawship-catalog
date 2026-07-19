@@ -42,6 +42,8 @@ async function dbConnect() {
   await import("@/lib/models/Banner");
   await import("@/lib/models/BackInStockLog");
   await import("@/lib/models/Currency");
+  await import("@/lib/models/Promotion");
+  await import("@/lib/models/PromotionUsage");
 
   return cached.conn;
 }

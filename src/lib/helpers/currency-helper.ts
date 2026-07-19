@@ -163,6 +163,7 @@ export interface OrderRevenueInput {
   shippingCost: number;
   discountShipping: number;
   baseRupiah: number;
+  promotionDiscount?: number; // total promotion benefit (product + shipping), order currency
 }
 
 /**
@@ -186,6 +187,7 @@ export function calculateOrderRevenue({
   shippingCost,
   discountShipping,
   baseRupiah,
+  promotionDiscount = 0,
 }: OrderRevenueInput): OrderRevenue {
   const code = String(currency || "")
     .trim()
@@ -208,7 +210,11 @@ export function calculateOrderRevenue({
   }, 0);
 
   const gross = grossAmount + (shippingCost || 0);
-  const net = (totalAmount || 0) + (shippingCost || 0) - (discountShipping || 0);
+  const net =
+    (totalAmount || 0) +
+    (shippingCost || 0) -
+    (discountShipping || 0) -
+    (promotionDiscount || 0);
 
   return {
     grossRevenue: Math.round(gross * baseRupiah),

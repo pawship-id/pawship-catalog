@@ -7,6 +7,7 @@ import { OrderForm } from "@/lib/types/order";
 import Order from "@/lib/models/Order";
 import ProductVariant from "@/lib/models/ProductVariant";
 import dbConnect from "@/lib/mongodb";
+import { syncOrderPromotionUsages } from "@/lib/helpers/promotion-service";
 import { NextRequest, NextResponse } from "next/server";
 
 interface Context {
@@ -150,6 +151,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
     );
 
     // Calculate revenue from the normalized amounts
+    const promotionDiscount = (body as any).promotionDiscount || 0;
     const { grossRevenue, netRevenue } = calculateOrderRevenue({
       orderDetails,
       currency: originalOrder.currency,
@@ -157,6 +159,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
       shippingCost: body.shippingCost,
       discountShipping: body.discountShipping,
       baseRupiah,
+      promotionDiscount,
     });
 
     // Update order
@@ -172,6 +175,8 @@ export async function PUT(req: NextRequest, { params }: Context) {
         baseRupiah,
         grossRevenue,
         netRevenue,
+        promotionDiscount,
+        appliedPromotions: (body as any).appliedPromotions || [],
       },
       { new: true, runValidators: true }
     );
@@ -182,6 +187,9 @@ export async function PUT(req: NextRequest, { params }: Context) {
         { status: 404 }
       );
     }
+
+    // Reconcile promotion usage records with the order's current promotions
+    await syncOrderPromotionUsages(updatedOrder);
 
     return NextResponse.json(
       {

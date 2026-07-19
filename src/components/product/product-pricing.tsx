@@ -3,8 +3,6 @@ import Tooltip from "./tooltip";
 import { VariantRow } from "@/lib/types/product";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useSession } from "next-auth/react";
-import { usePromo } from "@/context/PromoContext";
-import { calculateFinalPrice } from "@/lib/helpers/promo-helper";
 
 interface PriceTier {
   quantity: number;
@@ -39,7 +37,6 @@ export default function PricingDisplay({
   resellerPricing,
 }: PricingDisplayProps) {
   const { data: session } = useSession();
-  const { activePromos } = usePromo();
 
   // Determine which currency to use:
   // 1. If reseller pricing exists, use its currency as default
@@ -63,29 +60,12 @@ export default function PricingDisplay({
     return userCurrency;
   }, [session, resellerPricing, userCurrency, selectedVariant]);
 
-  // Calculate price with promo discount (for retail customers only)
-  const priceInfo = useMemo(() => {
+  // Base price for the effective currency. Promotions are now applied via code
+  // at checkout, so the product page shows the base price (no automatic promo).
+  const basePrice = useMemo(() => {
     const variantPrices = selectedVariant.selectedVariantDetail.price;
-    const basePrice =
-      variantPrices?.[effectiveCurrency as keyof typeof variantPrices] || 0;
-    const variantId = selectedVariant.selectedVariantDetail._id;
-    const isReseller = session?.user.role === "reseller";
-
-    // Use promo helper to calculate final price
-    return calculateFinalPrice(
-      basePrice,
-      effectiveCurrency,
-      productId,
-      variantId,
-      activePromos,
-      isReseller
-    );
-  }, [selectedVariant, effectiveCurrency, session, activePromos, productId]);
-
-  // Get base price and discount info
-  const basePrice = priceInfo.finalPrice;
-  const originalPrice = priceInfo.hasDiscount ? priceInfo.originalPrice : null;
-  const hasDiscount = priceInfo.hasDiscount;
+    return variantPrices?.[effectiveCurrency as keyof typeof variantPrices] || 0;
+  }, [selectedVariant, effectiveCurrency]);
 
   // Calculate tier prices with discount
   const calculatedTiers = useMemo(() => {
@@ -120,21 +100,9 @@ export default function PricingDisplay({
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="space-y-1">
-            {/* Show strikethrough price if there's a promo discount (retail only) */}
-            {originalPrice && hasDiscount && !showResellerPricing && (
-              <div className="text-sm text-gray-400 line-through">
-                {format(originalPrice)}
-              </div>
-            )}
             <div className="text-2xl font-semibold text-gray-900">
               {format(basePrice)}
             </div>
-            {/* Show promo badge if discount is active */}
-            {hasDiscount && !showResellerPricing && (
-              <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
-                Promo {priceInfo.discountPercentage.toFixed(0)}% Off
-              </span>
-            )}
           </div>
           {showResellerPricing && (
             <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">

@@ -28,6 +28,28 @@ export interface IOrderDetail {
   };
 }
 
+/**
+ * Snapshot of a promotion applied to an order, written by the Promotion Engine
+ * at checkout. Numbers are in the order currency (`discountCurrency`).
+ */
+export interface IAppliedPromotion {
+  promotionId: string;
+  code: string;
+  name: string;
+  trigger: string;
+  stackable?: boolean;
+  rewardsSummary?: string;
+  productDiscount: number; // total product-side discount
+  shippingDiscount: number; // shipping discount contributed by this promotion
+  freeGift?: {
+    productId: string;
+    variantId: string;
+    variantName?: string;
+    quantity: number;
+  } | null;
+  discountCurrency: string;
+}
+
 export interface IStatusLog {
   status: string;
   date: Date;
@@ -70,6 +92,8 @@ export interface OrderForm {
   shippingCost: number;
   discountShipping: number;
   currency: string;
+  appliedPromotions?: IAppliedPromotion[];
+  promotionDiscount?: number; // total promotion benefit (product + shipping), order currency
 }
 
 export interface OrderData {
@@ -89,6 +113,8 @@ export interface OrderData {
   shippingCost: number;
   discountShipping: number;
   currency: string;
+  appliedPromotions?: IAppliedPromotion[];
+  promotionDiscount?: number; // total promotion benefit (product + shipping), order currency
   baseRupiah?: number; // Rupiah rate of `currency`, snapshotted when the order was created
   snapshoot_baserupiah?: number; // Previous `baseRupiah` kept when an admin overrides the rate
   grossRevenue?: number; // Revenue in IDR before the product & shipping discount

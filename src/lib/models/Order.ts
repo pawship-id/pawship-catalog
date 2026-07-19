@@ -1,5 +1,9 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { IOrderDetail, IShippingAddress } from "../types/order";
+import {
+  IAppliedPromotion,
+  IOrderDetail,
+  IShippingAddress,
+} from "../types/order";
 
 export interface IStatusLog {
   status: string;
@@ -33,6 +37,8 @@ export interface IOrder extends Document {
   discountShipping: number;
   orderType: "B2C" | "B2B";
   currency: string;
+  appliedPromotions: IAppliedPromotion[];
+  promotionDiscount?: number; // total promotion benefit (product + shipping), order currency
   baseRupiah?: number; // Rupiah rate of `currency`, snapshotted when the order was created
   snapshoot_baserupiah?: number; // Previous `baseRupiah` kept when an admin overrides the rate
   grossRevenue?: number; // Revenue in IDR before the product & shipping discount
@@ -131,6 +137,31 @@ const PaymentProofSchema = new Schema<IPaymentProof>(
   { _id: false }
 );
 
+const AppliedPromotionSchema = new Schema<IAppliedPromotion>(
+  {
+    promotionId: { type: String, required: true },
+    code: { type: String, required: true },
+    name: { type: String, required: true },
+    trigger: { type: String },
+    stackable: { type: Boolean, default: false },
+    rewardsSummary: { type: String },
+    productDiscount: { type: Number, default: 0 },
+    shippingDiscount: { type: Number, default: 0 },
+    freeGift: {
+      type: {
+        productId: String,
+        variantId: String,
+        variantName: String,
+        quantity: Number,
+      },
+      _id: false,
+      default: null,
+    },
+    discountCurrency: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const OrderSchema = new Schema<IOrder>(
   {
     userId: {
@@ -190,6 +221,15 @@ const OrderSchema = new Schema<IOrder>(
       type: String,
       enum: ["B2C", "B2B"],
       default: "B2C",
+    },
+    appliedPromotions: {
+      type: [AppliedPromotionSchema],
+      default: [],
+    },
+    promotionDiscount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     baseRupiah: {
       type: Number,

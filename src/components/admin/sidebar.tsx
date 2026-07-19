@@ -64,7 +64,7 @@ const navigation = [
   },
   {
     name: "Promotion",
-    href: "/dashboard/promos",
+    href: "/dashboard/promotions",
     icon: TicketPercent,
   },
   {

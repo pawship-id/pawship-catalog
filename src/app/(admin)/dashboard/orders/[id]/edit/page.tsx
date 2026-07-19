@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getAll, getById, updateData } from "@/lib/apiService";
-import { OrderData, IOrderDetail } from "@/lib/types/order";
+import { OrderData, IOrderDetail, IAppliedPromotion } from "@/lib/types/order";
 import LoadingPage from "@/components/loading";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,8 @@ import {
   Plus,
   Search,
   BanknoteArrowDown,
+  Ticket,
+  X,
 } from "lucide-react";
 import { currencyFormat } from "@/lib/helpers";
 import {
@@ -54,6 +56,13 @@ import { ProductData } from "@/lib/types/product";
 import Link from "next/link";
 import ProductSelectorModal from "@/components/admin/orders/product-selector-modal";
 import VariantSelectorModal from "@/components/admin/orders/variant-selector-modal";
+import PromotionSelectorModal from "@/components/admin/orders/promotion-selector-modal";
+import { summarizeBenefits } from "@/lib/helpers/promotion-engine";
+import type {
+  EvaluationCart,
+  EvaluationCustomer,
+  PromotionEvaluationSuccess,
+} from "@/lib/types/promotion";
 
 export default function EditOrderPage() {
   const params = useParams();
@@ -78,6 +87,10 @@ export default function EditOrderPage() {
     null,
   );
   const [showVariantSelection, setShowVariantSelection] = useState(false);
+  const [showPromotionModal, setShowPromotionModal] = useState(false);
+  const [appliedPromotions, setAppliedPromotions] = useState<
+    IAppliedPromotion[]
+  >([]);
   const [variantQuantity, setVariantQuantity] = useState<{
     [key: string]: number;
   }>({});
@@ -592,6 +605,75 @@ export default function EditOrderPage() {
     });
   };
 
+  // Load applied promotions from the order once (re-init only on order id change)
+  useEffect(() => {
+    setAppliedPromotions(order?.appliedPromotions || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?._id]);
+
+  // Total promotion benefit (product + shipping) in the order currency
+  const promotionDiscount = appliedPromotions.reduce(
+    (s, ap) => s + (ap.productDiscount || 0) + (ap.shippingDiscount || 0),
+    0,
+  );
+
+  const buildCart = (): EvaluationCart => {
+    const cur = order?.currency || "IDR";
+    const items = editedItems.map((i) => ({
+      productId: i.productId,
+      variantId: i.variantId,
+      categoryId: i.categoryId,
+      quantity: i.quantity,
+      unitPrice: (i.discountedPrice?.[cur] ?? i.originalPrice?.[cur]) || 0,
+      subTotal: i.subTotal,
+    }));
+    return {
+      items,
+      subtotal: items.reduce((s, it) => s + it.subTotal, 0),
+      shippingCost: order?.shippingCost || 0,
+    };
+  };
+
+  const buildCustomer = (): EvaluationCustomer => ({
+    userId: (order as any)?.userId,
+    type: order?.orderType === "B2B" ? "RESELLER" : "RETAIL",
+  });
+
+  const handleApplyPromotion = (result: PromotionEvaluationSuccess) => {
+    const cur = order?.currency || "IDR";
+    const promo = result.promotion;
+    const gift = result.freeGift?.gifts?.[0];
+    const entry: IAppliedPromotion = {
+      promotionId: promo._id,
+      code: promo.code,
+      name: promo.name,
+      trigger: promo.trigger,
+      stackable: !!promo.stackable,
+      rewardsSummary: summarizeBenefits(promo, cur),
+      productDiscount: result.discount,
+      shippingDiscount: result.shippingDiscount,
+      freeGift: gift
+        ? {
+            productId: gift.productId,
+            variantId: gift.variantId,
+            variantName: gift.variantName,
+            quantity: gift.quantity,
+          }
+        : null,
+      discountCurrency: cur,
+    };
+    setAppliedPromotions((prev) => {
+      const withoutSame = prev.filter((p) => p.code !== entry.code);
+      if (!entry.stackable) return [entry];
+      return [...withoutSame.filter((p) => p.stackable), entry];
+    });
+    showSuccessAlert("Applied", `${promo.code} applied`);
+  };
+
+  const handleRemovePromotion = (code: string) => {
+    setAppliedPromotions((prev) => prev.filter((p) => p.code !== code));
+  };
+
   // Update order total amount.
   // NOTE: revenue is owned by the API, which values the order with the
   // baseRupiah snapshotted on it. Never recalculate it here.
@@ -671,6 +753,8 @@ export default function EditOrderPage() {
         shippingCost: order!.shippingCost,
         discountShipping: order!.discountShipping || 0,
         currency: order!.currency,
+        appliedPromotions,
+        promotionDiscount,
       });
 
       showSuccessAlert("Success", "Order updated successfully");
@@ -1123,6 +1207,75 @@ export default function EditOrderPage() {
                     />
                   </div>
 
+                  {/* Promotion */}
+                  <div className="space-y-2 pt-3 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Promotion
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!canEditOrder() || editedItems.length === 0}
+                        onClick={() => setShowPromotionModal(true)}
+                      >
+                        <Ticket className="h-4 w-4 mr-1" /> Apply Promotion
+                      </Button>
+                    </div>
+                    {appliedPromotions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No promotion applied
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {appliedPromotions.map((ap) => (
+                          <div
+                            key={ap.code}
+                            className="flex items-start justify-between rounded-md border p-2 bg-primary/5"
+                          >
+                            <div>
+                              <p className="text-sm font-medium">
+                                {ap.name}{" "}
+                                <span className="font-mono text-xs">
+                                  ({ap.code})
+                                </span>
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {ap.rewardsSummary}
+                              </p>
+                              {ap.freeGift && (
+                                <p className="text-xs text-green-700">
+                                  Free gift: {ap.freeGift.variantName || "item"}{" "}
+                                  × {ap.freeGift.quantity}
+                                </p>
+                              )}
+                            </div>
+                            {canEditOrder() && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePromotion(ap.code)}
+                                className="p-1 text-red-500 hover:text-red-700"
+                                title="Remove promotion"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {promotionDiscount > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Promotion discount</span>
+                      <span className="font-semibold text-green-700">
+                        - {currencyFormat(promotionDiscount, order.currency)}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                     <span className="text-lg font-semibold text-gray-900">
                       Total
@@ -1131,7 +1284,8 @@ export default function EditOrderPage() {
                       {currencyFormat(
                         order.totalAmount +
                           order.shippingCost -
-                          (order.discountShipping || 0),
+                          (order.discountShipping || 0) -
+                          promotionDiscount,
                         order.currency,
                       )}
                     </span>
@@ -1418,6 +1572,16 @@ export default function EditOrderPage() {
               product={selectedProduct}
               onSelectVariant={handleAddVariant}
               currency={order.currency}
+            />
+
+            <PromotionSelectorModal
+              isOpen={showPromotionModal}
+              onClose={() => setShowPromotionModal(false)}
+              cart={buildCart()}
+              customer={buildCustomer()}
+              currency={order.currency}
+              appliedCodes={appliedPromotions.map((p) => p.code)}
+              onApply={handleApplyPromotion}
             />
           </div>
         )

@@ -87,7 +87,8 @@ export default function TableOrder({
                   <span className="capitalize">
                     {currencyFormat(
                       item.totalAmount +
-                        (item.shippingCost - item.discountShipping),
+                        (item.shippingCost - item.discountShipping) -
+                        (item.promotionDiscount || 0),
                       item.currency
                     )}
                   </span>

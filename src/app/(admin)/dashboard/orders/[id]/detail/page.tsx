@@ -380,6 +380,19 @@ export default function DetailProduct() {
 
     summaryY += 6;
 
+    // Promotion discount
+    if ((order.promotionDiscount || 0) > 0) {
+      doc.setFont("helvetica", "normal");
+      doc.text("Promotion Discount", summaryX, summaryY);
+      doc.text(
+        `- ${currencyFormat(order.promotionDiscount || 0, order.currency)}`,
+        196,
+        summaryY,
+        { align: "right" },
+      );
+      summaryY += 6;
+    }
+
     // Tax
     doc.setFont("helvetica", "bold");
     doc.text("Tax", summaryX, summaryY);
@@ -393,7 +406,10 @@ export default function DetailProduct() {
     doc.setFontSize(10);
     doc.text("TOTAL", summaryX, summaryY);
     const finalTotal =
-      order.totalAmount + order.shippingCost - (order.discountShipping || 0);
+      order.totalAmount +
+      order.shippingCost -
+      (order.discountShipping || 0) -
+      (order.promotionDiscount || 0);
     doc.text(currencyFormat(finalTotal, order.currency), 196, summaryY, {
       align: "right",
     });
@@ -715,6 +731,38 @@ export default function DetailProduct() {
                     </div>
                   )}
 
+                  {(order.appliedPromotions?.length ?? 0) > 0 && (
+                    <div className="pb-3 border-b border-gray-200 space-y-2">
+                      <span className="text-gray-600">Promotions</span>
+                      {order.appliedPromotions!.map((ap) => (
+                        <div key={ap.code} className="text-sm">
+                          <div className="flex justify-between">
+                            <span className="font-medium">
+                              {ap.name}{" "}
+                              <span className="font-mono text-xs text-gray-500">
+                                ({ap.code})
+                              </span>
+                            </span>
+                            <span className="text-red-600">
+                              -{" "}
+                              {currencyFormat(
+                                (ap.productDiscount || 0) +
+                                  (ap.shippingDiscount || 0),
+                                order.currency,
+                              )}
+                            </span>
+                          </div>
+                          {ap.freeGift && (
+                            <p className="text-xs text-green-700">
+                              Free gift: {ap.freeGift.variantName || "item"} ×{" "}
+                              {ap.freeGift.quantity}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center pt-2">
                     <span className="text-lg font-semibold text-gray-900">
                       Total
@@ -723,7 +771,8 @@ export default function DetailProduct() {
                       {currencyFormat(
                         order.totalAmount +
                           order.shippingCost -
-                          (order.discountShipping || 0),
+                          (order.discountShipping || 0) -
+                          (order.promotionDiscount || 0),
                         order.currency,
                       )}
                     </span>
