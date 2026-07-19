@@ -35,6 +35,92 @@ function makeId() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+// Parse harga yang diketik admin. Mendukung pemisah ribuan + desimal ala locale
+// ID ("1.500.000,50"), US ("1,500,000.50"), maupun angka polos ("15000"). JS
+// hanya paham titik desimal, jadi kita normalisasi dulu sebelum Number().
+//
+// Aturan penentuan pemisah:
+// - Ada dua jenis pemisah  → yang muncul paling akhir = pemisah desimal,
+//   sisanya pemisah ribuan. Mis. "1.500.000,50" → 1500000.5.
+// - Satu jenis, muncul >1x → pasti ribuan. Mis. "1.000.000" → 1000000.
+// - Satu jenis, muncul 1x  → 3 digit di belakang (dan ada angka depan selain 0)
+//   dianggap ribuan ("150.000" → 150000); selain itu desimal ("5,6" → 5.6,
+//   "0.50" → 0.5).
+function parsePriceInput(raw: string | undefined): number {
+  if (raw === undefined || raw === null) return NaN;
+  let s = String(raw).trim().replace(/\s/g, "");
+  if (s === "") return NaN;
+
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+
+  if (hasComma && hasDot) {
+    const decimalSep = s.lastIndexOf(",") > s.lastIndexOf(".") ? "," : ".";
+    const thousandSep = decimalSep === "," ? "." : ",";
+    s = s.split(thousandSep).join("").replace(decimalSep, ".");
+  } else if (hasComma || hasDot) {
+    const sep = hasComma ? "," : ".";
+    const parts = s.split(sep);
+    const isThousand =
+      parts.length > 2 ||
+      (parts[1]?.length === 3 && parts[0] !== "" && parts[0] !== "0");
+    s = isThousand ? parts.join("") : parts.join(".");
+  }
+
+  return Number(s);
+}
+
+// Jumlah desimal sebuah currency (IDR/JPY → 0, USD/SGD/HKD → 2). Dihitung via
+// Intl supaya aman di client — mirror currencyDecimals() di currency-helper.ts
+// yang tidak bisa diimport ke sini (file itu menarik model mongoose).
+function currencyDecimals(currency: string): number {
+  try {
+    const fmt = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: String(currency || "").toUpperCase(),
+    });
+    return fmt.resolvedOptions().maximumFractionDigits ?? 2;
+  } catch {
+    return 2;
+  }
+}
+
+// Format string input harga secara live. Koma dipakai sebagai pemisah desimal,
+// dan jumlah desimal dibatasi sesuai currency (IDR tidak pakai desimal). Pemisah
+// ribuan (titik) HANYA ditambahkan bila `groupThousands` true — dipakai untuk
+// rupiah saja; currency lain tampil tanpa titik. Mis. IDR "1500000" →
+// "1.500.000", USD "1234,5" → "1234,5". Hasilnya tetap bisa diparse
+// oleh parsePriceInput().
+function formatPriceInput(
+  raw: string,
+  maxDecimals: number,
+  groupThousands: boolean,
+): string {
+  // Hanya digit & koma yang relevan; titik (pemisah ribuan lama) dibuang lalu
+  // dihitung ulang.
+  const cleaned = String(raw ?? "").replace(/[^\d,]/g, "");
+  if (cleaned === "") return "";
+
+  const commaIdx = cleaned.indexOf(",");
+  const intDigits = (
+    commaIdx === -1 ? cleaned : cleaned.slice(0, commaIdx)
+  ).replace(/,/g, "");
+  const decDigits =
+    commaIdx === -1 ? null : cleaned.slice(commaIdx + 1).replace(/,/g, "");
+
+  // buang leading zero berlebih ("007" → "7"), tapi sisakan satu "0"
+  const normalizedInt = intDigits.replace(/^0+(?=\d)/, "");
+  const groupedInt =
+    normalizedInt === "" || !groupThousands
+      ? normalizedInt
+      : normalizedInt.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+  // currency tanpa desimal (mis. IDR): abaikan koma
+  if (maxDecimals <= 0 || decDigits === null) return groupedInt;
+
+  return `${groupedInt},${decDigits.slice(0, maxDecimals)}`;
+}
+
 function buildNameFromAttrs(attrs: Record<string, string>, order: string[]) {
   return order
     .map((k) => attrs[k])
@@ -71,9 +157,14 @@ export function VariantEditor({
     variantTypes.map((t) => t.name.toLowerCase()),
   );
 
-  const [defaultStockPrice, setDefaultStockPrice] = useState({
+  // Harga bulk diinput manual per currency (bukan hasil konversi lagi), jadi
+  // simpan sebagai map { [currency]: "nilai string dari input" }.
+  const [defaultStockPrice, setDefaultStockPrice] = useState<{
+    stockDefault: number;
+    priceByCurrency: Record<string, string>;
+  }>({
     stockDefault: 0,
-    priceDefault: "",
+    priceByCurrency: {},
   });
 
   // Currency dikelola di Dashboard > Currencies, jangan di-hardcode di sini
@@ -130,27 +221,26 @@ export function VariantEditor({
   const handleApply = () => {
     const hasSelectedRows = value.some((row) => row.selected);
 
+    // Kumpulkan hanya currency yang benar-benar diisi (> 0). Input 0 / kosong
+    // berarti tidak diisi, jadi jangan menimpa harga yang sudah ada di form.
+    const priceEntries: Record<string, number> = {};
+    currencyList.forEach((el) => {
+      const num = parsePriceInput(defaultStockPrice.priceByCurrency[el.currency]);
+      if (Number.isFinite(num) && num > 0) {
+        priceEntries[el.currency] = num;
+      }
+    });
+    const hasPriceInput = Object.keys(priceEntries).length > 0;
+
     // Validate: at least one input must be filled
-    if (!defaultStockPrice.stockDefault && !defaultStockPrice.priceDefault) {
-      showErrorAlert(undefined, "Please input stock or price IDR");
+    if (!defaultStockPrice.stockDefault && !hasPriceInput) {
+      showErrorAlert(undefined, "Please input stock or price");
       return;
     }
 
     if (!hasSelectedRows) {
       showErrorAlert(undefined, "Please select row");
       return; // exit early if no rows are selected
-    }
-
-    // Tanpa currency, konversi harga akan menghasilkan objek kosong dan justru
-    // menghapus harga variant. Lebih baik berhenti dan beri tahu adminnya.
-    if (defaultStockPrice.priceDefault && !currencyList.length) {
-      showErrorAlert(
-        undefined,
-        currencyError
-          ? `Failed to load currencies: ${currencyError}`
-          : "Currencies are still loading, please wait a moment",
-      );
-      return;
     }
 
     const updatedRows = value.map((item) => {
@@ -169,22 +259,13 @@ export function VariantEditor({
         updateData.stock = defaultStockPrice.stockDefault;
       }
 
-      // Update price if provided
-      if (defaultStockPrice.priceDefault) {
-        let tempPrice: Record<string, number> = {};
-
-        currencyList.forEach((el) => {
-          if (el.currency === "IDR") {
-            tempPrice[el.currency] = Number(defaultStockPrice.priceDefault);
-          } else if (el.rate > 0) {
-            let price = Number(defaultStockPrice.priceDefault) / el.rate;
-            tempPrice[el.currency] = Number(price.toFixed(1));
-          }
-          // rate 0 dilewati — pembagiannya menghasilkan Infinity.
-          // Harganya bisa diisi manual lewat modal price.
-        });
-
-        updateData.price = tempPrice;
+      // Update price if provided — merge, jangan replace: currency yang tidak
+      // diisi tetap memakai harga yang sudah ada di row.
+      if (hasPriceInput) {
+        updateData.price = {
+          ...(item.price || {}),
+          ...priceEntries,
+        };
       }
 
       return {
@@ -197,7 +278,7 @@ export function VariantEditor({
 
     setDefaultStockPrice({
       stockDefault: 0,
-      priceDefault: "",
+      priceByCurrency: {},
     });
   };
 
@@ -678,33 +759,50 @@ export function VariantEditor({
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="space-y-2">
+        <div className="flex items-end gap-2 flex-wrap">
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Stock</label>
             <Input
               placeholder="Enter stock"
               className="border-gray-300 w-30"
               value={defaultStockPrice.stockDefault}
               onChange={(e) =>
-                setDefaultStockPrice({
-                  ...defaultStockPrice,
+                setDefaultStockPrice((prev) => ({
+                  ...prev,
                   stockDefault: Number(e.target.value),
-                })
+                }))
               }
             />
           </div>
-          <div className="space-y-2">
-            <Input
-              placeholder="Enter IDR price"
-              className="border-gray-300 w-40"
-              value={defaultStockPrice.priceDefault}
-              onChange={(e) =>
-                setDefaultStockPrice({
-                  ...defaultStockPrice,
-                  priceDefault: e.target.value,
-                })
-              }
-            />
-          </div>
+
+          {/* Satu input harga per currency dari collection currencies */}
+          {currencyList.map((el) => (
+            <div key={el.currency} className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                {el.currency}
+              </label>
+              <Input
+                inputMode="decimal"
+                placeholder={`Enter ${el.currency} price`}
+                className="border-gray-300 w-40"
+                value={defaultStockPrice.priceByCurrency[el.currency] ?? ""}
+                onChange={(e) =>
+                  setDefaultStockPrice((prev) => ({
+                    ...prev,
+                    priceByCurrency: {
+                      ...prev.priceByCurrency,
+                      [el.currency]: formatPriceInput(
+                        e.target.value,
+                        currencyDecimals(el.currency),
+                        el.currency === "IDR",
+                      ),
+                    },
+                  }))
+                }
+              />
+            </div>
+          ))}
+
           <Button
             type="button"
             className="cursor-pointer"
