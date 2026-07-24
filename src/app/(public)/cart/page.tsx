@@ -9,6 +9,8 @@ import {
   User,
   MapPin,
   Phone,
+  Ticket,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -27,15 +29,24 @@ import LoadingPage from "@/components/loading";
 import {
   IShippingAddress,
   IOrderDetail,
+  IAppliedPromotion,
   OrderData,
   OrderForm,
 } from "@/lib/types/order";
 import {
   showConfirmAlert,
   showErrorAlert,
+  showSuccessAlert,
   showWarningAlert,
 } from "@/lib/helpers/sweetalert2";
 import { useRouter } from "next/navigation";
+import PromotionSelectorModal from "@/components/admin/orders/promotion-selector-modal";
+import { summarizeBenefits } from "@/lib/helpers/promotion-engine";
+import type {
+  EvaluationCart,
+  EvaluationCustomer,
+  PromotionEvaluationSuccess,
+} from "@/lib/types/promotion";
 
 export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -92,6 +103,12 @@ export default function CartPage() {
 
   const router = useRouter();
 
+  // Promotions applied via code at checkout (Promotion Engine).
+  const [appliedPromotions, setAppliedPromotions] = useState<
+    IAppliedPromotion[]
+  >([]);
+  const [showPromotionModal, setShowPromotionModal] = useState(false);
+
   const handleAddressChange = (
     field: keyof IShippingAddress,
     value: string,
@@ -147,6 +164,10 @@ export default function CartPage() {
       totalAmount: updated.reduce((sum, el) => sum + el.subTotal, 0),
     }));
 
+    // The cart changed — drop applied promotions so a now-stale discount is
+    // never carried into checkout (re-apply reruns the engine on the new cart).
+    setAppliedPromotions([]);
+
     const cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
     localStorage.setItem(
       "cartItem",
@@ -195,6 +216,9 @@ export default function CartPage() {
         0,
       ),
     }));
+
+    // Cart changed — drop applied promotions to avoid a stale discount.
+    setAppliedPromotions([]);
 
     // update localStorage
     let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
@@ -305,7 +329,11 @@ export default function CartPage() {
     try {
       let { data } = await createData<OrderData, OrderForm>(
         "/api/public/orders",
-        formData,
+        {
+          ...formData,
+          appliedPromotions,
+          promotionDiscount,
+        },
       );
 
       router.push(`/order-success/${data?._id}`);
@@ -325,7 +353,73 @@ export default function CartPage() {
 
   // const shipping = totalAmount > 50 ? 0 : 9.99;
   const shipping = 0;
-  const total = totalAmount + shipping;
+
+  // Total promotion benefit (product + shipping) in the cart currency
+  const promotionDiscount = appliedPromotions.reduce(
+    (s, ap) => s + (ap.productDiscount || 0) + (ap.shippingDiscount || 0),
+    0,
+  );
+
+  const total = Math.max(0, totalAmount + shipping - promotionDiscount);
+
+  // Build cart + customer context for the Promotion Engine
+  const buildCart = (): EvaluationCart => {
+    const items = formData.orderDetails.map((i: any) => ({
+      productId: i.productId,
+      variantId: i.variantId,
+      categoryId: i.categoryId,
+      quantity: i.quantity,
+      unitPrice:
+        (i.discountedPrice?.[currency] ?? i.originalPrice?.[currency]) || 0,
+      subTotal: i.subTotal,
+    }));
+    return {
+      items,
+      subtotal: items.reduce((s, it) => s + it.subTotal, 0),
+      shippingCost: shipping,
+    };
+  };
+
+  const buildCustomer = (): EvaluationCustomer => ({
+    userId: session?.user?.id,
+    type: session?.user.role === "reseller" ? "RESELLER" : "RETAIL",
+  });
+
+  const handleApplyPromotion = (result: PromotionEvaluationSuccess) => {
+    const promo = result.promotion;
+    const gift = result.freeGift?.gifts?.[0];
+    const entry: IAppliedPromotion = {
+      promotionId: promo._id,
+      code: promo.code,
+      name: promo.name,
+      trigger: promo.trigger,
+      stackable: !!promo.stackable,
+      rewardsSummary: summarizeBenefits(promo, currency),
+      productDiscount: result.discount,
+      shippingDiscount: result.shippingDiscount,
+      freeGift: gift
+        ? {
+            productId: gift.productId,
+            variantId: gift.variantId,
+            variantName: gift.variantName,
+            quantity: gift.quantity,
+          }
+        : null,
+      discountCurrency: currency,
+    };
+    setAppliedPromotions((prev) => {
+      const withoutSame = prev.filter((p) => p.code !== entry.code);
+      // A non-stackable promo replaces everything; a stackable one keeps only
+      // the other stackable promotions.
+      if (!entry.stackable) return [entry];
+      return [...withoutSame.filter((p) => p.stackable), entry];
+    });
+    showSuccessAlert("Applied", `${promo.code} applied`);
+  };
+
+  const handleRemovePromotion = (code: string) => {
+    setAppliedPromotions((prev) => prev.filter((p) => p.code !== code));
+  };
 
   // B2B: Calculate tier discount for a specific product based on total category quantities in cart
   const calculateB2BDiscount = (
@@ -723,7 +817,7 @@ export default function CartPage() {
                           <div className="relative w-30 h-30 overflow-hidden rounded-lg">
                             <Image
                               src={item.image?.imageUrl}
-                              alt={item.name}
+                              alt={item.name || "Product image"}
                               fill
                               className="object-cover"
                               sizes="120px"
@@ -857,7 +951,7 @@ export default function CartPage() {
                           <div className="relative w-25 h-25 overflow-hidden rounded-lg">
                             <Image
                               src={item.image?.imageUrl}
-                              alt={item.name}
+                              alt={item.name || "Product image"}
                               fill
                               className="object-cover"
                               sizes="100px"
@@ -997,7 +1091,7 @@ export default function CartPage() {
                             <div className="relative w-25 h-25 overflow-hidden rounded-lg">
                               <Image
                                 src={item.image?.imageUrl}
-                                alt={item.name}
+                                alt={item.name || "Product image"}
                                 fill
                                 className="object-cover"
                                 sizes="100px"
@@ -1304,6 +1398,83 @@ export default function CartPage() {
                     <span>{format(shipping)}</span>
                   </div>
 
+                  {/* Promotion */}
+                  <div className="border-t border-gray-200 pt-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Promotion</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (formData.orderDetails.length === 0) {
+                            showErrorAlert(
+                              "No items",
+                              "Add products before applying a promotion",
+                            );
+                            return;
+                          }
+                          setShowPromotionModal(true);
+                        }}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline cursor-pointer"
+                      >
+                        <Ticket className="h-4 w-4" /> Apply Promotion
+                      </button>
+                    </div>
+
+                    {appliedPromotions.length === 0 ? (
+                      <p className="text-sm text-gray-400">
+                        No promotion applied
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {appliedPromotions.map((ap) => (
+                          <div
+                            key={ap.code}
+                            className="flex items-start justify-between rounded-md border border-primary/30 bg-primary/5 p-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">
+                                {ap.name}{" "}
+                                <span className="font-mono text-xs text-gray-500">
+                                  ({ap.code})
+                                </span>
+                              </p>
+                              {ap.rewardsSummary && (
+                                <p className="text-xs text-gray-500">
+                                  {ap.rewardsSummary}
+                                </p>
+                              )}
+                              {ap.freeGift && (
+                                <p className="text-xs text-green-700">
+                                  Free gift: {ap.freeGift.variantName || "item"}{" "}
+                                  × {ap.freeGift.quantity}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePromotion(ap.code)}
+                              className="p-1 text-red-500 hover:text-red-700 shrink-0 cursor-pointer"
+                              title="Remove promotion"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {promotionDiscount > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">
+                          Promotion discount
+                        </span>
+                        <span className="font-semibold text-green-700">
+                          - {format(promotionDiscount)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between text-lg font-semibold text-gray-800">
                       <span>Total</span>
@@ -1347,6 +1518,17 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+
+      <PromotionSelectorModal
+        isOpen={showPromotionModal}
+        onClose={() => setShowPromotionModal(false)}
+        cart={buildCart()}
+        customer={buildCustomer()}
+        currency={currency}
+        appliedCodes={appliedPromotions.map((p) => p.code)}
+        onApply={handleApplyPromotion}
+        availableEndpoint="/api/public/promotions/available"
+      />
     </div>
   );
 }

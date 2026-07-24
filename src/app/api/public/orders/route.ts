@@ -11,6 +11,11 @@ import {
   calculateOrderRevenue,
   normalizeOrderMoney,
 } from "@/lib/helpers/currency-helper";
+import {
+  recordOrderPromotionUsages,
+  resolveAppliedPromotions,
+} from "@/lib/helpers/promotion-service";
+import type { EvaluationCart } from "@/lib/types/promotion";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
@@ -33,11 +38,56 @@ export async function POST(req: NextRequest) {
       body.currency
     );
 
+    // Re-evaluate promotions server-side from the submitted CODES only — never
+    // trust the client's discount numbers. Reject the checkout if any code is
+    // no longer valid (expired / quota exhausted / cart no longer qualifies).
+    const evaluationCart: EvaluationCart = {
+      items: orderDetails.map((i: any) => ({
+        productId: i.productId,
+        variantId: i.variantId,
+        categoryId: i.categoryId,
+        quantity: i.quantity,
+        unitPrice:
+          (i.discountedPrice?.[body.currency] ??
+            i.originalPrice?.[body.currency]) || 0,
+        subTotal: i.subTotal,
+      })),
+      subtotal: totalAmount,
+      shippingCost: body.shippingCost || 0,
+    };
+    const {
+      appliedPromotions,
+      promotionDiscount,
+      invalid,
+    } = await resolveAppliedPromotions({
+      codes: ((body as any).appliedPromotions ?? []).map((p: any) => p.code),
+      cart: evaluationCart,
+      customer: {
+        userId: session.user.id,
+        type: body.orderType === "B2B" ? "RESELLER" : "RETAIL",
+      },
+      currency: body.currency,
+    });
+    if (invalid.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Promotion no longer valid: ${invalid
+            .map((i) => `${i.code} (${i.reason})`)
+            .join(", ")}`,
+          invalidCodes: invalid,
+        },
+        { status: 400 }
+      );
+    }
+
     // Snapshot the rupiah rate at order time, so a later rate change never
     // moves the revenue of this order
     const baseRupiah = await getRateToIDR(body.currency);
 
-    // Calculate revenue in IDR from the normalized amounts
+    // Calculate revenue in IDR from the normalized amounts. The promotion
+    // discount (product + shipping benefit) is recomputed above and subtracted
+    // from net revenue here.
     const { grossRevenue, netRevenue } = calculateOrderRevenue({
       orderDetails,
       currency: body.currency,
@@ -45,6 +95,7 @@ export async function POST(req: NextRequest) {
       shippingCost: body.shippingCost,
       discountShipping: body.discountShipping || 0,
       baseRupiah,
+      promotionDiscount,
     });
 
     // `revenue` is legacy and derived — never trust a client supplied value
@@ -60,6 +111,8 @@ export async function POST(req: NextRequest) {
       grossRevenue,
       netRevenue,
       discountShipping: body.discountShipping || 0, // Set default 0 if not provided
+      promotionDiscount, // server-recomputed
+      appliedPromotions, // server-recomputed
     };
 
     // Generate unique invoice number based on shipping address country
@@ -96,6 +149,9 @@ export async function POST(req: NextRequest) {
         await variantProduct.save();
       }
     }
+
+    // Record promotion usage (audit + quota) for any applied promotions
+    await recordOrderPromotionUsages(order);
 
     return NextResponse.json(
       {

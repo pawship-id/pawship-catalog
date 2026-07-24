@@ -32,6 +32,24 @@ interface PaymentProof {
   uploadedBy: string;
 }
 
+interface AppliedPromotion {
+  promotionId: string;
+  code: string;
+  name: string;
+  trigger?: string;
+  stackable?: boolean;
+  rewardsSummary?: string;
+  productDiscount: number;
+  shippingDiscount: number;
+  freeGift?: {
+    productId: string;
+    variantId: string;
+    variantName?: string;
+    quantity: number;
+  } | null;
+  discountCurrency: string;
+}
+
 interface OrderDetail {
   _id: string;
   userId: string;
@@ -40,6 +58,8 @@ interface OrderDetail {
   totalAmount: number;
   shippingCost: number;
   discountShipping: number;
+  appliedPromotions?: AppliedPromotion[];
+  promotionDiscount?: number;
   status:
     | "pending confirmation"
     | "awaiting payment"
@@ -517,6 +537,37 @@ export default function OrderDetailPage() {
                   - {currencyFormat(order.discountShipping, order.currency)}
                 </span>
               </div>
+              {(order.appliedPromotions?.length ?? 0) > 0 && (
+                <div className="space-y-2 pt-1">
+                  <span className="text-muted-foreground">Promotions</span>
+                  {order.appliedPromotions!.map((ap) => (
+                    <div key={ap.code} className="space-y-0.5">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium text-gray-800">
+                          {ap.name}{" "}
+                          <span className="font-mono text-xs text-gray-500">
+                            ({ap.code})
+                          </span>
+                        </span>
+                        <span className="whitespace-nowrap font-semibold text-red-600">
+                          -{" "}
+                          {currencyFormat(
+                            (ap.productDiscount || 0) +
+                              (ap.shippingDiscount || 0),
+                            order.currency,
+                          )}
+                        </span>
+                      </div>
+                      {ap.freeGift && (
+                        <p className="text-xs text-green-700">
+                          Free gift: {ap.freeGift.variantName || "item"} ×{" "}
+                          {ap.freeGift.quantity}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               <Separator />
               <div className="flex justify-between text-base font-bold">
                 <span>Total</span>
@@ -524,7 +575,8 @@ export default function OrderDetailPage() {
                   {currencyFormat(
                     order.totalAmount +
                       order.shippingCost -
-                      (order.discountShipping || 0),
+                      (order.discountShipping || 0) -
+                      (order.promotionDiscount || 0),
                     order.currency,
                   )}
                 </span>

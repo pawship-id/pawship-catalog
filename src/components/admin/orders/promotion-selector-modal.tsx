@@ -35,6 +35,9 @@ interface PromotionSelectorModalProps {
   currency: string;
   appliedCodes: string[];
   onApply: (result: PromotionEvaluationSuccess) => void;
+  /** Endpoint that lists available promotions. Defaults to the Admin route;
+   *  the public cart passes the public equivalent. */
+  availableEndpoint?: string;
 }
 
 export default function PromotionSelectorModal({
@@ -45,6 +48,7 @@ export default function PromotionSelectorModal({
   currency,
   appliedCodes,
   onApply,
+  availableEndpoint = "/api/admin/promotions/available",
 }: PromotionSelectorModalProps) {
   const [promotions, setPromotions] = useState<AvailablePromotion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,7 +61,7 @@ export default function PromotionSelectorModal({
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/admin/promotions/available", {
+        const res = await fetch(availableEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ cart, customer, currency }),

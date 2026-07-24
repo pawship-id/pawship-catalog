@@ -14,6 +14,7 @@ Dokumen ini berisi contoh data promo yang siap kamu input, beserta skenario orde
   - [Case 5 — NEWBIE15 (first purchase only)](#case-5--newbie15)
   - [Case 6 — GIFTPACK (free gift)](#case-6--giftpack)
 - [Cara Verifikasi Hasil](#cara-verifikasi-hasil)
+- [Uji Re-evaluasi Server (anti-tamper)](#uji-re-evaluasi-server-anti-tamper)
 
 ---
 
@@ -60,6 +61,16 @@ Body JSON tiap case ada di bawah. Ganti tanggal bila perlu (pastikan **sekarang*
    - Bisa juga ketik **code manual** lalu **Apply code**.
 6. Kalau valid → ringkasan (baris **Promotion discount** + **Total**) langsung ter-update.
 7. Klik **Create Order** untuk menyimpan (usage & kuota tercatat).
+
+### Lewat Cart Customer (`/cart`)
+
+Alur yang sama juga tersedia untuk customer di storefront:
+
+1. Login sebagai customer, tambah produk ke cart, buka **`/cart`**.
+2. Di **Order Summary**, klik **Apply Promotion** → modal & kartu promo sama seperti Admin Order (memakai endpoint publik).
+3. Apply code valid → baris **Promotion discount** + **Total** ter-update.
+4. **Catatan:** mengubah qty / menghapus item **me-reset** promo yang terpasang (guard diskon basi) — apply ulang bila perlu.
+5. **Confirm Order** → `POST /api/public/orders`. Server **re-evaluasi ulang** promo (lihat verifikasi di bawah).
 
 ---
 
@@ -290,3 +301,24 @@ db.promotion_usages.find({ promotionCode: "WELCOME10" }).sort({ createdAt: -1 })
 ```
 
 > Tips: kalau mau tes ulang kuota dari nol, hapus dokumen `promotion_usages` untuk code itu lalu reset `usedCount` ke 0.
+
+---
+
+## Uji Re-evaluasi Server (anti-tamper)
+
+Sejak submit order **re-evaluasi ulang** di server, angka diskon dari client diabaikan dan checkout ditolak bila code tak lagi valid. Uji dengan `curl`/DevTools (butuh cookie session login):
+
+1. **Angka digelembungkan** — POST `/api/public/orders` dengan `promotionDiscount` besar tapi code `WELCOME10` valid → order **tetap** tersimpan dengan `promotionDiscount` hasil **server** (bukan angka kirimanmu).
+
+   ```bash
+   curl -X POST http://localhost:3000/api/public/orders \
+     -H 'Content-Type: application/json' -b "$COOKIE" \
+     -d '{ ...order..., "promotionDiscount": 9999999,
+           "appliedPromotions": [{ "code": "WELCOME10" }] }'
+   # → 201, order.promotionDiscount = nilai engine, bukan 9999999
+   ```
+
+2. **Code palsu/expired** — `appliedPromotions:[{code:"NGASAL"}]` → **400** `{ success:false, invalidCodes:[...] }`, order **tidak** dibuat.
+3. **Kuota habis** — set `totalQuota:1`, pakai sekali, checkout kedua dengan code itu → **400** "Quota exhausted".
+4. **Stacking ilegal** — kirim satu code non-stackable + code lain → code ekstra ditandai invalid → **400**.
+5. **Edit order (admin)** — `PUT /api/admin/orders/:id` ubah promo → nilai otoritatif tersimpan, `promotion_usages` direkonsiliasi tanpa duplikat (simpan ulang tidak menggandakan `usedCount`).

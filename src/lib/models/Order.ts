@@ -10,7 +10,6 @@ export interface IStatusLog {
   date: Date;
   username: string;
 }
-
 export interface IPaymentProof {
   imageUrl: string;
   imagePublicId: string;
@@ -75,7 +74,7 @@ const OrderDetailSchema = new Schema<IOrderDetail>(
       type: Number,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const ShippingAddressSchema = new Schema<IShippingAddress>(
@@ -113,7 +112,7 @@ const ShippingAddressSchema = new Schema<IShippingAddress>(
       required: [true, "Please input a zipcode"],
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const StatusLogSchema = new Schema<IStatusLog>(
@@ -122,7 +121,7 @@ const StatusLogSchema = new Schema<IStatusLog>(
     date: { type: Date, default: Date.now },
     username: { type: String, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const PaymentProofSchema = new Schema<IPaymentProof>(
@@ -134,7 +133,7 @@ const PaymentProofSchema = new Schema<IPaymentProof>(
     uploadedAt: { type: Date, default: Date.now },
     uploadedBy: { type: String, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const AppliedPromotionSchema = new Schema<IAppliedPromotion>(
@@ -159,7 +158,7 @@ const AppliedPromotionSchema = new Schema<IAppliedPromotion>(
     },
     discountCurrency: { type: String, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const OrderSchema = new Schema<IOrder>(
@@ -260,7 +259,7 @@ const OrderSchema = new Schema<IOrder>(
       default: [],
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Order = mongoose.models.Order || mongoose.model("Order", OrderSchema);

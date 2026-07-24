@@ -7,7 +7,12 @@ import { OrderForm } from "@/lib/types/order";
 import Order from "@/lib/models/Order";
 import ProductVariant from "@/lib/models/ProductVariant";
 import dbConnect from "@/lib/mongodb";
-import { syncOrderPromotionUsages } from "@/lib/helpers/promotion-service";
+import {
+  clearOrderPromotionUsages,
+  recordOrderPromotionUsages,
+  resolveAppliedPromotions,
+} from "@/lib/helpers/promotion-service";
+import type { EvaluationCart } from "@/lib/types/promotion";
 import { NextRequest, NextResponse } from "next/server";
 
 interface Context {
@@ -150,8 +155,71 @@ export async function PUT(req: NextRequest, { params }: Context) {
       originalOrder.baseRupiah
     );
 
+    // Re-evaluate promotions server-side from the submitted CODES only — never
+    // trust the client's discount numbers. Two edit-specific adjustments so the
+    // engine sees the world *without this order*: (1) clear this order's own
+    // usage rows first, so a limited-quota promo it already consumed isn't
+    // counted against itself; (2) exclude this order from the customer's order
+    // count, so first-purchase/new-customer rules still hold.
+    const originalApplied = (originalOrder.appliedPromotions ??
+      []) as OrderForm["appliedPromotions"];
+    await clearOrderPromotionUsages(id);
+
+    const orderCountExcludingSelf = await Order.countDocuments({
+      userId: originalOrder.userId,
+      _id: { $ne: id },
+    });
+
+    const evaluationCart: EvaluationCart = {
+      items: orderDetails.map((i: any) => ({
+        productId: i.productId,
+        variantId: i.variantId,
+        categoryId: i.categoryId,
+        quantity: i.quantity,
+        unitPrice:
+          (i.discountedPrice?.[originalOrder.currency] ??
+            i.originalPrice?.[originalOrder.currency]) || 0,
+        subTotal: i.subTotal,
+      })),
+      subtotal: totalAmount,
+      shippingCost: body.shippingCost || 0,
+    };
+    const {
+      appliedPromotions,
+      promotionDiscount,
+      invalid,
+    } = await resolveAppliedPromotions({
+      codes: ((body as any).appliedPromotions ?? []).map((p: any) => p.code),
+      cart: evaluationCart,
+      customer: {
+        userId: originalOrder.userId,
+        type: originalOrder.orderType === "B2B" ? "RESELLER" : "RETAIL",
+        orderCount: orderCountExcludingSelf,
+      },
+      currency: originalOrder.currency,
+    });
+    if (invalid.length > 0) {
+      // Restore the order's original usage rows before bailing out.
+      await recordOrderPromotionUsages({
+        _id: originalOrder._id,
+        userId: originalOrder.userId,
+        invoiceNumber: originalOrder.invoiceNumber,
+        currency: originalOrder.currency,
+        appliedPromotions: originalApplied,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Promotion no longer valid: ${invalid
+            .map((i) => `${i.code} (${i.reason})`)
+            .join(", ")}`,
+          invalidCodes: invalid,
+        },
+        { status: 400 }
+      );
+    }
+
     // Calculate revenue from the normalized amounts
-    const promotionDiscount = (body as any).promotionDiscount || 0;
     const { grossRevenue, netRevenue } = calculateOrderRevenue({
       orderDetails,
       currency: originalOrder.currency,
@@ -175,8 +243,8 @@ export async function PUT(req: NextRequest, { params }: Context) {
         baseRupiah,
         grossRevenue,
         netRevenue,
-        promotionDiscount,
-        appliedPromotions: (body as any).appliedPromotions || [],
+        promotionDiscount, // server-recomputed
+        appliedPromotions, // server-recomputed
       },
       { new: true, runValidators: true }
     );
@@ -188,8 +256,8 @@ export async function PUT(req: NextRequest, { params }: Context) {
       );
     }
 
-    // Reconcile promotion usage records with the order's current promotions
-    await syncOrderPromotionUsages(updatedOrder);
+    // Usage for this order was cleared above; record the fresh set.
+    await recordOrderPromotionUsages(updatedOrder);
 
     return NextResponse.json(
       {

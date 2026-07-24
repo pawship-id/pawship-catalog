@@ -11,7 +11,11 @@ import {
   calculateOrderRevenue,
   normalizeOrderMoney,
 } from "@/lib/helpers/currency-helper";
-import { recordOrderPromotionUsages } from "@/lib/helpers/promotion-service";
+import {
+  recordOrderPromotionUsages,
+  resolveAppliedPromotions,
+} from "@/lib/helpers/promotion-service";
+import type { EvaluationCart } from "@/lib/types/promotion";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
@@ -34,12 +38,57 @@ export async function POST(req: NextRequest) {
       body.currency,
     );
 
+    // NOTE: For admin-created orders the buyer may be supplied in the body.
+    const userIdForOrder = (body as any).userId || session.user.id;
+
+    // Re-evaluate promotions server-side from the submitted CODES only — never
+    // trust the client's discount numbers. Reject the create if any code is no
+    // longer valid (expired / quota exhausted / cart no longer qualifies).
+    const evaluationCart: EvaluationCart = {
+      items: orderDetails.map((i: any) => ({
+        productId: i.productId,
+        variantId: i.variantId,
+        categoryId: i.categoryId,
+        quantity: i.quantity,
+        unitPrice:
+          (i.discountedPrice?.[body.currency] ??
+            i.originalPrice?.[body.currency]) || 0,
+        subTotal: i.subTotal,
+      })),
+      subtotal: totalAmount,
+      shippingCost: body.shippingCost || 0,
+    };
+    const {
+      appliedPromotions,
+      promotionDiscount,
+      invalid,
+    } = await resolveAppliedPromotions({
+      codes: ((body as any).appliedPromotions ?? []).map((p: any) => p.code),
+      cart: evaluationCart,
+      customer: {
+        userId: userIdForOrder,
+        type: body.orderType === "B2B" ? "RESELLER" : "RETAIL",
+      },
+      currency: body.currency,
+    });
+    if (invalid.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Promotion no longer valid: ${invalid
+            .map((i) => `${i.code} (${i.reason})`)
+            .join(", ")}`,
+          invalidCodes: invalid,
+        },
+        { status: 400 },
+      );
+    }
+
     // Snapshot the rupiah rate at order time, so a later rate change never
     // moves the revenue of this order
     const baseRupiah = await getRateToIDR(body.currency);
 
     // Calculate revenue in IDR from the normalized amounts
-    const promotionDiscount = (body as any).promotionDiscount || 0;
     const { grossRevenue, netRevenue } = calculateOrderRevenue({
       orderDetails,
       currency: body.currency,
@@ -49,10 +98,6 @@ export async function POST(req: NextRequest) {
       baseRupiah,
       promotionDiscount,
     });
-
-    // NOTE: For admin-created orders, use customerId from body if provided
-    // Otherwise fall back to session user ID (for backward compatibility)
-    const userIdForOrder = (body as any).userId || session.user.id;
 
     // `revenue` is legacy and derived — never trust a client supplied value
     const { revenue: _ignoredRevenue, ...safeBody } = body as any;
@@ -67,8 +112,8 @@ export async function POST(req: NextRequest) {
       grossRevenue,
       netRevenue,
       discountShipping: body.discountShipping || 0, // Set default 0 if not provided
-      promotionDiscount,
-      appliedPromotions: (body as any).appliedPromotions || [],
+      promotionDiscount, // server-recomputed
+      appliedPromotions, // server-recomputed
     };
 
     // Generate unique invoice number based on shipping address country

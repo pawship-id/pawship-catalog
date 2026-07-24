@@ -19,6 +19,8 @@ Dokumentasi untuk modul Promotion di Pawship Catalog setelah **redesign total (b
 - [API Endpoints](#-api-endpoints)
 - [Frontend — Manajemen Promotion](#️-frontend--manajemen-promotion)
 - [Integrasi Admin Order](#-integrasi-admin-order)
+- [Integrasi Cart Customer (Publik)](#-integrasi-cart-customer-publik)
+- [Re-evaluasi Server saat Submit (Otoritatif)](#-re-evaluasi-server-saat-submit-otoritatif)
 - [Perubahan Storefront](#-perubahan-storefront)
 - [Breaking Changes](#️-breaking-changes)
 - [Catatan & Limitasi](#-catatan--limitasi)
@@ -75,6 +77,9 @@ Sistem baru punya tiga bagian:
 - ✅ Collection `promotion_usages` untuk audit, kuota, limit per customer, dan laporan
 - ✅ Promotion Engine murni (tanpa akses DB) — mudah diuji & dipakai ulang
 - ✅ Integrasi Admin Order: selector + kartu promo + status disabled beserta alasannya + apply
+- ✅ Integrasi **Cart customer publik** (`/cart`): apply code + kartu promo lewat modal yang sama (endpoint publik)
+- ✅ **Re-evaluasi otoritatif di server** saat submit order (public POST, admin POST/PUT) — angka diskon dari client tidak dipercaya, checkout ditolak (400) bila code tidak lagi valid
+- ✅ `recordOrderPromotionUsages` idempotent (dijaga per `orderId`) — retry/submit ganda tidak menggandakan pemakaian
 - ✅ Promo berlaku untuk B2C **dan** B2B (reseller); `stackable` mengatur kombinasi dengan diskon tier reseller
 
 ---
@@ -89,11 +94,18 @@ src/
 │   │   ├── create/page.tsx                # Form create
 │   │   ├── [id]/edit/page.tsx             # Form edit
 │   │   └── [id]/detail/page.tsx           # View detail
-│   └── api/admin/promotions/
-│       ├── route.ts                       # GET (all), POST (create)
-│       ├── [id]/route.ts                  # GET, PUT, PATCH (soft delete)
-│       ├── available/route.ts             # POST — daftar promo utk order selector (+ evaluasi)
-│       └── evaluate/route.ts              # POST — evaluasi 1 code (apply / input manual)
+│   ├── api/admin/promotions/
+│   │   ├── route.ts                       # GET (all), POST (create)
+│   │   ├── [id]/route.ts                  # GET, PUT, PATCH (soft delete)
+│   │   ├── available/route.ts             # POST — daftar promo utk order selector (+ evaluasi)
+│   │   └── evaluate/route.ts              # POST — evaluasi 1 code (apply / input manual)
+│   ├── api/public/promotions/             # Versi PUBLIK utk cart customer (proxy service yg sama)
+│   │   ├── available/route.ts             # POST — daftar promo + evaluasi (read-only)
+│   │   └── evaluate/route.ts              # POST — evaluasi 1 code
+│   ├── api/public/orders/route.ts         # POST — checkout customer (re-evaluasi promo server-side)
+│   ├── api/admin/orders/route.ts          # POST — create order admin (re-evaluasi promo server-side)
+│   ├── api/admin/orders/[id]/route.ts     # PUT — edit order admin (re-evaluasi + rekonsiliasi usage)
+│   └── (public)/cart/page.tsx             # Cart customer: Apply Promotion + ringkasan diskon
 ├── components/admin/
 │   ├── promotions/
 │   │   ├── table-promotion.tsx            # Tabel + status badge + pagination
@@ -105,7 +117,7 @@ src/
 │   │   ├── tier-builder.tsx               # Builder tier (threshold + rewards)
 │   │   └── detail/detail-promotion.tsx    # Tampilan read-only lengkap
 │   └── orders/
-│       └── promotion-selector-modal.tsx   # Modal kartu promo di halaman order
+│       └── promotion-selector-modal.tsx   # Modal kartu promo (dipakai Admin Order & Cart publik via prop `availableEndpoint`)
 ├── lib/
 │   ├── models/
 │   │   ├── Promotion.ts                    # Mongoose model + IPromotion
@@ -378,8 +390,10 @@ Akses DB dipisah dari engine murni:
 | `evaluatePromotionDoc(promo, input)` | Rakit stats + panggil engine                                       |
 | `evaluateByCode(code, input)`   | Cari promo by code lalu evaluasi (jalur input manual)                    |
 | `listAvailablePromotions(input)`| Promo untuk selector order + evaluasi tiap kartu                        |
-| `recordOrderPromotionUsages(order)` | Catat pemakaian + `$inc usedCount` saat order dibuat               |
-| `syncOrderPromotionUsages(order)` | Rekonsiliasi pemakaian saat order diedit                             |
+| `resolveAppliedPromotions({ codes, cart, customer, currency, now? })` | **Re-evaluasi otoritatif** satu set code saat submit → `{ appliedPromotions, promotionDiscount, invalid[] }`. Validasi kombinasi stacking. Dipakai ketiga route order |
+| `recordOrderPromotionUsages(order)` | Catat pemakaian + `$inc usedCount` saat order dibuat. **Idempotent** (skip code yg sudah tercatat utk `orderId`) |
+| `clearOrderPromotionUsages(orderId)` | Hapus pemakaian order + `$dec usedCount` (tak pernah < 0)            |
+| `syncOrderPromotionUsages(order)` | Rekonsiliasi = `clear` + `record` (jalur edit)                        |
 
 ---
 
@@ -478,6 +492,15 @@ Mengembalikan promo `ACTIVE` + `CODE` + dalam rentang tanggal, masing-masing dil
 
 `data` berisi hasil engine (`{ valid, promotion, discount, shippingDiscount, freeGift, messages }` atau `{ valid:false, reason }`). Dipakai saat admin mengetik code manual atau menekan Apply.
 
+### 6. Endpoint Publik (Cart Customer)
+
+Cart storefront memakai endpoint di bawah `/api/public/promotions` — **proxy tipis** yang memanggil `listAvailablePromotions` / `evaluateByCode` yang sama. Evaluasi bersifat read-only (murni engine), jadi aman diekspos ke storefront.
+
+- **POST** `/api/public/promotions/available` — sama seperti versi admin (daftar promo + `evaluation` per kartu).
+- **POST** `/api/public/promotions/evaluate` — sama seperti versi admin (evaluasi 1 code).
+
+Modal `promotion-selector-modal.tsx` menerima prop opsional **`availableEndpoint`** (default route admin); cart publik mengarahkannya ke `/api/public/promotions/available`.
+
 ---
 
 ## 🖥️ Frontend — Manajemen Promotion
@@ -546,13 +569,65 @@ netRevenue   = (totalAmount + shippingCost − discountShipping − promotionDis
 
 ---
 
+## 🛍️ Integrasi Cart Customer (Publik)
+
+Customer kini bisa apply promo langsung di **`/cart`** (`src/app/(public)/cart/page.tsx`), memakai ulang `promotion-selector-modal.tsx` yang sama dengan Admin Order.
+
+- Tombol **Apply Promotion** di Order Summary membuka modal (diarahkan ke endpoint publik `available` lewat prop `availableEndpoint`).
+- Modal, kartu promo, ringkasan syarat/benefit, disabled+alasan, input code manual — semuanya identik dengan Admin Order.
+- Aturan stacking sama: non-stackable menggantikan semua; stackable hanya berdampingan dengan stackable lain.
+- Ringkasan cart menampilkan baris **Promotion discount** dan **Total** yang sudah dipotong (`total = Σ subTotal + shipping − promotionDiscount`).
+- `appliedPromotions` + `promotionDiscount` ikut dikirim ke `POST /api/public/orders` saat checkout.
+
+> **Guard stale-discount:** karena diskon per-currency dan bergantung isi cart, `appliedPromotions` otomatis di-reset saat qty diubah / item dihapus — mencegah diskon basi terbawa ke checkout. Server tetap re-evaluasi ulang (lihat bawah).
+
+---
+
+## 🔒 Re-evaluasi Server saat Submit (Otoritatif)
+
+Sejak `/cart` publik bisa apply promo, order-submit menjadi **permukaan yang tidak tepercaya**. Karena itu **ketiga route order** kini menjalankan ulang engine di server dan **tidak mempercayai angka diskon dari client** — hanya **code** promo yang dibaca.
+
+| Route | Perilaku |
+| ----- | -------- |
+| `POST /api/public/orders` | Re-evaluasi + `recordOrderPromotionUsages` (idempotent) |
+| `POST /api/admin/orders` | Re-evaluasi + `recordOrderPromotionUsages` |
+| `PUT /api/admin/orders/:id` | Re-evaluasi + rekonsiliasi usage (lihat catatan edit) |
+
+### Alur di setiap route
+
+```
+1. normalizeOrderMoney → orderDetails, totalAmount (dibulatkan per-currency)
+2. Bangun EvaluationCart dari orderDetails ternormalisasi + customer (type dari orderType)
+3. codes = body.appliedPromotions[].code            // hanya CODE yg dibaca
+4. resolveAppliedPromotions({ codes, cart, customer, currency })
+   → { appliedPromotions (otoritatif), promotionDiscount (roundMoney), invalid[] }
+5. invalid.length > 0 → HTTP 400 { success:false, message, invalidCodes }  // order TIDAK dibuat
+6. Simpan appliedPromotions & promotionDiscount hasil SERVER (angka client diabaikan)
+7. calculateOrderRevenue memakai promotionDiscount server → netRevenue
+```
+
+- **Reject on invalid:** bila ada code yang tidak lagi valid (expired / kuota habis / cart tak lagi memenuhi syarat) → **400** dengan daftar `invalidCodes`, order tidak dibuat, stok tidak berubah (public/admin create).
+- **Validasi stacking di server:** kombinasi legal hanya *satu non-stackable* **atau** *banyak stackable*. Request yang mencoba menumpuk non-stackable ditolak.
+- **Idempotency:** `recordOrderPromotionUsages` melewati promo yang sudah tercatat untuk `orderId` itu, jadi retry/submit-ganda tidak menggandakan `usedCount`.
+
+### Catatan khusus jalur Edit (`PUT`)
+
+Agar engine "melihat dunia tanpa order ini":
+
+1. **Clear usage order ini dulu** — supaya promo berkuota-terbatas yang sudah dipakai order ini tidak dihitung melawan dirinya sendiri.
+2. **`orderCount` dikecualikan diri** (`countDocuments({ userId, _id: { $ne: id } })`) — supaya rule first-purchase/new-customer tetap konsisten.
+3. Bila re-evaluasi **invalid** → usage lama order **dipulihkan** (rollback) sebelum kembali 400.
+4. Bila valid → order di-update lalu `recordOrderPromotionUsages` mencatat set terbaru.
+
+---
+
 ## 🌐 Perubahan Storefront
 
 Modul promo lama dulu menampilkan diskon otomatis di katalog (coret harga di kartu produk, badge diskon di detail, diskon B2C di cart). Karena promo sekarang **berbasis code saat checkout**, tampilan diskon otomatis itu dihapus:
 
 - `src/components/product-card.tsx` — menampilkan **harga dasar** (min harga varian), tanpa coret otomatis.
 - `src/components/product/product-pricing.tsx` — menampilkan harga dasar; diskon tier reseller (B2B) tetap jalan (jalur terpisah).
-- `src/app/(public)/cart/page.tsx` — B2C memakai harga dasar; diskon tier reseller B2B tidak berubah.
+- `src/app/(public)/cart/page.tsx` — item memakai harga dasar (diskon tier reseller B2B tidak berubah). **Diskon promo kini diterapkan lewat code saat checkout** (lihat [Integrasi Cart Customer](#-integrasi-cart-customer-publik)), bukan otomatis per item.
 - `PromoContext`, `promo-helper.ts`, dan mount `PromoProvider` di `providers.tsx` dihapus.
 
 ---
@@ -569,21 +644,27 @@ Modul promo lama dulu menampilkan diskon otomatis di katalog (coret harga di kar
 
 ## 📝 Catatan & Limitasi
 
+### 1. ~~Input code di checkout customer (publik)~~ ✅ SELESAI (2026-07-20)
+
+Cart publik `/cart` kini punya Apply Promotion (memakai ulang modal + endpoint publik). Lihat [Integrasi Cart Customer](#-integrasi-cart-customer-publik).
+
+### 2. ~~Re-evaluasi sisi server saat submit~~ ✅ SELESAI (2026-07-21)
+
+Ketiga route order kini re-evaluasi otoritatif di server (`resolveAppliedPromotions`) dan menolak checkout (400) bila code tidak valid. Lihat [Re-evaluasi Server saat Submit](#-re-evaluasi-server-saat-submit-otoritatif).
+
+---
+
 Beberapa hal sengaja **belum** dikerjakan dan menjadi follow-up:
 
-### 1. Input code di checkout customer (publik) belum ada
+### 3. Order-submit belum transaksional (sharp edge)
 
-Saat ini hanya **Admin Order** (create/edit) yang terintegrasi dengan engine. Checkout customer di storefront belum punya input code. Untuk menambahkannya, buat endpoint publik yang memakai kembali `evaluate` + engine yang sama.
+Route `PUT /api/admin/orders/:id` mengubah **stok sebelum** re-evaluasi promo, jadi edit yang ditolak karena promo invalid tetap sudah menyentuh stok (pola "mutate lalu validate" yang sudah ada). POST juga tidak transaksional. Follow-up: pindahkan validasi sebelum mutasi stok + bungkus dalam session/transaction MongoDB.
 
-### 2. Re-evaluasi sisi server saat submit belum dipaksakan
-
-Route order (POST/PUT) **menyimpan** `appliedPromotions`/`promotionDiscount` yang dihitung client dan mencatat pemakaian, tetapi **tidak** menjalankan ulang engine di server untuk menghitung ulang diskon secara otoritatif. Kuota baru dicek saat apply (endpoint `evaluate`/`available`). Untuk klien yang tidak tepercaya, tambahkan re-evaluasi server sebelum menyimpan.
-
-### 3. Trigger `AUTOMATIC` disiapkan, belum dipakai
+### 4. Trigger `AUTOMATIC` disiapkan, belum dipakai
 
 Schema mendukung `AUTOMATIC`, tapi semua promo saat ini `CODE`. Promo otomatis di katalog memerlukan endpoint publik baru untuk menampilkannya.
 
-### 4. Scope `BRANDS` direservasi
+### 5. Scope `BRANDS` direservasi
 
 `BRANDS` valid di enum tetapi belum bisa dipilih karena belum ada model Brand. Desain `appliesTo` generik sehingga dukungan brand bisa ditambahkan tanpa mengubah schema.
 
@@ -591,13 +672,28 @@ Schema mendukung `AUTOMATIC`, tapi semua promo saat ini `CODE`. Promo otomatis d
 
 ## 🔬 Verifikasi
 
+- ✅ **Type-check hijau** — `npx tsc --noEmit` bersih setelah penambahan endpoint publik + re-evaluasi server; tidak ada circular import.
 - ✅ **Production build hijau** — `npm run build` sukses; seluruh route baru (`/dashboard/promotions/*`) ter-compile, route lama (`/dashboard/promos/*`) hilang, 0 error tipe di source.
 - ✅ **Engine diuji unit** — 14/14 skenario lolos: minimum purchase (gagal & lolos + alasan), matematika persentase, cap `maxDiscount`, resolusi tier (600k→15%), `resellerOnly` (dua arah), free shipping, kuota habis, expired, filter `appliesTo`, dan derivasi first purchase.
 
-Skenario yang perlu diuji manual di lingkungan dengan database:
+Skenario yang perlu diuji manual di lingkungan dengan database (butuh MongoDB + session login + promo ter-seed):
+
+**Admin Order & engine**
 
 1. Seed satu promo lewat `POST /api/admin/promotions` (mis. `WELCOME10`, minimum purchase per currency, reward persentase + tier).
 2. Di `dashboard/orders/create`, tambah item, buka selector — cek kartu aktif, kartu disabled + alasan, View Details, input code manual.
 3. Apply promo valid → ringkasan/subtotal/diskon terupdate, `appliedPromotions` tercatat; apply promo invalid → error tampil.
 4. Submit order → cek dokumen `promotion_usages` terbuat, `Promotion.usedCount` bertambah, dan `netRevenue` benar.
 5. Uji B2B: promo `stackable` menambah di atas diskon tier reseller; non-stackable menggantikannya.
+
+**Cart customer publik**
+
+6. Di `/cart`, Apply Promotion → diskon & Total terupdate; ubah qty → `appliedPromotions` ter-reset.
+7. Checkout dengan promo valid → order dibuat, `promotionDiscount`/`appliedPromotions` sesuai engine.
+
+**Re-evaluasi server (otoritatif)**
+
+8. **Tamper angka:** POST `/api/public/orders` dengan `promotionDiscount` digelembungkan tapi code valid → order tersimpan dengan angka **server**, bukan angka client.
+9. **Code palsu/expired:** POST dengan code tak dikenal/expired → **400** + `invalidCodes`, order tidak dibuat.
+10. **Kuota:** set promo `totalQuota: 1`, pakai sekali, checkout kedua dengan code itu → **400** "Quota exhausted".
+11. **Edit order:** ubah promo lewat `PUT` → nilai otoritatif tersimpan & usage direkonsiliasi (`promotion_usages` + `usedCount` benar, tanpa duplikat saat simpan ulang).
