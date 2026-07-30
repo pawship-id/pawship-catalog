@@ -43,7 +43,7 @@ export async function registerAction(
     await newUser.save();
     return {
       status: "success",
-      message: "You can now log in.",
+      message: "Signing you in...",
       formData: { fullName, phoneNumber, email, password, confirmPassword },
     };
   } catch (error: any) {

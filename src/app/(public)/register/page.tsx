@@ -4,7 +4,7 @@ import { registerAction } from "@/lib/actions/auth";
 import { ActionResult } from "@/lib/types";
 import { useActionState, useEffect, useState } from "react";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
-import { redirect } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Eye, EyeOff } from "lucide-react";
 import { useFormStatus } from "react-dom";
 
@@ -46,13 +46,33 @@ export default function RegisterPage() {
     if (state.status === "error") {
       showErrorAlert("Registration Failed", state.message);
     } else if (state.status === "success") {
-      showSuccessAlert("Registration Successful", state.message);
-
-      setTimeout(() => {
-        redirect("/login");
-      }, 2000);
+      autoLogin(state.formData?.email, state.formData?.password);
     }
   }, [state]);
+
+  // sign the new user in straight away so they don't have to log in manually
+  async function autoLogin(email?: string, password?: string) {
+    const res =
+      email && password
+        ? await signIn("credentials", { email, password, redirect: false })
+        : null;
+
+    if (!res || res.error) {
+      // registration itself succeeded, so fall back to the login page
+      showSuccessAlert("Registration Successful", "Please log in to continue.");
+
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 2000);
+      return;
+    }
+
+    showSuccessAlert("Registration Successful", state.message);
+
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 2000);
+  }
 
   return (
     <div className="bg-gray-100 flex items-center justify-center py-25 font-sans">
