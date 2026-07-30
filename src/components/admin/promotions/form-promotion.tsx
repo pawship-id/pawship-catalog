@@ -60,6 +60,15 @@ function toDateTimeLocal(value?: string | Date): string {
   )}:${pad(d.getMinutes())}`;
 }
 
+// A datetime-local value ("2026-07-30T21:05") carries no timezone, so parsing it
+// on the server resolves it against the SERVER's timezone (UTC in production)
+// instead of the admin's. Pin it to an absolute instant here, in the browser.
+function toIsoInstant(value: string): string {
+  if (!value) return "";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 function createEmptyForm(): PromotionForm {
   return {
     name: "",
@@ -174,7 +183,12 @@ export default function FormPromotion({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const payload = { ...form, code: form.code.trim().toUpperCase() };
+    const payload = {
+      ...form,
+      code: form.code.trim().toUpperCase(),
+      startAt: toIsoInstant(form.startAt),
+      endAt: toIsoInstant(form.endAt),
+    };
 
     const errors = validatePromotionPayload(payload);
     if (errors.length > 0) {
