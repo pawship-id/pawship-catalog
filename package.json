@@ -9,7 +9,8 @@
     "seed": "node ./src/lib/seeders/productSeeder.js",
     "seed:currency": "node ./src/lib/seeders/currencySeeder.js",
     "backfill:revenue": "node ./src/lib/migrations/backfillOrderRevenue.js",
-    "backfill:money": "node ./src/lib/migrations/backfillOrderMoney.js"
+    "backfill:money": "node ./src/lib/migrations/backfillOrderMoney.js",
+    "price:bulk-update": "node ./scripts/bulk-update-price.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
