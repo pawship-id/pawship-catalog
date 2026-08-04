@@ -154,14 +154,16 @@ export const filterProducts = (
     case "price-high":
       filtered.sort((a, b) => b.minPrice - a.minPrice);
       break;
+    case "name":
+      filtered.sort((a, b) => a.productName.localeCompare(b.productName));
+      break;
     case "newest":
+    default:
+      // Default: produk yang paling terakhir ditambahkan tampil paling atas
       filtered.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-      break;
-    case "name":
-      filtered.sort((a, b) => a.productName.localeCompare(b.productName));
       break;
   }
 
