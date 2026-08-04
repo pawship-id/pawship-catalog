@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getAll, getById, updateData } from "@/lib/apiService";
 import { OrderData, IOrderDetail, IAppliedPromotion } from "@/lib/types/order";
@@ -58,6 +58,7 @@ import ProductSelectorModal from "@/components/admin/orders/product-selector-mod
 import VariantSelectorModal from "@/components/admin/orders/variant-selector-modal";
 import PromotionSelectorModal from "@/components/admin/orders/promotion-selector-modal";
 import { summarizeBenefits } from "@/lib/helpers/promotion-engine";
+import { revalidateAppliedPromotions } from "@/lib/helpers/promotion-client";
 import type {
   EvaluationCart,
   EvaluationCustomer,
@@ -673,6 +674,46 @@ export default function EditOrderPage() {
   const handleRemovePromotion = (code: string) => {
     setAppliedPromotions((prev) => prev.filter((p) => p.code !== code));
   };
+
+  // Keep tiered promotions honest while the admin edits line items — see the
+  // create page for the same guard. Evaluated on the order's own channel, which
+  // is also what the PUT handler re-resolves against.
+  const cartSignature = useMemo(
+    () =>
+      JSON.stringify({
+        items: editedItems.map((i) => [i.variantId, i.quantity, i.subTotal]),
+        shippingCost: order?.shippingCost || 0,
+        currency: order?.currency || "IDR",
+        codes: appliedPromotions.map((p) => p.code).sort(),
+      }),
+    [editedItems, order?.shippingCost, order?.currency, appliedPromotions],
+  );
+
+  useEffect(() => {
+    if (appliedPromotions.length === 0 || editedItems.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { applied, dropped, changed } = await revalidateAppliedPromotions({
+        applied: appliedPromotions,
+        cart: buildCart(),
+        customer: buildCustomer(),
+        currency: order?.currency || "IDR",
+        channel: order?.channel,
+      });
+      if (cancelled || !changed) return;
+      setAppliedPromotions(applied);
+      if (dropped.length > 0) {
+        showErrorAlert(
+          "Promotion removed",
+          dropped.map((d) => `${d.code}: ${d.reason}`),
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartSignature]);
 
   // Update order total amount.
   // NOTE: revenue is owned by the API, which values the order with the
@@ -1582,6 +1623,10 @@ export default function EditOrderPage() {
               currency={order.currency}
               appliedCodes={appliedPromotions.map((p) => p.code)}
               onApply={handleApplyPromotion}
+              // Evaluate on the channel this order was placed on — the same one
+              // the PUT handler re-evaluates against — so editing a web order
+              // still offers its web-only promotions.
+              channel={order.channel}
             />
           </div>
         )

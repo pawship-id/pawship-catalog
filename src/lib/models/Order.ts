@@ -4,6 +4,7 @@ import {
   IOrderDetail,
   IShippingAddress,
 } from "../types/order";
+import { PROMOTION_CHANNELS, type PromotionChannel } from "../types/promotion";
 
 export interface IStatusLog {
   status: string;
@@ -36,6 +37,7 @@ export interface IOrder extends Document {
   discountShipping: number;
   orderType: "B2C" | "B2B";
   currency: string;
+  channel?: PromotionChannel;
   appliedPromotions: IAppliedPromotion[];
   promotionDiscount?: number; // total promotion benefit (product + shipping), order currency
   baseRupiah?: number; // Rupiah rate of `currency`, snapshotted when the order was created
@@ -144,6 +146,7 @@ const AppliedPromotionSchema = new Schema<IAppliedPromotion>(
     trigger: { type: String },
     stackable: { type: Boolean, default: false },
     rewardsSummary: { type: String },
+    appliedTierLabel: { type: String },
     productDiscount: { type: Number, default: 0 },
     shippingDiscount: { type: Number, default: 0 },
     freeGift: {
@@ -220,6 +223,13 @@ const OrderSchema = new Schema<IOrder>(
       type: String,
       enum: ["B2C", "B2B"],
       default: "B2C",
+    },
+    // Deliberately has NO default: orders created before channels existed stay
+    // `undefined`, and the admin edit path reads that as "evaluate without a
+    // channel filter" so re-saving an old order can never reject its promo.
+    channel: {
+      type: String,
+      enum: [...PROMOTION_CHANNELS],
     },
     appliedPromotions: {
       type: [AppliedPromotionSchema],

@@ -27,8 +27,10 @@ import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 import { createData, getAll, updateData } from "@/lib/apiService";
 import { validatePromotionPayload } from "@/lib/helpers/promotion-validation";
 import {
+  PROMOTION_CHANNELS,
   PROMOTION_STATUSES,
   PROMOTION_TRIGGERS,
+  type PromotionChannel,
   type PromotionData,
   type PromotionForm,
 } from "@/lib/types/promotion";
@@ -39,6 +41,11 @@ import AppliesToSelector from "./applies-to-selector";
 import ConditionBuilder from "./condition-builder";
 import RewardBuilder from "./reward-builder";
 import TierBuilder from "./tier-builder";
+
+const CHANNEL_LABELS: Record<PromotionChannel, string> = {
+  WEB: "Web",
+  WHATSAPP: "WhatsApp",
+};
 
 interface CategoryLike {
   _id: string;
@@ -78,6 +85,7 @@ function createEmptyForm(): PromotionForm {
     status: "ACTIVE",
     priority: 0,
     stackable: false,
+    channels: [...PROMOTION_CHANNELS],
     startAt: "",
     endAt: "",
     appliesTo: { scope: "ALL", ids: [] },
@@ -159,6 +167,11 @@ export default function FormPromotion({
       status: initialData.status ?? "ACTIVE",
       priority: initialData.priority ?? 0,
       stackable: !!initialData.stackable,
+      // Promotions saved before channels existed have none — show them as
+      // available everywhere, which is exactly how the engine treats them.
+      channels: initialData.channels?.length
+        ? initialData.channels
+        : [...PROMOTION_CHANNELS],
       startAt: toDateTimeLocal(initialData.startAt),
       endAt: toDateTimeLocal(initialData.endAt),
       appliesTo: initialData.appliesTo ?? { scope: "ALL", ids: [] },
@@ -175,6 +188,27 @@ export default function FormPromotion({
   }, [initialData]);
 
   const patch = (p: Partial<PromotionForm>) => setForm((f) => ({ ...f, ...p }));
+
+  // Turning a channel off at the promotion level also drops it from every tier,
+  // otherwise a tier would be left pointing at a channel the promotion is no
+  // longer on and the payload would fail validation on save.
+  const toggleChannel = (channel: PromotionChannel, checked: boolean) =>
+    setForm((f) => {
+      const channels = checked
+        ? PROMOTION_CHANNELS.filter(
+            (c) => c === channel || f.channels.includes(c)
+          )
+        : f.channels.filter((c) => c !== channel);
+      return {
+        ...f,
+        channels,
+        tiers: f.tiers.map((t) => ({
+          ...t,
+          channels: (t.channels ?? []).filter((c) => channels.includes(c)),
+        })),
+      };
+    });
+
   const patchLimits = (p: Partial<PromotionForm["limits"]>) =>
     setForm((f) => ({ ...f, limits: { ...f.limits, ...p } }));
   const patchRules = (p: Partial<PromotionForm["customerRules"]>) =>
@@ -361,6 +395,33 @@ export default function FormPromotion({
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label className="text-base font-medium text-gray-700">
+                  Channels <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex flex-wrap gap-5">
+                  {PROMOTION_CHANNELS.map((channel) => (
+                    <label
+                      key={channel}
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-primary"
+                        checked={form.channels.includes(channel)}
+                        onChange={(e) => toggleChannel(channel, e.target.checked)}
+                      />
+                      {CHANNEL_LABELS[channel]}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Where this code can be redeemed. WhatsApp covers orders an
+                  admin keys in manually. Individual tiers can narrow this
+                  further.
+                </p>
+              </div>
+
               <div className="flex items-center gap-3">
                 <Switch
                   checked={form.stackable}
@@ -444,14 +505,15 @@ export default function FormPromotion({
         <TabsContent value="tiers" className="space-y-4 my-3">
           <Card className="bg-white border-gray-200">
             <CardHeader>
-              <CardTitle>Spend Tiers (optional)</CardTitle>
+              <CardTitle>Tiers (optional)</CardTitle>
               <CardDescription>
-                Reward scales with spend. When set, the highest qualifying tier
-                supersedes the rewards above.
+                Reward scales with spend or quantity. When set, the highest
+                qualifying tier supersedes the rewards above.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <TierBuilder
+                promotionChannels={form.channels}
                 value={form.tiers}
                 onChange={(tiers) => patch({ tiers })}
                 currencies={currencies}

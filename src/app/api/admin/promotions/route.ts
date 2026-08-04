@@ -13,6 +13,7 @@ function pickPromotionFields(body: any) {
     status: body.status,
     priority: body.priority,
     stackable: body.stackable,
+    channels: body.channels,
     startAt: body.startAt,
     endAt: body.endAt,
     appliesTo: body.appliesTo,

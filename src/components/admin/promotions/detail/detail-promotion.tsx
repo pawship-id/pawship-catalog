@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Edit } from "lucide-react";
 import { currencyFormat } from "@/lib/helpers";
+import { describeTiers } from "@/lib/helpers/promotion-engine";
 import type {
   Condition,
   MoneyMap,
@@ -120,6 +121,14 @@ export default function DetailPromotion({
             <Row label="Priority" value={promotion.priority} />
             <Row label="Stackable" value={promotion.stackable ? "Yes" : "No"} />
             <Row
+              label="Channels"
+              value={
+                promotion.channels?.length
+                  ? promotion.channels.join(", ")
+                  : "All channels"
+              }
+            />
+            <Row
               label="Active period"
               value={`${new Date(promotion.startAt).toLocaleString()} → ${new Date(
                 promotion.endAt
@@ -215,13 +224,19 @@ export default function DetailPromotion({
       {(promotion.tiers ?? []).length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Spend Tiers</CardTitle>
+            <CardTitle>Tiers</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {promotion.tiers.map((t, i) => (
-              <div key={i} className="text-sm rounded border px-3 py-2">
-                <span className="font-medium">Spend {money(t.threshold)}</span> →{" "}
-                {(t.rewards ?? []).map(describeReward).join(", ") || "—"}
+            {describeTiers(promotion).map((tier) => (
+              <div key={tier.threshold} className="text-sm rounded border px-3 py-2">
+                <span className="font-medium">{tier.threshold}</span> →{" "}
+                {tier.rewards}
+                {tier.channelNote && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({tier.channelNote})
+                  </span>
+                )}
               </div>
             ))}
           </CardContent>

@@ -12,16 +12,20 @@
  */
 
 import { currencyFormat } from "@/lib/helpers";
+import { getTiersBasis } from "@/lib/helpers/promotion-validation";
+import { PROMOTION_CHANNELS } from "@/lib/types/promotion";
 import type {
   ConditionType,
   EvaluationCart,
   EvaluationCartItem,
   EvaluationCustomer,
   FreeGiftResult,
+  PromotionChannel,
   PromotionData,
   PromotionEvaluationResult,
   RewardType,
   Tier,
+  TierBasis,
 } from "@/lib/types/promotion";
 
 export interface UsageStats {
@@ -36,6 +40,12 @@ export interface EvaluateArgs {
   currency: string;
   now: Date;
   usageStats: UsageStats;
+  /**
+   * Sales channel the checkout is happening on. Optional on purpose: when the
+   * caller omits it every channel restriction is skipped, so callers that
+   * predate channels behave exactly as they did before.
+   */
+  channel?: PromotionChannel;
 }
 
 interface EvalContext {
@@ -43,8 +53,10 @@ interface EvalContext {
   customer: EvaluationCustomer;
   currency: string;
   now: Date;
+  channel?: PromotionChannel;
   eligibleItems: EvaluationCartItem[];
   eligibleSubtotal: number; // Σ subTotal of items matching appliesTo, order currency
+  eligibleQuantity: number; // Σ quantity of items matching appliesTo
 }
 
 interface RewardResult {
@@ -190,21 +202,112 @@ const rewardCalculators: Record<
 };
 
 // ---------------------------------------------------------------------------
-// Tier resolution — highest tier whose threshold ≤ cart subtotal
+// Channel matching
 // ---------------------------------------------------------------------------
 
+/**
+ * An absent or empty channel list means "every channel", which is what makes
+ * the field safe on documents saved before channels existed. A missing
+ * `channel` argument means the caller does not care and every list matches.
+ */
+export function channelAllows(
+  channels: PromotionChannel[] | undefined,
+  channel?: PromotionChannel
+): boolean {
+  if (!channel) return true;
+  if (!Array.isArray(channels) || channels.length === 0) return true;
+  return channels.includes(channel);
+}
+
+// ---------------------------------------------------------------------------
+// Tier resolution — highest tier the cart qualifies for, on this channel
+// ---------------------------------------------------------------------------
+
+/**
+ * A tier's threshold as a comparable number. `Infinity` for a tier that carries
+ * no usable threshold, so it can never win.
+ */
+function tierThresholdValue(
+  tier: Tier,
+  basis: TierBasis,
+  currency: string
+): number {
+  const raw =
+    basis === "QUANTITY"
+      ? tier?.thresholdQuantity
+      : tier?.threshold?.[currency];
+  const value = Number(raw ?? Infinity);
+  return Number.isFinite(value) ? value : Infinity;
+}
+
+export interface ResolveTierOptions {
+  /** Eligible pieces in the cart — only read on the QUANTITY basis. */
+  quantity?: number;
+  channel?: PromotionChannel;
+}
+
+/**
+ * The highest tier the cart reaches. `subtotal` is used on the SPEND basis and
+ * `opts.quantity` on the QUANTITY basis. The first three parameters keep their
+ * original meaning and position so existing callers are unaffected.
+ */
 export function resolveTier(
   tiers: Tier[],
   currency: string,
-  subtotal: number
+  subtotal: number,
+  opts?: ResolveTierOptions
 ): Tier | null {
+  const basis = getTiersBasis(tiers);
+  if (!basis) return null;
+
+  const measured =
+    basis === "QUANTITY" ? Number(opts?.quantity ?? 0) : subtotal;
+
   const qualifying = (tiers ?? [])
-    .filter((t) => subtotal >= Number(t.threshold?.[currency] ?? Infinity))
+    .filter((t) => channelAllows(t.channels, opts?.channel))
+    .filter((t) => measured >= tierThresholdValue(t, basis, currency))
     .sort(
       (a, b) =>
-        Number(b.threshold?.[currency] ?? 0) - Number(a.threshold?.[currency] ?? 0)
+        tierThresholdValue(b, basis, currency) -
+        tierThresholdValue(a, basis, currency)
     );
   return qualifying[0] ?? null;
+}
+
+/**
+ * Why no tier applied. The shortfall is measured against the tiers available on
+ * THIS channel, so a WhatsApp customer holding 5 pieces is told the real bar
+ * ("Minimum 10 pcs") rather than the web-only 1-piece tier they cannot use.
+ */
+function describeTierShortfall(
+  tiers: Tier[],
+  currency: string,
+  channel?: PromotionChannel
+): string {
+  const available = (tiers ?? []).filter((t) =>
+    channelAllows(t.channels, channel)
+  );
+  if (available.length === 0) {
+    return "This promotion is not available on this channel";
+  }
+  const basis = getTiersBasis(tiers) ?? "SPEND";
+  const lowest = Math.min(
+    ...available.map((t) => tierThresholdValue(t, basis, currency))
+  );
+  return basis === "QUANTITY"
+    ? `Minimum ${lowest} pcs`
+    : `Minimum purchase ${currencyFormat(lowest, currency)}`;
+}
+
+/** Human-readable threshold for one tier, e.g. "10 pcs" or "Rp300.000". */
+export function describeTierThreshold(
+  tier: Tier,
+  basis: TierBasis,
+  currency: string
+): string {
+  return basis === "QUANTITY"
+    ? `${Number(tier?.thresholdQuantity ?? 0)} pcs`
+    : currencyFormat(Number(tier?.threshold?.[currency] ?? 0), currency);
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +342,7 @@ export function evaluatePromotion({
   currency,
   now,
   usageStats,
+  channel,
 }: EvaluateArgs): PromotionEvaluationResult {
   // 1. Active
   if (promotion.status !== "ACTIVE") return fail("Promotion is not active");
@@ -266,6 +370,12 @@ export function evaluatePromotion({
   const rulesCheck = checkCustomerRules(promotion.customerRules, customer);
   if (!rulesCheck.pass) return fail(rulesCheck.reason!);
 
+  // 4b. Channel — checked before appliesTo so an off-channel promotion says so
+  // plainly instead of being masked by "no items qualify".
+  if (!channelAllows(promotion.channels, channel)) {
+    return fail("This promotion is not available on this channel");
+  }
+
   // Build the eligible-item context from appliesTo
   const eligibleItems = cart.items.filter((i) =>
     matchesAppliesTo(i, promotion.appliesTo)
@@ -274,13 +384,16 @@ export function evaluatePromotion({
     return fail("No items in the cart qualify for this promotion");
   }
   const eligibleSubtotal = eligibleItems.reduce((s, i) => s + i.subTotal, 0);
+  const eligibleQuantity = eligibleItems.reduce((s, i) => s + i.quantity, 0);
   const ctx: EvalContext = {
     cart,
     customer,
     currency,
     now,
+    channel,
     eligibleItems,
     eligibleSubtotal,
+    eligibleQuantity,
   };
 
   // 5. Conditions (all must pass)
@@ -295,12 +408,14 @@ export function evaluatePromotion({
   let activeRewards = promotion.rewards ?? [];
   let appliedTier: Tier | null = null;
   if ((promotion.tiers ?? []).length > 0) {
-    appliedTier = resolveTier(promotion.tiers, currency, cart.subtotal);
+    // SPEND tiers keep comparing against the whole-cart subtotal (unchanged
+    // behaviour); QUANTITY tiers count the pieces that match `appliesTo`.
+    appliedTier = resolveTier(promotion.tiers, currency, cart.subtotal, {
+      quantity: eligibleQuantity,
+      channel,
+    });
     if (!appliedTier) {
-      const lowest = Math.min(
-        ...promotion.tiers.map((t) => Number(t.threshold?.[currency] ?? Infinity))
-      );
-      return fail(`Minimum purchase ${currencyFormat(lowest, currency)}`);
+      return fail(describeTierShortfall(promotion.tiers, currency, channel));
     }
     activeRewards = appliedTier.rewards ?? [];
   }
@@ -342,36 +457,108 @@ export function evaluatePromotion({
 // Card presenters (used by the available-promotions list & order cards)
 // ---------------------------------------------------------------------------
 
+function describeReward(
+  type: RewardType,
+  config: any,
+  currency: string
+): string {
+  switch (type) {
+    case "PERCENTAGE_DISCOUNT":
+      return `${config?.percentage ?? 0}% off`;
+    case "FIXED_DISCOUNT":
+      return `${currencyFormat(Number(config?.amount?.[currency] ?? 0), currency)} off`;
+    case "SHIPPING_DISCOUNT":
+      return "Shipping discount";
+    case "FREE_SHIPPING":
+      return "Free shipping";
+    case "FREE_GIFT":
+      return "Free gift";
+    default:
+      return "";
+  }
+}
+
+/** One tier, broken into parts so a card can lay it out however it likes. */
+export interface TierSummary {
+  /** e.g. "10 pcs" or "Rp 300.000" */
+  threshold: string;
+  /** e.g. "10% off" or "20% off + Free shipping" */
+  rewards: string;
+  /**
+   * Set only when this tier runs on FEWER channels than the promotion — e.g.
+   * "WEB only". A tier that matches the promotion's own channels needs no note,
+   * otherwise every line of a two-channel promo would carry the same noise.
+   */
+  channelNote?: string;
+}
+
+/**
+ * Tier breakdown, lowest threshold first. Pass `channel` to drop the tiers a
+ * customer cannot reach on that channel.
+ */
+export function describeTiers(
+  promotion: PromotionData,
+  currency = "IDR",
+  channel?: PromotionChannel
+): TierSummary[] {
+  const tiers = promotion.tiers ?? [];
+  if (tiers.length === 0) return [];
+  const basis = getTiersBasis(tiers) ?? "SPEND";
+  const promoChannels = promotion.channels?.length
+    ? promotion.channels
+    : [...PROMOTION_CHANNELS];
+
+  return tiers
+    .filter((t) => channelAllows(t.channels, channel))
+    .slice()
+    .sort(
+      (a, b) =>
+        tierThresholdValue(a, basis, currency) -
+        tierThresholdValue(b, basis, currency)
+    )
+    .map((tier) => {
+      const tierChannels = tier.channels?.length ? tier.channels : promoChannels;
+      const narrowed = tierChannels.length < promoChannels.length;
+      return {
+        threshold: describeTierThreshold(tier, basis, currency),
+        rewards:
+          (tier.rewards ?? [])
+            .map((r) => describeReward(r.type, r.config, currency))
+            .filter(Boolean)
+            .join(" + ") || "Special promotion",
+        channelNote: narrowed ? `${tierChannels.join(", ")} only` : undefined,
+      };
+    });
+}
+
+/**
+ * One line per tier — e.g. ["1 pcs → 5% off", "10 pcs → 10% off"]. Channel
+ * notes are left out; use `describeTiers` where they matter.
+ */
+export function summarizeTiers(
+  promotion: PromotionData,
+  currency = "IDR",
+  channel?: PromotionChannel
+): string[] {
+  return describeTiers(promotion, currency, channel).map(
+    (t) => `${t.threshold} → ${t.rewards}`
+  );
+}
+
 /** Short benefit summary for a promotion card, formatted in `currency`. */
 export function summarizeBenefits(
   promotion: PromotionData,
-  currency = "IDR"
+  currency = "IDR",
+  channel?: PromotionChannel
 ): string {
-  const parts: string[] = [];
-  const describeReward = (type: RewardType, config: any) => {
-    switch (type) {
-      case "PERCENTAGE_DISCOUNT":
-        return `${config?.percentage ?? 0}% off`;
-      case "FIXED_DISCOUNT":
-        return `${currencyFormat(Number(config?.amount?.[currency] ?? 0), currency)} off`;
-      case "SHIPPING_DISCOUNT":
-        return "Shipping discount";
-      case "FREE_SHIPPING":
-        return "Free shipping";
-      case "FREE_GIFT":
-        return "Free gift";
-      default:
-        return "";
-    }
-  };
+  // Tiers supersede the top-level rewards in the engine, so listing both would
+  // advertise a benefit that can never apply.
+  const tierLines = summarizeTiers(promotion, currency, channel);
+  if (tierLines.length > 0) return tierLines.join(" · ");
 
-  if ((promotion.tiers ?? []).length > 0) {
-    parts.push(`Up to ${promotion.tiers.length} spend tiers`);
-  }
-  for (const reward of promotion.rewards ?? []) {
-    const text = describeReward(reward.type, reward.config);
-    if (text) parts.push(text);
-  }
+  const parts = (promotion.rewards ?? [])
+    .map((reward) => describeReward(reward.type, reward.config, currency))
+    .filter(Boolean);
   return parts.length ? parts.join(" · ") : "Special promotion";
 }
 

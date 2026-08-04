@@ -15,7 +15,10 @@ import {
   recordOrderPromotionUsages,
   resolveAppliedPromotions,
 } from "@/lib/helpers/promotion-service";
-import type { EvaluationCart } from "@/lib/types/promotion";
+import type { EvaluationCart, PromotionChannel } from "@/lib/types/promotion";
+
+/** Every order placed through this route comes from the public storefront. */
+const ORDER_CHANNEL: PromotionChannel = "WEB";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
@@ -67,6 +70,7 @@ export async function POST(req: NextRequest) {
         type: body.orderType === "B2B" ? "RESELLER" : "RETAIL",
       },
       currency: body.currency,
+      channel: ORDER_CHANNEL,
     });
     if (invalid.length > 0) {
       return NextResponse.json(
@@ -111,6 +115,7 @@ export async function POST(req: NextRequest) {
       grossRevenue,
       netRevenue,
       discountShipping: body.discountShipping || 0, // Set default 0 if not provided
+      channel: ORDER_CHANNEL, // recorded so an admin edit re-evaluates on the same channel
       promotionDiscount, // server-recomputed
       appliedPromotions, // server-recomputed
     };

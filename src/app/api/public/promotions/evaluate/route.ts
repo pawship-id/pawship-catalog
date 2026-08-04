@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       cart,
       customer: customer ?? { type: "RETAIL" },
       currency,
+      channel: "WEB", // fixed by the route, never taken from the body
     });
 
     return NextResponse.json(

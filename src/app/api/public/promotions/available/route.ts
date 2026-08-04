@@ -15,7 +15,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const { cart, customer, currency } = body ?? {};
 
-    const promotions = await listAvailablePromotions({ cart, customer, currency });
+    // The channel is fixed by the route, never read from the body — otherwise a
+    // crafted request could claim a channel it is not on.
+    const promotions = await listAvailablePromotions({
+      cart,
+      customer,
+      currency,
+      channel: "WEB",
+    });
 
     return NextResponse.json(
       {

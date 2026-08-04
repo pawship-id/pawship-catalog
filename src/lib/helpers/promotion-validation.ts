@@ -15,15 +15,18 @@ import {
   CONDITION_TYPES,
   CUSTOMER_TYPES,
   FREE_GIFT_SELECTIONS,
+  PROMOTION_CHANNELS,
   PROMOTION_STATUSES,
   PROMOTION_TRIGGERS,
   REWARD_TYPES,
   type Condition,
   type ConditionType,
   type MoneyMap,
+  type PromotionChannel,
   type Reward,
   type RewardType,
   type Tier,
+  type TierBasis,
 } from "@/lib/types/promotion";
 
 // ---------------------------------------------------------------------------
@@ -48,6 +51,46 @@ export function validateMoneyMap(map: any, label: string): string[] {
     }
   }
   return errors;
+}
+
+/**
+ * Which basis a single tier uses. `null` means the tier declares neither
+ * threshold (invalid) or both (also invalid) — `validateTier` reports why.
+ */
+export function getTierBasis(tier: any): TierBasis | null {
+  const hasSpend =
+    isPlainObject(tier?.threshold) && Object.keys(tier.threshold).length > 0;
+  const hasQuantity = tier?.thresholdQuantity != null;
+  if (hasSpend && hasQuantity) return null;
+  if (hasSpend) return "SPEND";
+  if (hasQuantity) return "QUANTITY";
+  return null;
+}
+
+/**
+ * The basis shared by every tier of a promotion, or `null` when there are no
+ * tiers / the tiers disagree. The engine relies on a single basis so it can
+ * rank tiers against one another.
+ */
+export function getTiersBasis(tiers: Tier[] | undefined): TierBasis | null {
+  const bases = (tiers ?? []).map(getTierBasis);
+  if (bases.length === 0) return null;
+  const first = bases[0];
+  if (!first) return null;
+  return bases.every((b) => b === first) ? first : null;
+}
+
+/** A channel list, when present, must be a non-empty subset of the known channels. */
+export function validateChannels(channels: any, label: string): string[] {
+  if (channels == null) return []; // absent = every channel
+  if (!Array.isArray(channels)) return [`${label} must be a list of channels`];
+  if (channels.length === 0) return [`${label} must include at least one channel`];
+  const unknown = channels.filter(
+    (c) => !PROMOTION_CHANNELS.includes(c as PromotionChannel)
+  );
+  return unknown.length
+    ? [`${label} has unknown channel(s): ${unknown.join(", ")}`]
+    : [];
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +185,48 @@ export function validateRewardConfig(reward: Reward): string[] {
   return validator(reward?.config ?? {});
 }
 
+/**
+ * One tier in isolation: exactly one threshold basis, a sane value for it, and
+ * a valid channel list. Cross-tier rules (uniform basis, no duplicates) live in
+ * `validatePromotionPayload` because they need every tier at once.
+ */
+export function validateTier(tier: any): string[] {
+  const errors: string[] = [];
+  const hasSpend =
+    isPlainObject(tier?.threshold) && Object.keys(tier.threshold).length > 0;
+  const hasQuantity = tier?.thresholdQuantity != null;
+
+  if (hasSpend && hasQuantity) {
+    errors.push(
+      "A tier uses either a spend threshold or a quantity threshold, not both"
+    );
+  } else if (!hasSpend && !hasQuantity) {
+    errors.push("Tier requires a spend threshold or a quantity threshold");
+  } else if (hasSpend) {
+    errors.push(...validateMoneyMap(tier.threshold, "Tier threshold"));
+  } else if (
+    typeof tier.thresholdQuantity !== "number" ||
+    !Number.isInteger(tier.thresholdQuantity) ||
+    tier.thresholdQuantity < 1
+  ) {
+    errors.push("Tier quantity threshold must be a whole number of at least 1");
+  }
+
+  errors.push(...validateChannels(tier?.channels, "Tier channels"));
+
+  if (!Array.isArray(tier?.rewards) || tier.rewards.length === 0) {
+    errors.push("Tier requires at least one reward");
+  } else {
+    tier.rewards.forEach((reward: Reward, j: number) => {
+      validateRewardConfig(reward).forEach((e) =>
+        errors.push(`Reward #${j + 1}: ${e}`)
+      );
+    });
+  }
+
+  return errors;
+}
+
 // ---------------------------------------------------------------------------
 // Whole-payload validation (used by the POST/PUT route handlers)
 // ---------------------------------------------------------------------------
@@ -152,6 +237,7 @@ export interface PromotionPayloadLike {
   trigger?: any;
   status?: any;
   priority?: any;
+  channels?: any;
   startAt?: any;
   endAt?: any;
   appliesTo?: { scope?: any; ids?: any };
@@ -221,20 +307,49 @@ export function validatePromotionPayload(body: PromotionPayloadLike): string[] {
     errors.push("Promotion must have at least one reward or tier");
   }
 
-  (body?.tiers ?? []).forEach((tier, i) => {
-    validateMoneyMap(tier?.threshold, `Tier #${i + 1} threshold`).forEach((e) =>
-      errors.push(e)
-    );
-    if (!Array.isArray(tier?.rewards) || tier.rewards.length === 0) {
-      errors.push(`Tier #${i + 1} requires at least one reward`);
-    } else {
-      tier.rewards.forEach((reward, j) => {
-        validateRewardConfig(reward).forEach((e) =>
-          errors.push(`Tier #${i + 1} reward #${j + 1}: ${e}`)
+  errors.push(...validateChannels(body?.channels, "Channels"));
+
+  const tiers = body?.tiers ?? [];
+  tiers.forEach((tier, i) => {
+    validateTier(tier).forEach((e) => errors.push(`Tier #${i + 1}: ${e}`));
+
+    // A tier may only narrow the promotion's channels, never widen them —
+    // otherwise a tier would advertise a channel the promotion itself is off.
+    const promoChannels = body?.channels;
+    if (Array.isArray(promoChannels) && Array.isArray(tier?.channels)) {
+      const outside = tier.channels.filter((c) => !promoChannels.includes(c));
+      if (outside.length) {
+        errors.push(
+          `Tier #${i + 1}: channel ${outside.join(", ")} is not enabled on the promotion`
         );
-      });
+      }
     }
   });
+
+  if (tiers.length > 0) {
+    const basis = getTiersBasis(tiers);
+    if (!basis) {
+      // Only complain about the mix when each tier is individually well-formed;
+      // otherwise validateTier has already explained the real problem.
+      if (tiers.every((t) => getTierBasis(t) !== null)) {
+        errors.push(
+          "All tiers must use the same threshold basis (either spend or quantity)"
+        );
+      }
+    } else {
+      const seen = new Set<string>();
+      tiers.forEach((tier, i) => {
+        const key =
+          basis === "QUANTITY"
+            ? String(tier.thresholdQuantity)
+            : JSON.stringify(tier.threshold ?? {});
+        if (seen.has(key)) {
+          errors.push(`Tier #${i + 1} repeats a threshold used by another tier`);
+        }
+        seen.add(key);
+      });
+    }
+  }
 
   const limits = body?.limits;
   if (limits) {

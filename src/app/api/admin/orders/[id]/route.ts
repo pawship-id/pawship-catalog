@@ -197,6 +197,11 @@ export async function PUT(req: NextRequest, { params }: Context) {
         orderCount: orderCountExcludingSelf,
       },
       currency: originalOrder.currency,
+      // Re-evaluate on the channel the order was PLACED on, not on the channel
+      // the admin happens to be editing from. Otherwise editing a web order
+      // would reject its web-only promotion. Orders saved before `channel`
+      // existed are `undefined`, which evaluates without any channel filter.
+      channel: originalOrder.channel,
     });
     if (invalid.length > 0) {
       // Restore the order's original usage rows before bailing out.

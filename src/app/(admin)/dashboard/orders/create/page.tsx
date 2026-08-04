@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createData, getAll } from "@/lib/apiService";
 import {
@@ -50,6 +50,7 @@ import ProductSelectorModal from "@/components/admin/orders/product-selector-mod
 import VariantSelectorModal from "@/components/admin/orders/variant-selector-modal";
 import PromotionSelectorModal from "@/components/admin/orders/promotion-selector-modal";
 import { summarizeBenefits } from "@/lib/helpers/promotion-engine";
+import { revalidateAppliedPromotions } from "@/lib/helpers/promotion-client";
 import type {
   EvaluationCart,
   EvaluationCustomer,
@@ -498,6 +499,47 @@ export default function CreateOrderPage() {
   const handleRemovePromotion = (code: string) => {
     setAppliedPromotions((prev) => prev.filter((p) => p.code !== code));
   };
+
+  // Re-run the engine whenever the cart moves, so a tiered promo applied at
+  // 10 pcs upgrades itself once the order reaches 20. Keyed on a signature that
+  // deliberately excludes the discount numbers — including them would make the
+  // effect retrigger on its own result.
+  const cartSignature = useMemo(
+    () =>
+      JSON.stringify({
+        items: orderItems.map((i) => [i.variantId, i.quantity, i.subTotal]),
+        shippingCost,
+        currency,
+        customerId,
+        codes: appliedPromotions.map((p) => p.code).sort(),
+      }),
+    [orderItems, shippingCost, currency, customerId, appliedPromotions],
+  );
+
+  useEffect(() => {
+    if (appliedPromotions.length === 0 || orderItems.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { applied, dropped, changed } = await revalidateAppliedPromotions({
+        applied: appliedPromotions,
+        cart: buildCart(),
+        customer: buildCustomer(),
+        currency,
+      });
+      if (cancelled || !changed) return;
+      setAppliedPromotions(applied);
+      if (dropped.length > 0) {
+        showErrorAlert(
+          "Promotion removed",
+          dropped.map((d) => `${d.code}: ${d.reason}`),
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartSignature]);
 
   // Submit order
   const handleSubmit = async () => {

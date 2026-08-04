@@ -15,7 +15,22 @@ import {
   recordOrderPromotionUsages,
   resolveAppliedPromotions,
 } from "@/lib/helpers/promotion-service";
-import type { EvaluationCart } from "@/lib/types/promotion";
+import {
+  PROMOTION_CHANNELS,
+  type EvaluationCart,
+  type PromotionChannel,
+} from "@/lib/types/promotion";
+
+/**
+ * An order keyed in by an admin is a WhatsApp order unless the request says
+ * otherwise (the create screen may be used to record a web order). Unknown
+ * values fall back to the default so a bad payload cannot widen eligibility.
+ */
+function resolveOrderChannel(value: unknown): PromotionChannel {
+  return PROMOTION_CHANNELS.includes(value as PromotionChannel)
+    ? (value as PromotionChannel)
+    : "WHATSAPP";
+}
 
 export async function POST(req: NextRequest) {
   await dbConnect();
@@ -58,6 +73,7 @@ export async function POST(req: NextRequest) {
       subtotal: totalAmount,
       shippingCost: body.shippingCost || 0,
     };
+    const orderChannel = resolveOrderChannel((body as any).channel);
     const {
       appliedPromotions,
       promotionDiscount,
@@ -70,6 +86,7 @@ export async function POST(req: NextRequest) {
         type: body.orderType === "B2B" ? "RESELLER" : "RETAIL",
       },
       currency: body.currency,
+      channel: orderChannel,
     });
     if (invalid.length > 0) {
       return NextResponse.json(
@@ -112,6 +129,7 @@ export async function POST(req: NextRequest) {
       grossRevenue,
       netRevenue,
       discountShipping: body.discountShipping || 0, // Set default 0 if not provided
+      channel: orderChannel, // normalised, so a later edit re-evaluates on the same channel
       promotionDiscount, // server-recomputed
       appliedPromotions, // server-recomputed
     };

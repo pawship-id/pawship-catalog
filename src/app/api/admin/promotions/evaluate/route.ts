@@ -1,5 +1,13 @@
 import { evaluateByCode } from "@/lib/helpers/promotion-service";
+import { PROMOTION_CHANNELS, type PromotionChannel } from "@/lib/types/promotion";
 import { NextRequest, NextResponse } from "next/server";
+
+/** See the available route — admin defaults to WhatsApp, edit passes the order's channel. */
+function resolveAdminChannel(value: unknown): PromotionChannel {
+  return PROMOTION_CHANNELS.includes(value as PromotionChannel)
+    ? (value as PromotionChannel)
+    : "WHATSAPP";
+}
 
 /**
  * POST: run the Promotion Engine for a single code (the Apply / manual-code
@@ -14,7 +22,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { code, cart, customer, currency } = body ?? {};
+    const { code, cart, customer, currency, channel } = body ?? {};
 
     if (!cart || !currency) {
       return NextResponse.json(
@@ -27,6 +35,7 @@ export async function POST(req: NextRequest) {
       cart,
       customer: customer ?? { type: "RETAIL" },
       currency,
+      channel: resolveAdminChannel(channel),
     });
 
     return NextResponse.json(

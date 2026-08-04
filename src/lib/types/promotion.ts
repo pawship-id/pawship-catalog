@@ -21,6 +21,17 @@ export type PromotionTrigger = (typeof PROMOTION_TRIGGERS)[number];
 export const PROMOTION_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 export type PromotionStatus = (typeof PROMOTION_STATUSES)[number];
 
+/**
+ * Sales channels a promotion (or a single tier) is offered on. WEB is the
+ * public storefront checkout; WHATSAPP is an order an admin keys in manually on
+ * behalf of a WhatsApp customer.
+ *
+ * An empty/absent `channels` list always means "every channel" — that is what
+ * makes the field safe to add to promotions and orders that predate it.
+ */
+export const PROMOTION_CHANNELS = ["WEB", "WHATSAPP"] as const;
+export type PromotionChannel = (typeof PROMOTION_CHANNELS)[number];
+
 export const APPLIES_TO_SCOPES = [
   "ALL",
   "PRODUCTS",
@@ -118,8 +129,20 @@ export interface Reward {
   config: Record<string, any>;
 }
 
+/**
+ * What a tier's threshold is measured in. Inferred from which threshold field a
+ * tier carries; every tier of one promotion must use the same basis, otherwise
+ * "the highest qualifying tier" would compare rupiah against pieces.
+ */
+export type TierBasis = "SPEND" | "QUANTITY";
+
 export interface Tier {
-  threshold: MoneyMap;
+  /** SPEND basis — cart subtotal threshold, per currency. */
+  threshold?: MoneyMap;
+  /** QUANTITY basis — minimum number of eligible pieces (mix of items counts). */
+  thresholdQuantity?: number;
+  /** Channels this tier is offered on. Empty = inherit the promotion's list. */
+  channels?: PromotionChannel[];
   rewards: Reward[];
 }
 
@@ -154,6 +177,8 @@ export interface PromotionData {
   status: PromotionStatus;
   priority: number;
   stackable: boolean;
+  /** Absent/empty = available on every channel (promotions created before channels existed). */
+  channels?: PromotionChannel[];
   startAt: string | Date;
   endAt: string | Date;
   appliesTo: AppliesTo;
@@ -178,6 +203,7 @@ export interface PromotionForm {
   status: PromotionStatus;
   priority: number;
   stackable: boolean;
+  channels: PromotionChannel[];
   startAt: string;
   endAt: string;
   appliesTo: AppliesTo;

@@ -3,12 +3,14 @@ import softDelete from "mongoose-delete";
 import {
   APPLIES_TO_SCOPES,
   CONDITION_TYPES,
+  PROMOTION_CHANNELS,
   PROMOTION_STATUSES,
   PROMOTION_TRIGGERS,
   REWARD_TYPES,
   type AppliesTo,
   type Condition,
   type CustomerRules,
+  type PromotionChannel,
   type PromotionLimits,
   type PromotionStatus,
   type PromotionTrigger,
@@ -18,6 +20,7 @@ import {
 import {
   validateConditionConfig,
   validateRewardConfig,
+  validateTier,
 } from "@/lib/helpers/promotion-validation";
 
 export interface IPromotion extends Document {
@@ -28,6 +31,7 @@ export interface IPromotion extends Document {
   status: PromotionStatus;
   priority: number;
   stackable: boolean;
+  channels: PromotionChannel[];
   startAt: Date;
   endAt: Date;
   appliesTo: AppliesTo;
@@ -70,13 +74,33 @@ RewardSchema.path("config").validate(function (this: any) {
   return validateRewardConfig({ type: this.type, config: this.config }).length === 0;
 }, "Invalid reward configuration");
 
+// A tier carries EITHER `threshold` (MoneyMap, spend basis) OR
+// `thresholdQuantity` (pieces). Neither field can be `required` at the path
+// level, so the "exactly one of them" rule is enforced by the document-level
+// validator below — same split as ConditionSchema/RewardSchema, which delegate
+// their config rules to promotion-validation.ts.
 const TierSchema = new Schema<Tier>(
   {
-    threshold: { type: Schema.Types.Mixed, required: true }, // MoneyMap
+    threshold: { type: Schema.Types.Mixed }, // MoneyMap (spend basis)
+    thresholdQuantity: { type: Number, min: 1 }, // pieces (quantity basis)
+    channels: {
+      type: [String],
+      enum: [...PROMOTION_CHANNELS],
+      default: [], // empty = inherit the promotion's channels
+    },
     rewards: { type: [RewardSchema], default: [] },
   },
   { _id: false }
 );
+// The "exactly one threshold" rule spans two paths, so it is a document-level
+// hook rather than a path validator. This is a backstop — the API routes gate
+// on validatePromotionPayload, which also enforces the cross-tier rules.
+TierSchema.pre("validate", function (this: any, next: (err?: Error) => void) {
+  const errors = validateTier(this.toObject ? this.toObject() : this);
+  return errors.length > 0
+    ? next(new Error(`Invalid tier configuration: ${errors.join("; ")}`))
+    : next();
+});
 
 const AppliesToSchema = new Schema<AppliesTo>(
   {
@@ -135,6 +159,14 @@ const PromotionSchema = new Schema<IPromotion>(
     },
     priority: { type: Number, default: 0, min: 0 },
     stackable: { type: Boolean, default: false },
+    // The default only applies to newly created documents; promotions saved
+    // before this field existed keep `channels` undefined, which the engine
+    // reads as "every channel" — no backfill needed.
+    channels: {
+      type: [String],
+      enum: [...PROMOTION_CHANNELS],
+      default: [...PROMOTION_CHANNELS],
+    },
     startAt: { type: Date, required: true },
     endAt: { type: Date, required: true },
     appliesTo: {

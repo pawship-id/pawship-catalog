@@ -12,15 +12,18 @@ import Promotion from "@/lib/models/Promotion";
 import PromotionUsage from "@/lib/models/PromotionUsage";
 import dbConnect from "@/lib/mongodb";
 import {
+  describeTierThreshold,
   evaluatePromotion,
   summarizeBenefits,
   type UsageStats,
 } from "@/lib/helpers/promotion-engine";
+import { getTiersBasis } from "@/lib/helpers/promotion-validation";
 import { roundMoney } from "@/lib/helpers/currency-helper";
 import type { IAppliedPromotion } from "@/lib/types/order";
 import type {
   EvaluationCart,
   EvaluationCustomer,
+  PromotionChannel,
   PromotionData,
   PromotionEvaluationResult,
 } from "@/lib/types/promotion";
@@ -54,12 +57,14 @@ export interface EvaluateInput {
   customer: EvaluationCustomer;
   currency: string;
   now?: Date;
+  /** Omit to evaluate without any channel restriction (pre-channel behaviour). */
+  channel?: PromotionChannel;
 }
 
 /** Evaluate a single already-loaded promotion against a cart. */
 export async function evaluatePromotionDoc(
   promotion: PromotionData,
-  { cart, customer, currency, now }: EvaluateInput
+  { cart, customer, currency, now, channel }: EvaluateInput
 ): Promise<PromotionEvaluationResult> {
   const orderCount =
     customer.orderCount != null
@@ -78,6 +83,7 @@ export async function evaluatePromotionDoc(
     currency,
     now: now ?? new Date(),
     usageStats,
+    channel,
   });
 }
 
@@ -134,6 +140,7 @@ export async function listAvailablePromotions(
         customer,
         currency: input.currency!,
         now,
+        channel: input.channel,
       }),
     }))
   );
@@ -149,6 +156,7 @@ export interface ResolveAppliedInput {
   customer: EvaluationCustomer;
   currency: string;
   now?: Date;
+  channel?: PromotionChannel;
 }
 
 export interface ResolveAppliedResult {
@@ -171,6 +179,7 @@ export async function resolveAppliedPromotions({
   customer,
   currency,
   now,
+  channel,
 }: ResolveAppliedInput): Promise<ResolveAppliedResult> {
   const uniqueCodes = Array.from(
     new Set(
@@ -189,6 +198,7 @@ export async function resolveAppliedPromotions({
       customer,
       currency,
       now,
+      channel,
     });
     if (!result.valid) {
       invalid.push({ code, reason: result.reason });
@@ -196,13 +206,21 @@ export async function resolveAppliedPromotions({
     }
     const promo = result.promotion;
     const gift = result.freeGift?.gifts?.[0];
+    const tierBasis = getTiersBasis(promo.tiers);
     applied.push({
       promotionId: String((promo as any)._id),
       code: promo.code,
       name: promo.name,
       trigger: promo.trigger,
       stackable: !!promo.stackable,
-      rewardsSummary: summarizeBenefits(promo, currency),
+      rewardsSummary: summarizeBenefits(promo, currency, channel),
+      // Which rung of a tiered promotion this order actually landed on — the
+      // summary alone lists every tier, so without this the order loses the
+      // record of what was granted.
+      appliedTierLabel:
+        result.appliedTier && tierBasis
+          ? describeTierThreshold(result.appliedTier, tierBasis, currency)
+          : undefined,
       productDiscount: result.discount,
       shippingDiscount: result.shippingDiscount,
       freeGift: gift

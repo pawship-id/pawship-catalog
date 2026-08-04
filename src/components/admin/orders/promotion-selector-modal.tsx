@@ -12,12 +12,14 @@ import { Ticket, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { currencyFormat } from "@/lib/helpers";
 import { showErrorAlert } from "@/lib/helpers/sweetalert2";
 import {
+  describeTiers,
   summarizeBenefits,
   summarizeConditions,
 } from "@/lib/helpers/promotion-engine";
 import type {
   EvaluationCart,
   EvaluationCustomer,
+  PromotionChannel,
   PromotionData,
   PromotionEvaluationResult,
   PromotionEvaluationSuccess,
@@ -38,6 +40,12 @@ interface PromotionSelectorModalProps {
   /** Endpoint that lists available promotions. Defaults to the Admin route;
    *  the public cart passes the public equivalent. */
   availableEndpoint?: string;
+  /**
+   * Channel to evaluate on. Only honoured by the admin endpoints — the public
+   * route pins itself to WEB and ignores this — and used by the order edit
+   * screen to re-evaluate on the channel the order was placed on.
+   */
+  channel?: PromotionChannel;
 }
 
 export default function PromotionSelectorModal({
@@ -49,6 +57,7 @@ export default function PromotionSelectorModal({
   appliedCodes,
   onApply,
   availableEndpoint = "/api/admin/promotions/available",
+  channel,
 }: PromotionSelectorModalProps) {
   const [promotions, setPromotions] = useState<AvailablePromotion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,7 +73,7 @@ export default function PromotionSelectorModal({
         const res = await fetch(availableEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cart, customer, currency }),
+          body: JSON.stringify({ cart, customer, currency, channel }),
         });
         const json = await res.json();
         setPromotions(json.data || []);
@@ -136,6 +145,17 @@ export default function PromotionSelectorModal({
               const reason =
                 evaluation && !evaluation.valid ? evaluation.reason : "";
               const isOpen2 = expanded === promo._id;
+              const tiers = describeTiers(promo, currency, channel);
+              // The engine reports which rung the cart landed on, so the card
+              // can mark it and show what the next tier is worth.
+              const appliedThreshold =
+                evaluation?.valid && evaluation.appliedTier
+                  ? describeTiers(
+                      { ...promo, tiers: [evaluation.appliedTier] },
+                      currency,
+                      channel
+                    )[0]?.threshold
+                  : null;
 
               return (
                 <div
@@ -165,9 +185,34 @@ export default function PromotionSelectorModal({
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-primary font-medium">
-                        {summarizeBenefits(promo, currency)}
-                      </p>
+                      {tiers.length > 0 ? (
+                        <ul className="text-sm text-primary font-medium space-y-0.5">
+                          {tiers.map((tier) => (
+                            <li
+                              key={tier.threshold}
+                              className="flex items-baseline gap-1.5 flex-wrap"
+                            >
+                              <span>
+                                {tier.threshold} → {tier.rewards}
+                              </span>
+                              {tier.channelNote && (
+                                <span className="text-xs font-normal text-muted-foreground">
+                                  ({tier.channelNote})
+                                </span>
+                              )}
+                              {tier.threshold === appliedThreshold && (
+                                <span className="text-xs font-medium text-green-700">
+                                  · applied
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-primary font-medium">
+                          {summarizeBenefits(promo, currency, channel)}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         {summarizeConditions(promo, currency)}
                       </p>
@@ -237,9 +282,7 @@ export default function PromotionSelectorModal({
                             .join(" · ")}
                         </p>
                       )}
-                      {(promo.tiers ?? []).length > 0 && (
-                        <p>{promo.tiers.length} spend tier(s)</p>
-                      )}
+                      {/* Tiers are listed on the card itself, not repeated here. */}
                     </div>
                   )}
                 </div>

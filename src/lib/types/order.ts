@@ -1,3 +1,5 @@
+import type { PromotionChannel } from "@/lib/types/promotion";
+
 export interface IOrderDetail {
   productId: string;
   productName: string;
@@ -39,6 +41,8 @@ export interface IAppliedPromotion {
   trigger: string;
   stackable?: boolean;
   rewardsSummary?: string;
+  /** Which tier of a tiered promotion was hit, e.g. "10 pcs → 10% off". */
+  appliedTierLabel?: string;
   productDiscount: number; // total product-side discount
   shippingDiscount: number; // shipping discount contributed by this promotion
   freeGift?: {
@@ -92,6 +96,8 @@ export interface OrderForm {
   shippingCost: number;
   discountShipping: number;
   currency: string;
+  /** Sales channel the order came in on. Absent on orders predating the field. */
+  channel?: PromotionChannel;
   appliedPromotions?: IAppliedPromotion[];
   promotionDiscount?: number; // total promotion benefit (product + shipping), order currency
 }
@@ -113,6 +119,7 @@ export interface OrderData {
   shippingCost: number;
   discountShipping: number;
   currency: string;
+  channel?: PromotionChannel;
   appliedPromotions?: IAppliedPromotion[];
   promotionDiscount?: number; // total promotion benefit (product + shipping), order currency
   baseRupiah?: number; // Rupiah rate of `currency`, snapshotted when the order was created
