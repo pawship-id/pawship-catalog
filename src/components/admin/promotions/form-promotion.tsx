@@ -176,7 +176,12 @@ export default function FormPromotion({
   // Hydrate form from initialData (edit)
   useEffect(() => {
     if (!initialData) return;
-    setForm({
+    // MERGE onto the defaults rather than replacing the whole object: a key
+    // missing from this literal would otherwise leave the field `undefined`,
+    // which React renders as an uncontrolled input — a Select shows its
+    // placeholder even though every other field around it filled in fine.
+    setForm((defaults) => ({
+      ...defaults,
       name: initialData.name ?? "",
       code: initialData.code ?? "",
       description: initialData.description ?? "",
@@ -206,7 +211,7 @@ export default function FormPromotion({
         resellerOnly: false,
       },
       limits: initialData.limits ?? {},
-    });
+    }));
   }, [initialData]);
 
   const patch = (p: Partial<PromotionForm>) => setForm((f) => ({ ...f, ...p }));
@@ -341,7 +346,10 @@ export default function FormPromotion({
                     Trigger
                   </Label>
                   <Select
-                    value={form.trigger}
+                    // Coerced again at render: an empty value makes Radix drop
+                    // into uncontrolled mode and show the placeholder, which is
+                    // indistinguishable from "the data failed to load".
+                    value={pickOption(PROMOTION_TRIGGERS, form.trigger, "CODE")}
                     onValueChange={(trigger: any) => patch({ trigger })}
                   >
                     <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
@@ -366,7 +374,7 @@ export default function FormPromotion({
                     Status
                   </Label>
                   <Select
-                    value={form.status}
+                    value={pickOption(PROMOTION_STATUSES, form.status, "ACTIVE")}
                     onValueChange={(status: any) => patch({ status })}
                   >
                     <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
