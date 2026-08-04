@@ -22,7 +22,7 @@ import {
 import Image from "next/image";
 import { UploadPaymentProofModal } from "@/components/orders/upload-payment-proof-modal";
 import { PaymentProofDetailModal } from "@/components/orders/payment-proof-detail-modal";
-import { currencyFormat } from "@/lib/helpers";
+import { calculateOrderPayable, currencyFormat } from "@/lib/helpers";
 
 interface PaymentProof {
   imageUrl: string;
@@ -572,13 +572,7 @@ export default function OrderDetailPage() {
               <div className="flex justify-between text-base font-bold">
                 <span>Total</span>
                 <span className="text-primary">
-                  {currencyFormat(
-                    order.totalAmount +
-                      order.shippingCost -
-                      (order.discountShipping || 0) -
-                      (order.promotionDiscount || 0),
-                    order.currency,
-                  )}
+                  {currencyFormat(calculateOrderPayable(order), order.currency)}
                 </span>
               </div>
             </CardContent>

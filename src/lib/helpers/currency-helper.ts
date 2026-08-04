@@ -221,3 +221,7 @@ export function calculateOrderRevenue({
     netRevenue: Math.round(net * baseRupiah),
   };
 }
+
+// NOTE: `calculateOrderPayable` — the order-currency twin of `netRevenue` — is
+// deliberately NOT here. This module imports the Currency model and therefore
+// mongoose, so anything a "use client" screen needs must live in ./index.ts.

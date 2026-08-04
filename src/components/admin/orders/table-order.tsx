@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { OrderData } from "@/lib/types/order";
-import { currencyFormat } from "@/lib/helpers";
+import { calculateOrderPayable, currencyFormat } from "@/lib/helpers";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -86,9 +86,7 @@ export default function TableOrder({
                 <TableCell>
                   <span className="capitalize">
                     {currencyFormat(
-                      item.totalAmount +
-                        (item.shippingCost - item.discountShipping) -
-                        (item.promotionDiscount || 0),
+                      calculateOrderPayable(item),
                       item.currency
                     )}
                   </span>

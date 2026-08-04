@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { OrderData } from "@/lib/types/order";
-import { currencyFormat } from "@/lib/helpers";
+import { calculateOrderPayable, currencyFormat } from "@/lib/helpers";
 
 const statusConfig = {
   "pending confirmation": {
@@ -330,8 +330,7 @@ export default function MyOrdersPage() {
                       </p>
                       <p className="text-lg sm:text-xl font-bold">
                         {currencyFormat(
-                          order.totalAmount +
-                            (order.shippingCost - order.discountShipping),
+                          calculateOrderPayable(order),
                           order.currency
                         )}
                       </p>
