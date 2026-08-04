@@ -690,7 +690,8 @@ export default function EditOrderPage() {
   );
 
   useEffect(() => {
-    if (appliedPromotions.length === 0 || editedItems.length === 0) return;
+    // See the create page: automatic promotions are resolved here too.
+    if (editedItems.length === 0) return;
     let cancelled = false;
     (async () => {
       const { applied, dropped, changed } = await revalidateAppliedPromotions({
@@ -1281,6 +1282,11 @@ export default function EditOrderPage() {
                                 <span className="font-mono text-xs">
                                   ({ap.code})
                                 </span>
+                                {ap.trigger === "AUTOMATIC" && (
+                                  <span className="ml-1 text-xs text-green-700 font-medium">
+                                    Otomatis
+                                  </span>
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {ap.rewardsSummary}
@@ -1292,7 +1298,9 @@ export default function EditOrderPage() {
                                 </p>
                               )}
                             </div>
-                            {canEditOrder() && (
+                            {/* Automatic promotions apply themselves — removing
+                                one would only be undone on revalidation. */}
+                            {canEditOrder() && ap.trigger !== "AUTOMATIC" && (
                               <button
                                 type="button"
                                 onClick={() => handleRemovePromotion(ap.code)}

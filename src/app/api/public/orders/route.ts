@@ -63,7 +63,12 @@ export async function POST(req: NextRequest) {
       promotionDiscount,
       invalid,
     } = await resolveAppliedPromotions({
-      codes: ((body as any).appliedPromotions ?? []).map((p: any) => p.code),
+      // Only code-driven promotions are read from the request. Automatic ones
+      // are rediscovered server-side, so passing their internal code here would
+      // just be rejected as "not found" and fail the whole order.
+      codes: ((body as any).appliedPromotions ?? [])
+        .filter((p: any) => p?.trigger !== "AUTOMATIC")
+        .map((p: any) => p.code),
       cart: evaluationCart,
       customer: {
         userId: session.user.id,

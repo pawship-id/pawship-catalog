@@ -333,6 +333,11 @@ export default function FormPromotion({
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {form.trigger === "AUTOMATIC"
+                      ? "Applies on its own once the cart qualifies. The customer never types anything, so the code below is only an internal label."
+                      : "The customer redeems this by entering the code below."}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-base font-medium text-gray-700">

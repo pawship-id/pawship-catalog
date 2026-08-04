@@ -79,7 +79,10 @@ export async function POST(req: NextRequest) {
       promotionDiscount,
       invalid,
     } = await resolveAppliedPromotions({
-      codes: ((body as any).appliedPromotions ?? []).map((p: any) => p.code),
+      // See the public route: automatic promotions are rediscovered server-side.
+      codes: ((body as any).appliedPromotions ?? [])
+        .filter((p: any) => p?.trigger !== "AUTOMATIC")
+        .map((p: any) => p.code),
       cart: evaluationCart,
       customer: {
         userId: userIdForOrder,

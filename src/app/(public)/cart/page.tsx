@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Minus,
   Plus,
@@ -42,6 +42,7 @@ import {
 import { useRouter } from "next/navigation";
 import PromotionSelectorModal from "@/components/admin/orders/promotion-selector-modal";
 import { summarizeBenefits } from "@/lib/helpers/promotion-engine";
+import { revalidateAppliedPromotions } from "@/lib/helpers/promotion-client";
 import type {
   EvaluationCart,
   EvaluationCustomer,
@@ -420,6 +421,51 @@ export default function CartPage() {
   const handleRemovePromotion = (code: string) => {
     setAppliedPromotions((prev) => prev.filter((p) => p.code !== code));
   };
+
+  // Resolve automatic promotions (and refresh any applied code) whenever the
+  // cart moves. Keyed on a signature that deliberately excludes the discount
+  // numbers — including them would make the effect retrigger on its own result.
+  const cartSignature = useMemo(
+    () =>
+      JSON.stringify({
+        items: (formData.orderDetails ?? []).map((i: any) => [
+          i.variantId,
+          i.quantity,
+          i.subTotal,
+        ]),
+        shipping,
+        currency,
+        codes: appliedPromotions.map((p) => p.code).sort(),
+      }),
+    [formData.orderDetails, shipping, currency, appliedPromotions],
+  );
+
+  useEffect(() => {
+    if ((formData.orderDetails ?? []).length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { applied, dropped, changed } = await revalidateAppliedPromotions({
+        applied: appliedPromotions,
+        cart: buildCart(),
+        customer: buildCustomer(),
+        currency,
+        endpoint: "/api/public/promotions/evaluate",
+        automaticEndpoint: "/api/public/promotions/automatic",
+      });
+      if (cancelled || !changed) return;
+      setAppliedPromotions(applied);
+      if (dropped.length > 0) {
+        showErrorAlert(
+          "Promotion removed",
+          dropped.map((d) => `${d.code}: ${d.reason}`),
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartSignature]);
 
   // B2B: Calculate tier discount for a specific product based on total category quantities in cart
   const calculateB2BDiscount = (
@@ -1434,9 +1480,17 @@ export default function CartPage() {
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-gray-800 truncate">
                                 {ap.name}{" "}
-                                <span className="font-mono text-xs text-gray-500">
-                                  ({ap.code})
-                                </span>
+                                {ap.trigger === "AUTOMATIC" ? (
+                                  // The customer never typed anything, so the
+                                  // internal code would only confuse them.
+                                  <span className="text-xs text-green-700 font-medium">
+                                    Otomatis
+                                  </span>
+                                ) : (
+                                  <span className="font-mono text-xs text-gray-500">
+                                    ({ap.code})
+                                  </span>
+                                )}
                               </p>
                               {ap.rewardsSummary && (
                                 <p className="text-xs text-gray-500">
@@ -1450,14 +1504,17 @@ export default function CartPage() {
                                 </p>
                               )}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemovePromotion(ap.code)}
-                              className="p-1 text-red-500 hover:text-red-700 shrink-0 cursor-pointer"
-                              title="Remove promotion"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
+                            {/* Automatic promotions are not the customer's to remove. */}
+                            {ap.trigger !== "AUTOMATIC" && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePromotion(ap.code)}
+                                className="p-1 text-red-500 hover:text-red-700 shrink-0 cursor-pointer"
+                                title="Remove promotion"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>

@@ -15,6 +15,7 @@
 
 import { describeTierThreshold, summarizeBenefits } from "@/lib/helpers/promotion-engine";
 import { getTiersBasis } from "@/lib/helpers/promotion-validation";
+import { mergeAutomaticPromotions } from "@/lib/helpers/promotion-stacking";
 import type { IAppliedPromotion } from "@/lib/types/order";
 import type {
   EvaluationCart,
@@ -31,6 +32,11 @@ export interface RevalidateArgs {
   channel?: PromotionChannel;
   /** Defaults to the admin endpoint; the public cart passes its own. */
   endpoint?: string;
+  /**
+   * Endpoint that resolves AUTOMATIC promotions for this cart. Defaults to the
+   * admin one. Pass `null` to skip the automatic pass entirely.
+   */
+  automaticEndpoint?: string | null;
 }
 
 export interface RevalidateResult {
@@ -82,13 +88,15 @@ export async function revalidateAppliedPromotions({
   currency,
   channel,
   endpoint = "/api/admin/promotions/evaluate",
+  automaticEndpoint = "/api/admin/promotions/automatic",
 }: RevalidateArgs): Promise<RevalidateResult> {
-  if (applied.length === 0) {
-    return { applied, dropped: [], changed: false };
-  }
+  // Automatic promotions are re-resolved from scratch every time, so an empty
+  // list is NOT an early exit: a cart that just crossed a threshold gains one
+  // without the customer touching anything.
+  const codeApplied = applied.filter((p) => p.trigger !== "AUTOMATIC");
 
   const evaluated = await Promise.all(
-    applied.map(async (entry) => {
+    codeApplied.map(async (entry) => {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,25 +113,47 @@ export async function revalidateAppliedPromotions({
     })
   );
 
-  const next: IAppliedPromotion[] = [];
+  const refreshedCodes: IAppliedPromotion[] = [];
   const dropped: { code: string; reason: string }[] = [];
 
   for (const { entry, result } of evaluated) {
     // A failed request (network, 500) is not evidence the promotion became
     // invalid — keep what we had rather than silently dropping a valid promo.
     if (!result) {
-      next.push(entry);
+      refreshedCodes.push(entry);
       continue;
     }
     if (!result.valid) {
       dropped.push({ code: entry.code, reason: result.reason });
       continue;
     }
-    next.push(toEntry(entry, result, currency, channel));
+    refreshedCodes.push(toEntry(entry, result, currency, channel));
   }
+
+  // Automatic promotions are REPLACED, never merged with the previous set, so
+  // one that stopped qualifying actually disappears from the screen.
+  let automatic: IAppliedPromotion[] = [];
+  if (automaticEndpoint) {
+    try {
+      const res = await fetch(automaticEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cart, customer, currency, channel }),
+      });
+      const json = await res.json();
+      if (Array.isArray(json?.data)) automatic = json.data;
+    } catch {
+      // Same reasoning as above: a failed request is not a verdict. Keep the
+      // automatic promotions already on screen rather than flickering them off.
+      automatic = applied.filter((p) => p.trigger === "AUTOMATIC");
+    }
+  }
+
+  const next = mergeAutomaticPromotions(refreshedCodes, automatic);
 
   const changed =
     dropped.length > 0 ||
+    next.length !== applied.length ||
     next.some((p, i) => {
       const before = applied[i];
       return (

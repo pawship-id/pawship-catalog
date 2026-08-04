@@ -18,6 +18,7 @@ import {
   type UsageStats,
 } from "@/lib/helpers/promotion-engine";
 import { getTiersBasis } from "@/lib/helpers/promotion-validation";
+import { mergeAutomaticPromotions } from "@/lib/helpers/promotion-stacking";
 import { roundMoney } from "@/lib/helpers/currency-helper";
 import type { IAppliedPromotion } from "@/lib/types/order";
 import type {
@@ -98,7 +99,13 @@ export async function evaluateByCode(
     return { result: { valid: false, reason: "Promotion code is required" } };
   }
 
-  const promotion = await Promotion.findOne({ code: normalized }).lean();
+  // Constrain to CODE promotions. Only this trigger exists today, but any
+  // legacy document still carrying a retired trigger must not stay redeemable
+  // by anyone who happens to know its code.
+  const promotion = await Promotion.findOne({
+    code: normalized,
+    trigger: "CODE",
+  }).lean();
   if (!promotion) {
     return { result: { valid: false, reason: "Promotion code not found" } };
   }
@@ -173,6 +180,98 @@ export interface ResolveAppliedResult {
  * here by the engine. Callers should reject the request when `invalid` is
  * non-empty.
  */
+/** Turn a successful engine result into the snapshot stored on the order. */
+function toAppliedPromotion(
+  result: Extract<PromotionEvaluationResult, { valid: true }>,
+  currency: string,
+  channel?: PromotionChannel
+): IAppliedPromotion {
+  const promo = result.promotion;
+  const gift = result.freeGift?.gifts?.[0];
+  const tierBasis = getTiersBasis(promo.tiers);
+  return {
+    promotionId: String((promo as any)._id),
+    code: promo.code,
+    name: promo.name,
+    trigger: promo.trigger,
+    stackable: !!promo.stackable,
+    rewardsSummary: summarizeBenefits(promo, currency, channel),
+    // Which rung of a tiered promotion this order actually landed on — the
+    // summary alone lists every tier, so without this the order loses the
+    // record of what was granted.
+    appliedTierLabel:
+      result.appliedTier && tierBasis
+        ? describeTierThreshold(result.appliedTier, tierBasis, currency)
+        : undefined,
+    productDiscount: result.discount,
+    shippingDiscount: result.shippingDiscount,
+    freeGift: gift
+      ? {
+          productId: gift.productId,
+          variantId: gift.variantId,
+          variantName: gift.variantName,
+          quantity: gift.quantity,
+        }
+      : null,
+    discountCurrency: currency,
+  };
+}
+
+export interface ResolveAutomaticInput {
+  cart: EvaluationCart;
+  customer: EvaluationCustomer;
+  currency: string;
+  now?: Date;
+  channel?: PromotionChannel;
+}
+
+/**
+ * Promotions that apply themselves, in descending `priority` order.
+ *
+ * Nothing here comes from the request: the candidates are queried and evaluated
+ * server-side. That is the whole point — an automatic promotion has no code for
+ * the client to send, so a client must be able to neither forge one nor drop
+ * one by staying silent. Both the preview endpoints and the order-submit path
+ * call this same function, so what the cart shows and what gets persisted
+ * cannot drift apart.
+ */
+export async function resolveAutomaticPromotions({
+  cart,
+  customer,
+  currency,
+  now,
+  channel,
+}: ResolveAutomaticInput): Promise<IAppliedPromotion[]> {
+  await dbConnect();
+  const at = now ?? new Date();
+
+  const candidates = (await Promotion.find({
+    status: "ACTIVE",
+    trigger: "AUTOMATIC",
+    startAt: { $lte: at },
+    endAt: { $gte: at },
+  })
+    .sort({ priority: -1, createdAt: -1 })
+    .lean()) as unknown as PromotionData[];
+
+  const qualifying: IAppliedPromotion[] = [];
+  for (const promotion of candidates) {
+    const result = await evaluatePromotionDoc(promotion, {
+      cart,
+      customer,
+      currency,
+      now: at,
+      channel,
+    });
+    // A promotion the customer never asked for is simply skipped when it does
+    // not qualify — there is nothing to explain to them.
+    if (result.valid) {
+      qualifying.push(toAppliedPromotion(result, currency, channel));
+    }
+  }
+  return qualifying;
+}
+
 export async function resolveAppliedPromotions({
   codes,
   cart,
@@ -204,35 +303,7 @@ export async function resolveAppliedPromotions({
       invalid.push({ code, reason: result.reason });
       continue;
     }
-    const promo = result.promotion;
-    const gift = result.freeGift?.gifts?.[0];
-    const tierBasis = getTiersBasis(promo.tiers);
-    applied.push({
-      promotionId: String((promo as any)._id),
-      code: promo.code,
-      name: promo.name,
-      trigger: promo.trigger,
-      stackable: !!promo.stackable,
-      rewardsSummary: summarizeBenefits(promo, currency, channel),
-      // Which rung of a tiered promotion this order actually landed on — the
-      // summary alone lists every tier, so without this the order loses the
-      // record of what was granted.
-      appliedTierLabel:
-        result.appliedTier && tierBasis
-          ? describeTierThreshold(result.appliedTier, tierBasis, currency)
-          : undefined,
-      productDiscount: result.discount,
-      shippingDiscount: result.shippingDiscount,
-      freeGift: gift
-        ? {
-            productId: gift.productId,
-            variantId: gift.variantId,
-            variantName: gift.variantName,
-            quantity: gift.quantity,
-          }
-        : null,
-      discountCurrency: currency,
-    });
+    applied.push(toAppliedPromotion(result, currency, channel));
   }
 
   // Validate the stacking combination (mirror the client rule): the only legal
@@ -252,15 +323,32 @@ export async function resolveAppliedPromotions({
     }
   }
 
+  // Automatic promotions join only AFTER the codes are settled, using the same
+  // rule the cart previews with (see promotion-stacking.ts). Skipped entirely
+  // when a code is invalid, since the caller is about to reject the request.
+  const final =
+    invalid.length === 0
+      ? mergeAutomaticPromotions(
+          applied,
+          await resolveAutomaticPromotions({
+            cart,
+            customer,
+            currency,
+            now,
+            channel,
+          })
+        )
+      : applied;
+
   const promotionDiscount = roundMoney(
-    applied.reduce(
+    final.reduce(
       (s, p) => s + (p.productDiscount || 0) + (p.shippingDiscount || 0),
       0
     ),
     currency
   );
 
-  return { appliedPromotions: applied, promotionDiscount, invalid };
+  return { appliedPromotions: final, promotionDiscount, invalid };
 }
 
 // ---------------------------------------------------------------------------

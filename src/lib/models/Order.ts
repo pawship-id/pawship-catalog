@@ -1,5 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
-import {
+// Type-only: written as `import type` so the binding is erased rather than
+// emitted as a runtime import of a module that exports no such value.
+import type {
   IAppliedPromotion,
   IOrderDetail,
   IShippingAddress,

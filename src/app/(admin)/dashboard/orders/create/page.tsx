@@ -517,7 +517,9 @@ export default function CreateOrderPage() {
   );
 
   useEffect(() => {
-    if (appliedPromotions.length === 0 || orderItems.length === 0) return;
+    // No early exit on an empty promotion list: automatic promotions are
+    // resolved here too, so a cart that just crossed a threshold gains one.
+    if (orderItems.length === 0) return;
     let cancelled = false;
     (async () => {
       const { applied, dropped, changed } = await revalidateAppliedPromotions({
@@ -980,6 +982,11 @@ export default function CreateOrderPage() {
                             <span className="font-mono text-xs">
                               ({ap.code})
                             </span>
+                            {ap.trigger === "AUTOMATIC" && (
+                              <span className="ml-1 text-xs text-green-700 font-medium">
+                                Otomatis
+                              </span>
+                            )}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {ap.rewardsSummary}
@@ -991,14 +998,18 @@ export default function CreateOrderPage() {
                             </p>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePromotion(ap.code)}
-                          className="p-1 text-red-500 hover:text-red-700"
-                          title="Remove promotion"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                        {/* Automatic promotions apply themselves — removing one
+                            here would only be undone on the next revalidation. */}
+                        {ap.trigger !== "AUTOMATIC" && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePromotion(ap.code)}
+                            className="p-1 text-red-500 hover:text-red-700"
+                            title="Remove promotion"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
