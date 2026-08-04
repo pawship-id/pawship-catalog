@@ -47,6 +47,23 @@ const CHANNEL_LABELS: Record<PromotionChannel, string> = {
   WHATSAPP: "WhatsApp",
 };
 
+/**
+ * Coerce a stored enum value onto one of the options actually offered.
+ *
+ * Radix renders a value that has no matching `<SelectItem>` as an EMPTY box —
+ * no error, no placeholder, nothing to hint that the field holds a real value.
+ * A document written when the option list differed (or a hot-reloaded bundle
+ * mid-edit) therefore looks like the field simply failed to populate. Falling
+ * back to a valid option keeps that failure impossible.
+ */
+function pickOption<T extends string>(
+  options: readonly T[],
+  value: unknown,
+  fallback: T
+): T {
+  return options.includes(value as T) ? (value as T) : fallback;
+}
+
 interface CategoryLike {
   _id: string;
   name: string;
@@ -163,15 +180,20 @@ export default function FormPromotion({
       name: initialData.name ?? "",
       code: initialData.code ?? "",
       description: initialData.description ?? "",
-      trigger: initialData.trigger ?? "CODE",
-      status: initialData.status ?? "ACTIVE",
+      trigger: pickOption(PROMOTION_TRIGGERS, initialData.trigger, "CODE"),
+      status: pickOption(PROMOTION_STATUSES, initialData.status, "ACTIVE"),
       priority: initialData.priority ?? 0,
       stackable: !!initialData.stackable,
       // Promotions saved before channels existed have none — show them as
       // available everywhere, which is exactly how the engine treats them.
-      channels: initialData.channels?.length
-        ? initialData.channels
-        : [...PROMOTION_CHANNELS],
+      // Unknown entries are dropped for the same reason as pickOption: a
+      // channel with no checkbox would silently survive every save.
+      channels: (() => {
+        const known = (initialData.channels ?? []).filter((c) =>
+          PROMOTION_CHANNELS.includes(c)
+        );
+        return known.length ? known : [...PROMOTION_CHANNELS];
+      })(),
       startAt: toDateTimeLocal(initialData.startAt),
       endAt: toDateTimeLocal(initialData.endAt),
       appliesTo: initialData.appliesTo ?? { scope: "ALL", ids: [] },
@@ -323,7 +345,7 @@ export default function FormPromotion({
                     onValueChange={(trigger: any) => patch({ trigger })}
                   >
                     <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
-                      <SelectValue />
+                      <SelectValue placeholder="Select trigger" />
                     </SelectTrigger>
                     <SelectContent>
                       {PROMOTION_TRIGGERS.map((t) => (
@@ -348,7 +370,7 @@ export default function FormPromotion({
                     onValueChange={(status: any) => patch({ status })}
                   >
                     <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
-                      <SelectValue />
+                      <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
                       {PROMOTION_STATUSES.map((s) => (
