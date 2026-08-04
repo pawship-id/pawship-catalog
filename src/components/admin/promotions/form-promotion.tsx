@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -214,6 +214,10 @@ export default function FormPromotion({
     }));
   }, [initialData]);
 
+  // Set only when the admin actually opens the Trigger dropdown and picks a
+  // value. Everything else — hydration, defaults — leaves it false.
+  const triggerTouched = useRef(false);
+
   const patch = (p: Partial<PromotionForm>) => setForm((f) => ({ ...f, ...p }));
 
   // Turning a channel off at the promotion level also drops it from every tier,
@@ -243,6 +247,26 @@ export default function FormPromotion({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Refuse to rewrite the trigger unless the admin chose the new value.
+    // Whenever the loaded value fails to reach the form, saving would quietly
+    // downgrade an AUTOMATIC promotion to CODE — it would simply stop applying
+    // itself, with nothing on screen to say why.
+    const loadedTrigger = initialData?.trigger;
+    if (
+      isEditMode &&
+      loadedTrigger &&
+      !triggerTouched.current &&
+      form.trigger !== loadedTrigger
+    ) {
+      showErrorAlert(
+        "Trigger mismatch",
+        `This promotion is saved as ${loadedTrigger}, but the form is showing ${
+          form.trigger || "an empty value"
+        }. Saving now would change it. Reload the page, and pick the trigger explicitly if you really mean to change it.`
+      );
+      return;
+    }
 
     const payload = {
       ...form,
@@ -346,11 +370,15 @@ export default function FormPromotion({
                     Trigger
                   </Label>
                   <Select
-                    // Coerced again at render: an empty value makes Radix drop
-                    // into uncontrolled mode and show the placeholder, which is
-                    // indistinguishable from "the data failed to load".
-                    value={pickOption(PROMOTION_TRIGGERS, form.trigger, "CODE")}
-                    onValueChange={(trigger: any) => patch({ trigger })}
+                    // Deliberately NOT coerced here. If the value is unknown the
+                    // placeholder is the honest signal; showing a plausible
+                    // default instead would look correct and then be written to
+                    // the database on save, silently retiring an automatic promo.
+                    value={form.trigger}
+                    onValueChange={(trigger: any) => {
+                      triggerTouched.current = true;
+                      patch({ trigger });
+                    }}
                   >
                     <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
                       <SelectValue placeholder="Select trigger" />
@@ -374,7 +402,7 @@ export default function FormPromotion({
                     Status
                   </Label>
                   <Select
-                    value={pickOption(PROMOTION_STATUSES, form.status, "ACTIVE")}
+                    value={form.status}
                     onValueChange={(status: any) => patch({ status })}
                   >
                     <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
