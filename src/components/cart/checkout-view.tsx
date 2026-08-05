@@ -1396,7 +1396,7 @@ export default function CheckoutView({ source }: CheckoutViewProps) {
                       htmlFor="pickup-toggle"
                       className="block text-sm font-medium text-gray-800 cursor-pointer"
                     >
-                      Pick up at our store
+                      Pick up
                     </label>
                     <p className="mt-1 text-sm text-gray-500">
                       {formData.isPickup
