@@ -10,6 +10,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
+/** Reseller (B2B) orders go to the reseller line, retail (B2C) to the retail line. */
+const WA_NUMBER = {
+  B2B: "628158843760",
+  B2C: "6281231351150",
+} as const;
+
 export default function OrderSuccess() {
   const params = useParams();
   const id = params.id as string;
@@ -46,7 +52,8 @@ Thank you!
 `;
 
     const encodedMsg = encodeURIComponent(msg.trim());
-    window.open(`https://wa.me/628158843760?text=${encodedMsg}`, "_blank");
+    const phone = WA_NUMBER[order?.orderType === "B2B" ? "B2B" : "B2C"];
+    window.open(`https://wa.me/${phone}?text=${encodedMsg}`, "_blank");
   };
 
   const fetchOrderById = async () => {
