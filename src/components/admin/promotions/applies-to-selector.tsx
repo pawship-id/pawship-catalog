@@ -83,7 +83,11 @@ export default function AppliesToSelector({
         <Label className="text-sm">Scope</Label>
         <Select value={scope} onValueChange={changeScope}>
           <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
-            <SelectValue />
+            {/* Explicit children: the label must not depend on which item Radix
+                had registered when the value first arrived. */}
+            <SelectValue placeholder="Select scope">
+              {SCOPE_LABELS[scope] ?? scope}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {APPLIES_TO_SCOPES.map((s) => (

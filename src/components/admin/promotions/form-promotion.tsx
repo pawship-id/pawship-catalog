@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -48,20 +48,39 @@ const CHANNEL_LABELS: Record<PromotionChannel, string> = {
 };
 
 /**
- * Coerce a stored enum value onto one of the options actually offered.
+ * Match a stored enum value against the options actually offered.
  *
- * Radix renders a value that has no matching `<SelectItem>` as an EMPTY box —
- * no error, no placeholder, nothing to hint that the field holds a real value.
- * A document written when the option list differed (or a hot-reloaded bundle
- * mid-edit) therefore looks like the field simply failed to populate. Falling
- * back to a valid option keeps that failure impossible.
+ * Case and surrounding whitespace are normalised first, so a legacy
+ * `"automatic"` is recognised as the same trigger as `"AUTOMATIC"`. Anything
+ * that still does not match returns `null` rather than a fallback: substituting
+ * a plausible default looks correct on screen and then gets written back on the
+ * next save, silently retiring an automatic promotion. The caller shows the
+ * stored value instead and asks the admin to choose.
  */
-function pickOption<T extends string>(
+function normalizeOption<T extends string>(
   options: readonly T[],
-  value: unknown,
-  fallback: T
-): T {
-  return options.includes(value as T) ? (value as T) : fallback;
+  value: unknown
+): T | null {
+  const normalized = String(value ?? "")
+    .trim()
+    .toUpperCase();
+  return options.find((option) => option === normalized) ?? null;
+}
+
+/**
+ * Names the value the document actually holds when it is not one of the options.
+ * Without it the Select is just an empty box, which reads as "the data failed to
+ * load" — the exact confusion that made this bug hard to place.
+ */
+function StoredValueWarning({ value }: { value?: unknown }) {
+  const shown = String(value ?? "").trim() || "—";
+  return (
+    <p className="text-xs text-red-600">
+      Stored value <span className="font-semibold">{shown}</span> is not one of
+      the options above. Pick one to replace it — leaving it alone keeps the
+      stored value untouched.
+    </p>
+  );
 }
 
 interface CategoryLike {
@@ -118,6 +137,59 @@ function createEmptyForm(): PromotionForm {
   };
 }
 
+/**
+ * Build the form state from a promotion document.
+ *
+ * Pure, and fed to `useState`'s initialiser rather than applied later from an
+ * effect. Radix registers its `<SelectItem>`s on the first render (when closed,
+ * its content lives in a DocumentFragment created in a layout effect), and the
+ * trigger's label is portalled out of the item that is selected at that moment.
+ * A value that only arrives a render later therefore never reaches the label:
+ * the box stays blank with no error, and the only values that appear to work are
+ * the ones that happen to equal the defaults. Seeding the real value up front is
+ * what keeps every Select filled — in `next dev` and in a production build alike
+ * (Strict Mode's double mount hid this in dev by re-registering the items).
+ */
+function formFromPromotion(initialData?: PromotionData | null): PromotionForm {
+  const empty = createEmptyForm();
+  if (!initialData) return empty;
+
+  return {
+    ...empty,
+    name: initialData.name ?? "",
+    code: initialData.code ?? "",
+    description: initialData.description ?? "",
+    // `?? ""` keeps an unrecognised stored value out of the form without
+    // pretending it was something else — see `normalizeOption`.
+    trigger: normalizeOption(PROMOTION_TRIGGERS, initialData.trigger) ?? "",
+    status: normalizeOption(PROMOTION_STATUSES, initialData.status) ?? "",
+    priority: initialData.priority ?? 0,
+    stackable: !!initialData.stackable,
+    // Promotions saved before channels existed have none — show them as
+    // available everywhere, which is exactly how the engine treats them.
+    // Unknown entries are dropped: a channel with no checkbox would silently
+    // survive every save.
+    channels: (() => {
+      const known = (initialData.channels ?? []).filter((c) =>
+        PROMOTION_CHANNELS.includes(c)
+      );
+      return known.length ? known : [...PROMOTION_CHANNELS];
+    })(),
+    startAt: toDateTimeLocal(initialData.startAt),
+    endAt: toDateTimeLocal(initialData.endAt),
+    appliesTo: initialData.appliesTo ?? { scope: "ALL", ids: [] },
+    conditions: initialData.conditions ?? [],
+    rewards: initialData.rewards ?? [],
+    tiers: initialData.tiers ?? [],
+    customerRules: initialData.customerRules ?? {
+      firstPurchaseOnly: false,
+      newCustomerOnly: false,
+      resellerOnly: false,
+    },
+    limits: initialData.limits ?? {},
+  };
+}
+
 export default function FormPromotion({
   initialData,
   promotionId,
@@ -125,7 +197,12 @@ export default function FormPromotion({
   const router = useRouter();
   const isEditMode = !!promotionId;
 
-  const [form, setForm] = useState<PromotionForm>(createEmptyForm());
+  // Seeded from `initialData` on the very first render, never patched in later —
+  // see `formFromPromotion`. The edit page only mounts this component once the
+  // fetch has resolved, so there is nothing to wait for.
+  const [form, setForm] = useState<PromotionForm>(() =>
+    formFromPromotion(initialData)
+  );
   const [currencies, setCurrencies] = useState<string[]>(["IDR"]);
   const [products, setProducts] = useState<ProductData[]>([]);
   const [categories, setCategories] = useState<CategoryLike[]>([]);
@@ -173,51 +250,6 @@ export default function FormPromotion({
     })();
   }, []);
 
-  // Hydrate form from initialData (edit)
-  useEffect(() => {
-    if (!initialData) return;
-    // MERGE onto the defaults rather than replacing the whole object: a key
-    // missing from this literal would otherwise leave the field `undefined`,
-    // which React renders as an uncontrolled input — a Select shows its
-    // placeholder even though every other field around it filled in fine.
-    setForm((defaults) => ({
-      ...defaults,
-      name: initialData.name ?? "",
-      code: initialData.code ?? "",
-      description: initialData.description ?? "",
-      trigger: pickOption(PROMOTION_TRIGGERS, initialData.trigger, "CODE"),
-      status: pickOption(PROMOTION_STATUSES, initialData.status, "ACTIVE"),
-      priority: initialData.priority ?? 0,
-      stackable: !!initialData.stackable,
-      // Promotions saved before channels existed have none — show them as
-      // available everywhere, which is exactly how the engine treats them.
-      // Unknown entries are dropped for the same reason as pickOption: a
-      // channel with no checkbox would silently survive every save.
-      channels: (() => {
-        const known = (initialData.channels ?? []).filter((c) =>
-          PROMOTION_CHANNELS.includes(c)
-        );
-        return known.length ? known : [...PROMOTION_CHANNELS];
-      })(),
-      startAt: toDateTimeLocal(initialData.startAt),
-      endAt: toDateTimeLocal(initialData.endAt),
-      appliesTo: initialData.appliesTo ?? { scope: "ALL", ids: [] },
-      conditions: initialData.conditions ?? [],
-      rewards: initialData.rewards ?? [],
-      tiers: initialData.tiers ?? [],
-      customerRules: initialData.customerRules ?? {
-        firstPurchaseOnly: false,
-        newCustomerOnly: false,
-        resellerOnly: false,
-      },
-      limits: initialData.limits ?? {},
-    }));
-  }, [initialData]);
-
-  // Set only when the admin actually opens the Trigger dropdown and picks a
-  // value. Everything else — hydration, defaults — leaves it false.
-  const triggerTouched = useRef(false);
-
   const patch = (p: Partial<PromotionForm>) => setForm((f) => ({ ...f, ...p }));
 
   // Turning a channel off at the promotion level also drops it from every tier,
@@ -248,32 +280,19 @@ export default function FormPromotion({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Refuse to rewrite the trigger unless the admin chose the new value.
-    // Whenever the loaded value fails to reach the form, saving would quietly
-    // downgrade an AUTOMATIC promotion to CODE — it would simply stop applying
-    // itself, with nothing on screen to say why.
-    const loadedTrigger = initialData?.trigger;
-    if (
-      isEditMode &&
-      loadedTrigger &&
-      !triggerTouched.current &&
-      form.trigger !== loadedTrigger
-    ) {
-      showErrorAlert(
-        "Trigger mismatch",
-        `This promotion is saved as ${loadedTrigger}, but the form is showing ${
-          form.trigger || "an empty value"
-        }. Saving now would change it. Reload the page, and pick the trigger explicitly if you really mean to change it.`
-      );
-      return;
-    }
-
-    const payload = {
+    const payload: Partial<PromotionForm> = {
       ...form,
       code: form.code.trim().toUpperCase(),
       startAt: toIsoInstant(form.startAt),
       endAt: toIsoInstant(form.endAt),
     };
+
+    // An empty enum means the stored value is not one we offer and the admin has
+    // not picked a replacement. Dropping the key leaves the document's own value
+    // alone; sending `""` would fail the Mongoose enum validator, and sending a
+    // guessed default would quietly rewrite it.
+    if (!payload.trigger) delete payload.trigger;
+    if (!payload.status) delete payload.status;
 
     const errors = validatePromotionPayload(payload);
     if (errors.length > 0) {
@@ -289,7 +308,7 @@ export default function FormPromotion({
             promotionId!,
             payload
           )
-        : await createData<PromotionData, PromotionForm>(
+        : await createData<PromotionData, Partial<PromotionForm>>(
             "/api/admin/promotions",
             payload
           );
@@ -370,18 +389,20 @@ export default function FormPromotion({
                     Trigger
                   </Label>
                   <Select
-                    // Deliberately NOT coerced here. If the value is unknown the
-                    // placeholder is the honest signal; showing a plausible
-                    // default instead would look correct and then be written to
-                    // the database on save, silently retiring an automatic promo.
+                    // Never coerced. An empty value means the stored one is not
+                    // an option we offer; the placeholder plus the warning below
+                    // say so, where a plausible default would look correct and
+                    // then be written back on save.
                     value={form.trigger}
-                    onValueChange={(trigger: any) => {
-                      triggerTouched.current = true;
-                      patch({ trigger });
-                    }}
+                    onValueChange={(trigger: any) => patch({ trigger })}
                   >
                     <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
-                      <SelectValue placeholder="Select trigger" />
+                      {/* Explicit children so the label is rendered by
+                          SelectValue itself instead of being portalled out of
+                          whichever item Radix had registered at first render. */}
+                      <SelectValue placeholder="Select trigger">
+                        {form.trigger}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {PROMOTION_TRIGGERS.map((t) => (
@@ -391,11 +412,15 @@ export default function FormPromotion({
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {form.trigger === "AUTOMATIC"
-                      ? "Applies on its own once the cart qualifies. The customer never types anything, so the code below is only an internal label."
-                      : "The customer redeems this by entering the code below."}
-                  </p>
+                  {form.trigger ? (
+                    <p className="text-xs text-muted-foreground">
+                      {form.trigger === "AUTOMATIC"
+                        ? "Applies on its own once the cart qualifies. The customer never types anything, so the code below is only an internal label."
+                        : "The customer redeems this by entering the code below."}
+                    </p>
+                  ) : (
+                    <StoredValueWarning value={initialData?.trigger} />
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-base font-medium text-gray-700">
@@ -406,7 +431,9 @@ export default function FormPromotion({
                     onValueChange={(status: any) => patch({ status })}
                   >
                     <SelectTrigger className="border-gray-300 focus:border-primary/80 focus:ring-primary/80 py-5 w-full">
-                      <SelectValue placeholder="Select status" />
+                      <SelectValue placeholder="Select status">
+                        {form.status}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {PROMOTION_STATUSES.map((s) => (
@@ -416,6 +443,9 @@ export default function FormPromotion({
                       ))}
                     </SelectContent>
                   </Select>
+                  {!form.status && (
+                    <StoredValueWarning value={initialData?.status} />
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-base font-medium text-gray-700">

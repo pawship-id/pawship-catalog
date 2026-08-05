@@ -23,7 +23,11 @@ export default function EditPromotionPage() {
         "/api/admin/promotions",
         id
       );
-      if (response.data) setPromotion(response.data);
+      // A 200 with no `data` used to fall through silently and render the form on
+      // empty defaults — saving then overwrote the whole document. Treat it as
+      // the failure it is.
+      if (!response.data) throw new Error("Promotion data is empty");
+      setPromotion(response.data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -46,10 +50,20 @@ export default function EditPromotionPage() {
 
       {isLoading ? (
         <LoadingPage />
-      ) : error ? (
-        <ErrorPage errorMessage={error} url="/dashboard/promotions" />
+      ) : error || !promotion ? (
+        <ErrorPage
+          errorMessage={error ?? "Promotion not found"}
+          url="/dashboard/promotions"
+        />
       ) : (
-        <FormPromotion initialData={promotion} promotionId={id} />
+        // `key` remounts the form when the document changes, so its state is
+        // seeded from the new data on a first render rather than patched in
+        // afterwards — the whole reason the Trigger dropdown came up blank.
+        <FormPromotion
+          key={promotion._id}
+          initialData={promotion}
+          promotionId={id}
+        />
       )}
     </div>
   );

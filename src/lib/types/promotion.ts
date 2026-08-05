@@ -194,13 +194,20 @@ export interface PromotionData {
   updatedAt?: string | Date;
 }
 
-/** Payload the create/edit form submits. */
+/**
+ * Payload the create/edit form submits.
+ *
+ * `trigger`/`status` allow `""` so the form can hold "the stored value is not
+ * one of the options we offer" without inventing a plausible replacement. An
+ * empty value is never sent to the API — the form drops the key instead, which
+ * leaves the stored value alone (see `form-promotion.tsx`).
+ */
 export interface PromotionForm {
   name: string;
   code: string;
   description?: string;
-  trigger: PromotionTrigger;
-  status: PromotionStatus;
+  trigger: PromotionTrigger | "";
+  status: PromotionStatus | "";
   priority: number;
   stackable: boolean;
   channels: PromotionChannel[];

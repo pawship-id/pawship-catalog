@@ -7,13 +7,21 @@ interface Context {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * `trigger`/`status` are omitted when the client did not send them, so the
+ * stored value survives. The form leaves them out when it is holding a value it
+ * could not recognise — writing a guessed default there would silently retire an
+ * automatic promotion. Spreading conditionally rather than assigning `undefined`
+ * keeps that intent explicit instead of relying on Mongoose stripping undefined
+ * out of the `$set`.
+ */
 function pickPromotionFields(body: any) {
   return {
     name: body.name,
     code: String(body.code || "").trim().toUpperCase(),
     description: body.description,
-    trigger: body.trigger,
-    status: body.status,
+    ...(body.trigger === undefined ? {} : { trigger: body.trigger }),
+    ...(body.status === undefined ? {} : { status: body.status }),
     priority: body.priority,
     stackable: body.stackable,
     channels: body.channels,
