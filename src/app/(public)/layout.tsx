@@ -5,6 +5,7 @@ import NavigationHeader from "@/components/navigation-header";
 import { Footer } from "@/components/footer";
 import { Providers } from "@/components/providers";
 import FloatingButtonWA from "@/components/floating-button-wa";
+import BuyNowCleanup from "@/components/cart/buy-now-cleanup";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -86,6 +87,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
         <Providers>
+          <BuyNowCleanup />
           <NavigationHeader />
           <main className="flex-grow">{children}</main>
           <FloatingButtonWA />

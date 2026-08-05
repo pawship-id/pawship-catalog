@@ -8,7 +8,11 @@ export async function middleware(req: NextRequest) {
 
   // if the user has not logged in
   if (!token) {
-    if (pathname.startsWith("/wishlist") || pathname.startsWith("/cart")) {
+    if (
+      pathname.startsWith("/wishlist") ||
+      pathname.startsWith("/cart") ||
+      pathname.startsWith("/buy-now")
+    ) {
       return NextResponse.redirect(
         new URL(`/login?callbackUrl=${pathname}`, req.url)
       );
@@ -51,6 +55,7 @@ export const config = {
     "/reset-password",
     "/wishlist",
     "/cart",
+    "/buy-now",
     "/dashboard/:path*",
   ],
 };

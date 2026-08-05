@@ -18,6 +18,11 @@ import { useSession } from "next-auth/react";
 import { showErrorAlert, showSuccessAlert } from "@/lib/helpers/sweetalert2";
 import * as XLSX from "xlsx";
 import { filterProductsByCountry } from "@/lib/helpers/product-filter";
+import {
+  getQuantityInCart,
+  readLines,
+  writeLines,
+} from "@/lib/helpers/cart-storage";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -102,73 +107,84 @@ export default function ProductDetailPage() {
     return <ErrorPublicPage errorMessage="Page Not Found" />;
   }
 
-  const handleAddToCart = async () => {
+  /**
+   * The gate both CTAs share: a logged-in customer, a fully chosen variant,
+   * and — for anything that is not pre-order — enough stock left once whatever
+   * is already sitting in the cart is counted. "Buy Now" checks the cart too,
+   * because both baskets are eventually checked out against the same stock.
+   */
+  const resolvePurchasableVariant = (): VariantRow | null => {
     if (!session) {
       router.push(`/login?callbackUrl=/product/${slug}`);
       showErrorAlert(undefined, "Please login first");
-      return;
+      return null;
     }
 
-    let cartItem = JSON.parse(localStorage.getItem("cartItem") || "[]");
+    if (!selectedVariant) return null;
 
-    if (selectedVariant) {
-      const { selectedVariantDetail } = selectedVariant;
+    const variant = selectedVariant.selectedVariantDetail;
 
-      const existingVariantIndex = cartItem.findIndex(
-        (el: any) => el.variantId === selectedVariantDetail._id
-      );
+    if (!product.preOrder?.enabled) {
+      const existingQuantityInCart = getQuantityInCart(variant._id);
+      const availableStock = variant.stock;
 
-      // Check stock availability including existing cart quantity (only for non-PO products)
-      if (!product.preOrder?.enabled) {
-        const existingQuantityInCart =
-          existingVariantIndex !== -1
-            ? cartItem[existingVariantIndex].quantity
-            : 0;
+      if (existingQuantityInCart + quantity > availableStock) {
+        const remainingStock = availableStock - existingQuantityInCart;
 
-        const totalQuantity = existingQuantityInCart + quantity;
-        const availableStock = selectedVariantDetail.stock;
-
-        // Validate against available stock
-        if (totalQuantity > availableStock) {
-          const remainingStock = availableStock - existingQuantityInCart;
-
-          if (remainingStock <= 0) {
-            showErrorAlert(
-              undefined,
-              `The product in the cart has reached the maximum stock of ${availableStock} pcs`
-            );
-          } else {
-            showErrorAlert(
-              undefined,
-              `There are already ${existingQuantityInCart} items in your cart. You can only add ${remainingStock} more.`
-            );
-          }
-          return;
-        }
+        showErrorAlert(
+          undefined,
+          remainingStock <= 0
+            ? `The product in the cart has reached the maximum stock of ${availableStock} pcs`
+            : `There are already ${existingQuantityInCart} items in your cart. You can only add ${remainingStock} more.`
+        );
+        return null;
       }
-
-      if (existingVariantIndex !== -1) {
-        cartItem[existingVariantIndex].quantity += quantity;
-      } else {
-        cartItem = [
-          {
-            variantId: selectedVariantDetail._id,
-            productId: product._id,
-            quantity,
-          },
-          ...cartItem,
-        ];
-      }
-
-      localStorage.setItem("cartItem", JSON.stringify(cartItem));
-
-      // Trigger event to update cart badge in header
-      window.dispatchEvent(new Event("cartUpdated"));
-
-      setQuantity(1);
-
-      showSuccessAlert(undefined, "Successfully added product to cart");
     }
+
+    return variant;
+  };
+
+  const handleAddToCart = async () => {
+    const variant = resolvePurchasableVariant();
+    if (!variant) return;
+
+    const cartItem = readLines("cart");
+
+    const existingVariantIndex = cartItem.findIndex(
+      (el) => el.variantId === variant._id
+    );
+
+    if (existingVariantIndex !== -1) {
+      cartItem[existingVariantIndex].quantity += quantity;
+      writeLines("cart", cartItem);
+    } else {
+      writeLines("cart", [
+        {
+          variantId: variant._id,
+          productId: product._id,
+          quantity,
+        },
+        ...cartItem,
+      ]);
+    }
+
+    setQuantity(1);
+
+    showSuccessAlert(undefined, "Successfully added product to cart");
+  };
+
+  const handleBuyNow = () => {
+    const variant = resolvePurchasableVariant();
+    if (!variant) return;
+
+    // Replaces whatever a previous Buy Now left behind — this basket only ever
+    // holds the one item the customer just picked, and it never touches the
+    // cart.
+    writeLines("buynow", [
+      { productId: product._id, variantId: variant._id, quantity },
+    ]);
+
+    router.push("/buy-now");
   };
 
   const handleDownloadBulkTemplate = async () => {
@@ -359,8 +375,13 @@ export default function ProductDetailPage() {
 
             {/* Buy Now */}
             <button
-              className="w-full border-1 border-primary cursor-pointer bg-white hover:bg-secondary text-primary py-3 px-6 rounded-lg font-semibold transition-colors"
-              onClick={() => console.log("Buy now")}
+              className={`w-full border-1 py-3 px-6 rounded-lg font-semibold transition-colors ${
+                disabledAddToCart
+                  ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                  : "border-primary bg-white hover:bg-secondary text-primary cursor-pointer"
+              }`}
+              onClick={handleBuyNow}
+              disabled={disabledAddToCart}
             >
               Buy Now
             </button>

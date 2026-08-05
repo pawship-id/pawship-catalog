@@ -17,6 +17,7 @@ import VariantSelector from "@/components/product/variant-selector";
 import PricingDisplay from "@/components/product/product-pricing";
 import { enrichProduct } from "@/lib/helpers/product";
 import { useRouter } from "next/navigation";
+import { readLines, writeLines } from "@/lib/helpers/cart-storage";
 
 interface AddToCartModalProps {
   isOpen: boolean;
@@ -93,11 +94,11 @@ export default function AddToCartModal({
     const { selectedVariantDetail } = selectedVariant;
 
     // Get existing cart
-    const existingCart = JSON.parse(localStorage.getItem("cartItem") || "[]");
+    const existingCart = readLines("cart");
 
     // Check if item already exists
     const existingItemIndex = existingCart.findIndex(
-      (item: any) => item.variantId === selectedVariantDetail._id
+      (item) => item.variantId === selectedVariantDetail._id
     );
 
     // Check stock availability including existing cart quantity (only for non-PO products)
@@ -141,10 +142,7 @@ export default function AddToCartModal({
       existingCart.push(cartItem);
     }
 
-    localStorage.setItem("cartItem", JSON.stringify(existingCart));
-
-    // Trigger event to update cart badge in header
-    window.dispatchEvent(new Event("cartUpdated"));
+    writeLines("cart", existingCart);
 
     showSuccessAlert(
       "Added to Cart",
