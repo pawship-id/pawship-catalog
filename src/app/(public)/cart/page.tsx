@@ -11,6 +11,8 @@ import {
   Phone,
   Ticket,
   X,
+  Store,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { createData, getById } from "@/lib/apiService";
 import { ProductData } from "@/lib/types/product";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -95,6 +98,7 @@ export default function CartPage() {
       zipCode: "",
       address: "",
     },
+    isPickup: false,
     shippingCost: 0,
     orderDetails: [] as IOrderDetail[],
     currency,
@@ -120,11 +124,41 @@ export default function CartPage() {
     }));
   };
 
+  /** Fields the customer must fill in. A pickup order needs contact info only. */
+  const requiredAddressFields: (keyof IShippingAddress)[] = formData.isPickup
+    ? ["fullName", "email", "phone", "country"]
+    : [
+        "fullName",
+        "email",
+        "phone",
+        "country",
+        "city",
+        "district",
+        "zipCode",
+        "address",
+      ];
+
   const isAddressValid = () => {
-    return Object.values(formData.shippingAddress).every(
-      (value) => value.trim() !== "",
+    return requiredAddressFields.every(
+      (field) => (formData.shippingAddress[field] ?? "").trim() !== "",
     );
   };
+
+  /**
+   * Street-level fields are kept in state while the pickup toggle is on (so
+   * switching back restores what the customer typed) but stripped from what we
+   * send, so a pickup order never stores a delivery address it does not use.
+   */
+  const buildShippingAddress = (): IShippingAddress =>
+    formData.isPickup
+      ? {
+          ...formData.shippingAddress,
+          city: "",
+          district: "",
+          zipCode: "",
+          address: "",
+        }
+      : formData.shippingAddress;
 
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -332,6 +366,7 @@ export default function CartPage() {
         "/api/public/orders",
         {
           ...formData,
+          shippingAddress: buildShippingAddress(),
           appliedPromotions,
           promotionDiscount,
         },
@@ -1277,13 +1312,71 @@ export default function CartPage() {
               </div>
             </div>
 
+            {/* Delivery Method Section */}
+            <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-primary/30">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  {formData.isPickup ? (
+                    <Store className="w-6 h-6 text-primary" />
+                  ) : (
+                    <Truck className="w-6 h-6 text-primary" />
+                  )}
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Delivery Method
+                  </h2>
+                </div>
+
+                <div
+                  className={`flex items-start justify-between gap-4 rounded-lg border p-4 transition-colors ${
+                    formData.isPickup
+                      ? "border-primary/50 bg-primary/5"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="pickup-toggle"
+                      className="block text-sm font-medium text-gray-800 cursor-pointer"
+                    >
+                      Pick up at our store
+                    </label>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {formData.isPickup
+                        ? "You will collect the order yourself, so no delivery address is needed. We'll arrange the pickup schedule via WhatsApp."
+                        : "Turn this on if you prefer to collect the order yourself instead of having it delivered."}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span
+                      className={`text-xs font-semibold ${
+                        formData.isPickup ? "text-primary" : "text-gray-400"
+                      }`}
+                    >
+                      {formData.isPickup ? "ON" : "OFF"}
+                    </span>
+                    <Switch
+                      id="pickup-toggle"
+                      checked={formData.isPickup}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({ ...prev, isPickup: checked }))
+                      }
+                      className="cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Shipping Address Section */}
             <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-primary/30">
               <div className="p-4 sm:p-6">
                 <div className="flex items-center space-x-3 mb-6">
                   <MapPin className="w-6 h-6 text-primary" />
                   <h2 className="text-xl font-semibold text-gray-800">
-                    Shipping Address
+                    {formData.isPickup
+                      ? "Contact & Pickup Info"
+                      : "Shipping Address"}
                   </h2>
                 </div>
 
@@ -1361,65 +1454,72 @@ export default function CartPage() {
                     </Select>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.shippingAddress.city}
-                      onChange={(e) =>
-                        handleAddressChange("city", e.target.value)
-                      }
-                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
-                      placeholder="Enter your city"
-                    />
-                  </div>
+                  {/* Street-level fields are irrelevant for a pickup order.
+                      They stay in state (hidden, not cleared) so turning the
+                      toggle back off restores what the customer already typed. */}
+                  {!formData.isPickup && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">
+                          City
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.shippingAddress.city}
+                          onChange={(e) =>
+                            handleAddressChange("city", e.target.value)
+                          }
+                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
+                          placeholder="Enter your city"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      District
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.shippingAddress.district}
-                      onChange={(e) =>
-                        handleAddressChange("district", e.target.value)
-                      }
-                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
-                      placeholder="Enter district"
-                    />
-                  </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">
+                          District
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.shippingAddress.district}
+                          onChange={(e) =>
+                            handleAddressChange("district", e.target.value)
+                          }
+                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
+                          placeholder="Enter district"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Zip Code
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.shippingAddress.zipCode}
-                      onChange={(e) =>
-                        handleAddressChange("zipCode", e.target.value)
-                      }
-                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
-                      placeholder="Enter zip code"
-                    />
-                  </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">
+                          Zip Code
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.shippingAddress.zipCode}
+                          onChange={(e) =>
+                            handleAddressChange("zipCode", e.target.value)
+                          }
+                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors"
+                          placeholder="Enter zip code"
+                        />
+                      </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Street Address
-                    </label>
-                    <textarea
-                      value={formData.shippingAddress.address}
-                      onChange={(e) =>
-                        handleAddressChange("address", e.target.value)
-                      }
-                      rows={3}
-                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors resize-none"
-                      placeholder="Enter your complete address"
-                    />
-                  </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">
+                          Street Address
+                        </label>
+                        <textarea
+                          value={formData.shippingAddress.address}
+                          onChange={(e) =>
+                            handleAddressChange("address", e.target.value)
+                          }
+                          rows={3}
+                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/80 focus:border-primary/80 transition-colors resize-none"
+                          placeholder="Enter your complete address"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -1441,7 +1541,9 @@ export default function CartPage() {
 
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping</span>
-                    <span>{format(shipping)}</span>
+                    <span>
+                      {formData.isPickup ? "Pickup — no fee" : format(shipping)}
+                    </span>
                   </div>
 
                   {/* Promotion */}
@@ -1559,7 +1661,9 @@ export default function CartPage() {
                     {moqWarnings.length > 0
                       ? "MOQ Requirements Not Met"
                       : !isAddressValid()
-                        ? "Complete Address to Continue"
+                        ? formData.isPickup
+                          ? "Complete Contact Info to Continue"
+                          : "Complete Address to Continue"
                         : "Confirm Order via Whatsapp"}
                   </button>
                   {isAddressValid() && moqWarnings.length === 0 && (

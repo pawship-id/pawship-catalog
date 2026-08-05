@@ -68,6 +68,27 @@ export async function PUT(req: NextRequest, { params }: Context) {
       );
     }
 
+    // The street-level address fields are optional on the schema so that pickup
+    // orders can exist without them, which means an edit could otherwise blank
+    // out the address of an order that still has to be delivered.
+    if (!originalOrder.isPickup) {
+      const missingAddress = (
+        ["city", "district", "zipCode", "address"] as const
+      ).filter((field) => !(body.shippingAddress?.[field] ?? "").trim());
+
+      if (missingAddress.length > 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `A delivery order requires a complete address. Missing: ${missingAddress.join(
+              ", "
+            )}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Calculate stock updates needed
     const stockUpdates: Map<
       string,

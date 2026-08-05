@@ -33,21 +33,34 @@ export default function OrderSuccess() {
       )
       .join("\n");
 
+    // A pickup order has no delivery address and no shipping fee to quote, so
+    // the message asks about the pickup schedule instead.
+    const isPickup = !!order?.isPickup;
+
+    const deliveryLines = isPickup
+      ? `*Delivery Method:* Pickup at store`
+      : `*Delivery Method:* Delivery
+*Address:* ${order?.shippingAddress.address}
+*Shipping Fee:* _Not available yet_`;
+
+    const closing = isPickup
+      ? `Please confirm my pickup schedule & payment details.`
+      : `Please confirm my shipping fee & payment details.`;
+
     const msg = `
 *Hi Pawship!*
 
-I just placed an order on your website.  
+I just placed an order on your website.
 Here are my details:
 
 *Name:* ${order?.shippingAddress.fullName}
 *Phone:* ${order?.shippingAddress.phone}
-*Address:* ${order?.shippingAddress.address}
-*Shipping Fee:* _Not available yet_
+${deliveryLines}
 
-*Items:*  
+*Items:*
 ${items}
 
-Please confirm my shipping fee & payment details.  
+${closing}
 Thank you!
 `;
 
@@ -156,7 +169,9 @@ Thank you!
               Your Order ID: {order.invoiceNumber}
             </p>
             <p className="text-base md:text-lg text-gray-500 px-2">
-              We'll confirm shipping & payment via WhatsApp
+              {order.isPickup
+                ? "We'll confirm your pickup schedule & payment via WhatsApp"
+                : "We'll confirm shipping & payment via WhatsApp"}
             </p>
           </div>
 

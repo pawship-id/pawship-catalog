@@ -78,7 +78,19 @@ export default function TableOrder({
                 <TableCell className="font-medium">
                   {item.invoiceNumber}
                 </TableCell>
-                <TableCell>{item.shippingAddress.fullName}</TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-1">
+                    <span>{item.shippingAddress.fullName}</span>
+                    {item.isPickup && (
+                      <Badge
+                        variant="outline"
+                        className="w-fit text-xs font-normal"
+                      >
+                        Pickup
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{item.shippingAddress.phone}</TableCell>
                 <TableCell className="text-muted-foreground">
                   <Badge variant="outline">{item.orderType}</Badge>

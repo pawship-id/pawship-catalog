@@ -46,6 +46,26 @@ export async function POST(req: NextRequest) {
 
     const body: OrderForm = await req.json();
 
+    // The street-level address fields are optional on the schema because a
+    // pickup order has none, so a delivery order's address is enforced here.
+    // Admin-created orders are always deliveries — this form has no pickup
+    // option — hence no `isPickup` branch.
+    const missingAddress = (
+      ["city", "district", "zipCode", "address"] as const
+    ).filter((field) => !(body.shippingAddress?.[field] ?? "").trim());
+
+    if (missingAddress.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `A delivery order requires a complete address. Missing: ${missingAddress.join(
+            ", ",
+          )}`,
+        },
+        { status: 400 },
+      );
+    }
+
     // Round monetary fields to the currency's precision so what is stored is
     // exactly what the UI displays (no 3.8949999 / 1450.8000000000002)
     const { orderDetails, totalAmount } = normalizeOrderMoney(

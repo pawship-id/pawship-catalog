@@ -10,6 +10,7 @@
     "seed:currency": "node ./src/lib/seeders/currencySeeder.js",
     "backfill:revenue": "node ./src/lib/migrations/backfillOrderRevenue.js",
     "backfill:money": "node ./src/lib/migrations/backfillOrderMoney.js",
+    "backfill:pickup": "node ./src/lib/migrations/backfillOrderPickup.js",
     "price:bulk-update": "node ./scripts/bulk-update-price.js"
   },
   "dependencies": {

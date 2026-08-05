@@ -74,6 +74,7 @@ export interface IShippingAddress {
   email: string;
   phone: string;
   country: string;
+  // Street-level fields are empty strings on a pickup order.
   city: string;
   district: string;
   zipCode: string;
@@ -92,6 +93,8 @@ export interface OrderForm {
     | "shipped";
   orderType: "B2C" | "B2B";
   shippingAddress: IShippingAddress;
+  /** true when the customer collects the order at the store instead of having it delivered. */
+  isPickup: boolean;
   orderDetails: IOrderDetail[];
   shippingCost: number;
   discountShipping: number;
@@ -115,6 +118,12 @@ export interface OrderData {
     | "shipped";
   orderType: "B2C" | "B2B";
   shippingAddress: IShippingAddress;
+  /**
+   * true when the customer collects the order at the store. Optional because
+   * orders created before the field existed have no value until the backfill
+   * runs — always read it as `!!order.isPickup`.
+   */
+  isPickup?: boolean;
   orderDetails: IOrderDetail[];
   shippingCost: number;
   discountShipping: number;

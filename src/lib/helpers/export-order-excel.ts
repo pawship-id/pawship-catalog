@@ -21,6 +21,7 @@ const HEADERS = [
   "Created Date",
   "Order Type",
   "Status",
+  "Delivery Method",
   "Customer Name",
   "Email",
   "Phone",
@@ -48,29 +49,29 @@ const HEADERS = [
 ];
 
 const COL_WIDTHS = [
-  22, 12, 12, 10, 20, 22, 26, 16, 14, 16, 16, 10, 40, 28, 18, 18, 10, 14, 12,
-  22, 14, 16, 14, 16, 14, 10, 16,
+  22, 12, 12, 10, 20, 16, 22, 26, 16, 14, 16, 16, 10, 40, 28, 18, 18, 10, 14,
+  12, 22, 14, 16, 14, 16, 14, 10, 16,
 ].map((wch) => ({ wch }));
 
 // Indeks kolom order-level — nilainya hanya ditulis di baris pertama tiap order,
-// lalu di-merge ke bawah. Sisanya (13-20) diisi per variant.
+// lalu di-merge ke bawah. Sisanya (14-21) diisi per variant.
 const MERGED_COLUMNS = [
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 21, 22, 23, 24, 25, 26,
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 22, 23, 24, 25, 26, 27,
 ];
 
 const NUMBER_FORMATS: Record<number, string> = {
   1: "yyyy-mm-dd",
   2: "yyyy-mm-dd",
-  16: "#,##0",
-  17: "#,##0.00",
-  18: "#,##0.##",
-  19: "#,##0.00",
+  17: "#,##0",
+  18: "#,##0.00",
+  19: "#,##0.##",
   20: "#,##0.00",
   21: "#,##0.00",
   22: "#,##0.00",
   23: "#,##0.00",
   24: "#,##0.00",
-  26: "#,##0",
+  25: "#,##0.00",
+  27: "#,##0",
 };
 
 export const buildFileName = (
@@ -149,6 +150,7 @@ export async function exportOrdersToExcel(
         orderCell(toDateCell(order.createdAt)),
         orderCell(order.orderType ?? ""),
         orderCell(order.status ?? ""),
+        orderCell(order.isPickup ? "Pickup" : "Delivery"),
         orderCell(order.shippingAddress?.fullName ?? ""),
         orderCell(order.shippingAddress?.email ?? ""),
         orderCell(order.shippingAddress?.phone ?? ""),

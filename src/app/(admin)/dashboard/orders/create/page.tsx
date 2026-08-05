@@ -608,6 +608,9 @@ export default function CreateOrderPage() {
         status: "pending confirmation",
         orderType: selectedCustomer.role === "reseller" ? "B2B" : "B2C",
         shippingAddress,
+        // Admin-created orders are deliveries; this form always collects a full
+        // address. Pickup is only offered on the storefront for now.
+        isPickup: false,
         orderDetails: orderItems,
         shippingCost,
         discountShipping,

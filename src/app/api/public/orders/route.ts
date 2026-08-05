@@ -34,6 +34,44 @@ export async function POST(req: NextRequest) {
 
     const body: OrderForm = await req.json();
 
+    // Delivery vs pickup. Only a literal `true` counts, so a truthy string from
+    // a hand-rolled request can never turn a delivery into a pickup and skip
+    // the address requirement below.
+    const isPickup = body.isPickup === true;
+
+    // The schema deliberately leaves the street-level fields optional (a pickup
+    // order has none), so the "a delivery needs a full address" rule is enforced
+    // here — the client-side check is a convenience, not a guarantee.
+    if (!isPickup) {
+      const missing = (
+        ["city", "district", "zipCode", "address"] as const
+      ).filter((field) => !(body.shippingAddress?.[field] ?? "").trim());
+
+      if (missing.length > 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `A delivery order requires a complete address. Missing: ${missing.join(
+              ", "
+            )}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Never store a delivery address on an order nobody is going to deliver.
+    // `country` is kept either way: it drives the invoice number.
+    const shippingAddress = isPickup
+      ? {
+          ...body.shippingAddress,
+          city: "",
+          district: "",
+          zipCode: "",
+          address: "",
+        }
+      : body.shippingAddress;
+
     // Round monetary fields to the currency's precision so what is stored is
     // exactly what the UI displays (no 3.8949999 / 1450.8000000000002)
     const { orderDetails, totalAmount } = normalizeOrderMoney(
@@ -115,6 +153,8 @@ export async function POST(req: NextRequest) {
       ...safeBody,
       orderDetails,
       totalAmount,
+      isPickup, // coerced above
+      shippingAddress, // stripped of street-level fields when picking up
       userId: session.user.id,
       baseRupiah,
       grossRevenue,
@@ -127,7 +167,7 @@ export async function POST(req: NextRequest) {
 
     // Generate unique invoice number based on shipping address country
     const invoiceNumber = await generateInvoiceNumber(
-      body.shippingAddress.country
+      shippingAddress.country
     );
     orderData.invoiceNumber = invoiceNumber;
 

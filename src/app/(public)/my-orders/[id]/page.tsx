@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   Package,
@@ -69,6 +70,8 @@ interface OrderDetail {
   currency: string;
   orderType: "B2C" | "B2B";
   paymentProofs: PaymentProof[];
+  /** Absent on orders created before the field existed — always read as `!!`. */
+  isPickup?: boolean;
   shippingAddress: {
     fullName: string;
     email: string;
@@ -488,10 +491,13 @@ export default function OrderDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <MapPin className="h-5 w-5" />
-                Shipping Address
+                {order.isPickup ? "Contact & Pickup Info" : "Shipping Address"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
+              <Badge variant="outline" className="mb-1">
+                {order.isPickup ? "Pickup at store" : "Delivery"}
+              </Badge>
               <p className="font-semibold">{order.shippingAddress.fullName}</p>
               <p className="text-muted-foreground">
                 {order.shippingAddress.phone}
@@ -500,15 +506,26 @@ export default function OrderDetailPage() {
                 {order.shippingAddress.email}
               </p>
               <Separator className="my-2" />
-              <p className="text-muted-foreground">
-                {order.shippingAddress.address}
-              </p>
-              <p className="text-muted-foreground">
-                {order.shippingAddress.district}, {order.shippingAddress.city}
-              </p>
-              <p className="text-muted-foreground">
-                {order.shippingAddress.country}, {order.shippingAddress.zipCode}
-              </p>
+              {order.isPickup ? (
+                <p className="text-muted-foreground">
+                  You are collecting this order at our store — no delivery
+                  address needed.
+                </p>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    {order.shippingAddress.address}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {order.shippingAddress.district},{" "}
+                    {order.shippingAddress.city}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {order.shippingAddress.country},{" "}
+                    {order.shippingAddress.zipCode}
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 

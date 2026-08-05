@@ -34,6 +34,8 @@ export interface IOrder extends Document {
     | "processing"
     | "shipped";
   shippingAddress: IShippingAddress;
+  /** true when the customer collects the order at the store instead of having it delivered. */
+  isPickup: boolean;
   orderDetails: IOrderDetail[];
   shippingCost: number;
   discountShipping: number;
@@ -81,6 +83,11 @@ const OrderDetailSchema = new Schema<IOrderDetail>(
   { _id: false },
 );
 
+// Contact fields (+ country, which drives the invoice number) are required on
+// every order. The street-level fields are NOT required here: a pickup order
+// legitimately has none. A `required` function could not see `isPickup` anyway —
+// inside a subdocument `this` is the subdocument, not the order — so the
+// "delivery orders must have a full address" rule lives in the API routes.
 const ShippingAddressSchema = new Schema<IShippingAddress>(
   {
     fullName: {
@@ -97,7 +104,6 @@ const ShippingAddressSchema = new Schema<IShippingAddress>(
     },
     address: {
       type: String,
-      required: [true, "Please input a address"],
     },
     country: {
       type: String,
@@ -105,15 +111,12 @@ const ShippingAddressSchema = new Schema<IShippingAddress>(
     },
     city: {
       type: String,
-      required: [true, "Please input a zip"],
     },
     district: {
       type: String,
-      required: [true, "Please input a district"],
     },
     zipCode: {
       type: String,
-      required: [true, "Please input a zipcode"],
     },
   },
   { _id: false },
@@ -209,6 +212,13 @@ const OrderSchema = new Schema<IOrder>(
     shippingAddress: {
       type: ShippingAddressSchema,
       required: true,
+    },
+    // Orders created before pickup existed were always delivered, hence `false`.
+    // Note that a `.lean()` query will NOT apply this default to documents that
+    // predate the field — the backfill script fills them in for real.
+    isPickup: {
+      type: Boolean,
+      default: false,
     },
     orderDetails: {
       type: [OrderDetailSchema],

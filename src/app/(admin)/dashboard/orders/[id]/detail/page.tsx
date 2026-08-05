@@ -3,6 +3,7 @@
 import ErrorPage from "@/components/admin/error-page";
 import LoadingPage from "@/components/admin/loading-page";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { getById } from "@/lib/apiService";
 import { currencyFormat } from "@/lib/helpers";
 import { OrderData } from "@/lib/types/order";
@@ -196,10 +197,15 @@ export default function DetailProduct() {
     doc.setFontSize(9);
     doc.text(order.shippingAddress.fullName, 120, 75);
 
-    // Address
-    const fullAddress = `${order.shippingAddress.address}${
-      order.shippingAddress.address ? ", " + order.shippingAddress.district : ""
-    }, ${order.shippingAddress.city}, ${order.shippingAddress.country} ${order.shippingAddress.zipCode}`;
+    // Address. A pickup order has no street-level fields, so the usual template
+    // would print a line of stray commas — say what it actually is instead.
+    const fullAddress = order.isPickup
+      ? `PICKUP AT STORE (${order.shippingAddress.country})`
+      : `${order.shippingAddress.address}${
+          order.shippingAddress.address
+            ? ", " + order.shippingAddress.district
+            : ""
+        }, ${order.shippingAddress.city}, ${order.shippingAddress.country} ${order.shippingAddress.zipCode}`;
     const addressLines = doc.splitTextToSize(fullAddress, 75);
     let addressY = 81;
     addressLines.forEach((line: string) => {
@@ -612,8 +618,13 @@ export default function DetailProduct() {
                 <div className="flex items-center space-x-2 mb-4">
                   <MapPin className="w-5 h-5 text-primary" />
                   <h2 className="text-xl font-semibold text-gray-900">
-                    Shipping Address
+                    {order.isPickup
+                      ? "Contact & Pickup Info"
+                      : "Shipping Address"}
                   </h2>
+                  <Badge variant="outline">
+                    {order.isPickup ? "Pickup at store" : "Delivery"}
+                  </Badge>
                 </div>
 
                 <div className="space-y-4">
@@ -658,42 +669,56 @@ export default function DetailProduct() {
                       </p>
                     </div>
 
-                    <div>
-                      <div className="text-gray-600 mb-1 text-sm font-medium">
-                        City
-                      </div>
-                      <p className="text-gray-900 font-medium">
-                        {order.shippingAddress.city}
-                      </p>
-                    </div>
+                    {/* A pickup order has no street-level fields to show. */}
+                    {!order.isPickup && (
+                      <>
+                        <div>
+                          <div className="text-gray-600 mb-1 text-sm font-medium">
+                            City
+                          </div>
+                          <p className="text-gray-900 font-medium">
+                            {order.shippingAddress.city}
+                          </p>
+                        </div>
 
-                    <div>
-                      <div className="text-gray-600 mb-1 text-sm font-medium">
-                        District
-                      </div>
-                      <p className="text-gray-900 font-medium">
-                        {order.shippingAddress.district}
-                      </p>
-                    </div>
+                        <div>
+                          <div className="text-gray-600 mb-1 text-sm font-medium">
+                            District
+                          </div>
+                          <p className="text-gray-900 font-medium">
+                            {order.shippingAddress.district}
+                          </p>
+                        </div>
 
-                    <div>
-                      <div className="text-gray-600 mb-1 text-sm font-medium">
-                        Zip Code
-                      </div>
-                      <p className="text-gray-900 font-medium">
-                        {order.shippingAddress.zipCode}
-                      </p>
-                    </div>
+                        <div>
+                          <div className="text-gray-600 mb-1 text-sm font-medium">
+                            Zip Code
+                          </div>
+                          <p className="text-gray-900 font-medium">
+                            {order.shippingAddress.zipCode}
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  <div>
-                    <div className="text-gray-600 mb-1 text-sm font-medium">
-                      Street Address
+                  {order.isPickup ? (
+                    <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+                      <p className="text-sm text-gray-600">
+                        The customer collects this order at the store — no
+                        delivery address was provided.
+                      </p>
                     </div>
-                    <p className="text-gray-900 font-medium">
-                      {order.shippingAddress.address}
-                    </p>
-                  </div>
+                  ) : (
+                    <div>
+                      <div className="text-gray-600 mb-1 text-sm font-medium">
+                        Street Address
+                      </div>
+                      <p className="text-gray-900 font-medium">
+                        {order.shippingAddress.address}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
