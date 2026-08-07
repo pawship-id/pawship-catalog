@@ -39,7 +39,7 @@ const VariantTypeSchema = new Schema<VariantType>(
       type: String,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const ProductSchema = new Schema<IProduct>(
@@ -130,7 +130,7 @@ const ProductSchema = new Schema<IProduct>(
       type: String,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // mongoose-delete plugin for soft delete
@@ -145,6 +145,13 @@ ProductSchema.virtual("productVariantsData", {
   localField: "_id",
   foreignField: "productId",
   justOne: false,
+  // Tanpa sort, MongoDB mengembalikan variant dalam urutan natural (urutan
+  // insert di collection), sehingga variant yang ditambahkan lewat form edit
+  // selalu menempel di akhir dan urutan baris form tidak lagi sama dengan
+  // urutan saat disimpan. `position` diisi ulang dari index baris form setiap
+  // kali produk disimpan; `_id` dipakai sebagai tie-breaker agar urutannya
+  // tetap deterministik untuk data lama yang position-nya masih duplikat.
+  options: { sort: { position: 1, _id: 1 } },
 });
 
 ProductSchema.virtual("categoryDetail", {

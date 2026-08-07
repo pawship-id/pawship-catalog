@@ -10,6 +10,23 @@ import {
   ChevronDown,
   Settings,
 } from "lucide-react";
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -33,6 +50,57 @@ type VariantEditorProps = {
 
 function makeId() {
   return Math.random().toString(36).slice(2, 9);
+}
+
+// Baris tabel hanya boleh digeser ke atas/bawah — tanpa ini baris ikut melayang
+// ke samping saat tabel di-scroll horizontal. Sama dengan modifier
+// restrictToVerticalAxis milik @dnd-kit, tapi paket modifiers-nya tidak
+// terpasang di project ini.
+function restrictToVerticalAxis({ transform }: { transform: any }) {
+  return { ...transform, x: 0 };
+}
+
+// Satu baris varian yang bisa di-drag. Listener drag sengaja hanya dipasang di
+// handle (ikon grip), supaya klik/ketik di input dalam baris tidak tertangkap
+// sebagai gesture drag.
+function SortableVariantRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: (handleProps: {
+    ref: (node: HTMLElement | null) => void;
+    listeners: Record<string, any> | undefined;
+    attributes: Record<string, any>;
+  }) => React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={{
+        // Translate saja (bukan Transform) — Transform ikut membawa scale yang
+        // membuat baris tabel gepeng saat digeser.
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        position: isDragging ? "relative" : undefined,
+        zIndex: isDragging ? 1 : undefined,
+      }}
+      className="h-14 border-b align-middle bg-background"
+    >
+      {children({ ref: setActivatorNodeRef, listeners, attributes })}
+    </tr>
+  );
 }
 
 // Parse harga yang diketik admin. Mendukung pemisah ribuan + desimal ala locale
@@ -225,7 +293,9 @@ export function VariantEditor({
     // berarti tidak diisi, jadi jangan menimpa harga yang sudah ada di form.
     const priceEntries: Record<string, number> = {};
     currencyList.forEach((el) => {
-      const num = parsePriceInput(defaultStockPrice.priceByCurrency[el.currency]);
+      const num = parsePriceInput(
+        defaultStockPrice.priceByCurrency[el.currency],
+      );
       if (Number.isFinite(num) && num > 0) {
         priceEntries[el.currency] = num;
       }
@@ -288,6 +358,34 @@ export function VariantEditor({
 
   function updateRow(id: string, patch: Partial<VariantRowForm>) {
     onChange(value.map((r) => (r.codeRow === id ? { ...r, ...patch } : r)));
+  }
+
+  const dragSensors = useSensors(
+    // Butuh geser 5px dulu sebelum drag aktif, supaya klik biasa pada handle
+    // tidak langsung dianggap drag.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = value.findIndex((r) => r.codeRow === active.id);
+    const newIndex = value.findIndex((r) => r.codeRow === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // position dinomori ulang 1..N mengikuti urutan baru. Server juga menomori
+    // ulang saat simpan, tapi menjaga nilainya tetap benar di sini membuat
+    // state form (termasuk draft di localStorage) konsisten dengan yang tampil.
+    onChange(
+      arrayMove(value, oldIndex, newIndex).map((row, index) => ({
+        ...row,
+        position: index + 1,
+      })),
+    );
   }
 
   function removeType(name: string) {
@@ -822,161 +920,201 @@ export function VariantEditor({
 
         <div className="w-full mb-2">
           <div className="min-w-max">
-            <table className="w-full text-sm border">
-              <thead>
-                <tr className="h-12 border-b">
-                  <th className="w-10 px-4 text-left">
-                    <input
-                      type="checkbox"
-                      aria-label="select all"
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        onChange(
-                          value.map((v) => ({ ...v, selected: checked })),
-                        );
-                      }}
-                    />
-                  </th>
-                  <th className="w-8 px-2"></th>
-                  <th className="w-24 px-2 text-left">Image</th>
-                  <th className="w-64 px-2 text-left">SKU Code</th>
-                  {typeNames.map((n) => (
-                    <th key={`head-${n}`} className="w-48 px-2 text-left">
-                      {n}
-                    </th>
-                  ))}
-                  <th className="w-56 px-2 text-left">Variation Name</th>
-                  <th className="w-40 px-2 text-left">Stock</th>
-                  <th className="w-40 px-2 text-left">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {value.map((row) => (
-                  <tr key={row.codeRow} className="h-14 border-b align-middle">
-                    <td className="px-4">
+            <DndContext
+              sensors={dragSensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragEnd={handleDragEnd}
+            >
+              <table className="w-full text-sm border">
+                <thead>
+                  <tr className="h-12 border-b">
+                    <th className="w-10 px-4 text-left">
                       <input
                         type="checkbox"
-                        checked={!!row.selected}
-                        onChange={(e) =>
-                          updateRow(row.codeRow, { selected: e.target.checked })
-                        }
-                        aria-label="Pilih baris"
+                        aria-label="select all"
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          onChange(
+                            value.map((v) => ({ ...v, selected: checked })),
+                          );
+                        }}
                       />
-                    </td>
-                    <td className="px-2 text-muted-foreground">
-                      <GripVertical className="h-4 w-4" />
-                    </td>
-                    <td className="px-2">
-                      <div className="flex items-center gap-2">
-                        {row.image?.imageUrl ? (
-                          <Image
-                            src={
-                              row.image.imageUrl ||
-                              "/placeholder.svg?height=32&width=32&query=variant-image"
-                            }
-                            alt="Gambar variasi"
-                            width={32}
-                            height={32}
-                            className="rounded object-cover cursor-pointer"
-                            onClick={() => handleFilePick(row.codeRow)}
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleFilePick(row.codeRow)}
-                            className="flex h-8 w-8 items-center justify-center rounded border cursor-pointer"
-                            aria-label="Tambah gambar"
-                          >
-                            <ImagePlus className="h-4 w-4" />
-                          </button>
-                        )}
-                        <input
-                          ref={(el) => {
-                            fileInputs.current[row.codeRow] = el;
-                          }}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => handleFileChange(e, row.codeRow)}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-2">
-                      <Input
-                        value={row.sku}
-                        onChange={(e) =>
-                          updateRow(row.codeRow, { sku: e.target.value })
-                        }
-                        className="border-gray-300"
-                        placeholder="MonaPeach:L"
-                      />
-                    </td>
-                    {typeNames.map((tName) => (
-                      <td key={`${row.codeRow}-${tName}`} className="px-2">
-                        <Input
-                          className="border-gray-300"
-                          value={row.attrs?.[tName] || ""}
-                          onChange={(e) => {
-                            const attrs = {
-                              ...(row.attrs || {}),
-                              [tName]: e.target.value,
-                            };
-                            const name = buildNameFromAttrs(attrs, typeNames);
-                            updateRow(row.codeRow, { attrs, name });
-                          }}
-                          placeholder={tName}
-                        />
-                      </td>
+                    </th>
+                    <th className="w-8 px-2"></th>
+                    <th className="w-24 px-2 text-left">Image</th>
+                    <th className="w-64 px-2 text-left">SKU Code</th>
+                    {typeNames.map((n) => (
+                      <th key={`head-${n}`} className="w-48 px-2 text-left">
+                        {n}
+                      </th>
                     ))}
-                    <td className="px-2">
-                      <Input
-                        className="border-gray-300"
-                        value={row.name}
-                        onChange={(e) =>
-                          updateRow(row.codeRow, { name: e.target.value })
-                        }
-                        placeholder="Peach-L"
-                      />
-                    </td>
-                    <td className="px-2">
-                      <Input
-                        className="border-gray-300"
-                        type="number"
-                        value={row.stock || 0}
-                        onChange={(e) =>
-                          updateRow(row.codeRow, {
-                            stock: Number(e.target.value),
-                          })
-                        }
-                        placeholder="0"
-                      />
-                    </td>
-                    <td className="px-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenPriceModal(row)}
-                        className="cursor-pointer w-full"
+                    <th className="w-56 px-2 text-left">Variation Name</th>
+                    <th className="w-40 px-2 text-left">Stock</th>
+                    <th className="w-40 px-2 text-left">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <SortableContext
+                    items={value.map((row) => row.codeRow)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {value.map((row) => (
+                      <SortableVariantRow key={row.codeRow} id={row.codeRow}>
+                        {(handle) => (
+                          <>
+                            <td className="px-4">
+                              <input
+                                type="checkbox"
+                                checked={!!row.selected}
+                                onChange={(e) =>
+                                  updateRow(row.codeRow, {
+                                    selected: e.target.checked,
+                                  })
+                                }
+                                aria-label="Pilih baris"
+                              />
+                            </td>
+                            <td className="px-2 text-muted-foreground">
+                              <button
+                                type="button"
+                                ref={handle.ref}
+                                {...handle.attributes}
+                                {...handle.listeners}
+                                className="cursor-grab touch-none active:cursor-grabbing"
+                                aria-label={`Ubah urutan baris ${row.name || row.sku || ""}`}
+                                title="Geser untuk mengubah urutan"
+                              >
+                                <GripVertical className="h-4 w-4" />
+                              </button>
+                            </td>
+                            <td className="px-2">
+                              <div className="flex items-center gap-2">
+                                {row.image?.imageUrl ? (
+                                  <Image
+                                    src={
+                                      row.image.imageUrl ||
+                                      "/placeholder.svg?height=32&width=32&query=variant-image"
+                                    }
+                                    alt="Gambar variasi"
+                                    width={32}
+                                    height={32}
+                                    className="rounded object-cover cursor-pointer"
+                                    onClick={() => handleFilePick(row.codeRow)}
+                                  />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFilePick(row.codeRow)}
+                                    className="flex h-8 w-8 items-center justify-center rounded border cursor-pointer"
+                                    aria-label="Tambah gambar"
+                                  >
+                                    <ImagePlus className="h-4 w-4" />
+                                  </button>
+                                )}
+                                <input
+                                  ref={(el) => {
+                                    fileInputs.current[row.codeRow] = el;
+                                  }}
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) =>
+                                    handleFileChange(e, row.codeRow)
+                                  }
+                                />
+                              </div>
+                            </td>
+                            <td className="px-2">
+                              <Input
+                                value={row.sku}
+                                onChange={(e) =>
+                                  updateRow(row.codeRow, {
+                                    sku: e.target.value,
+                                  })
+                                }
+                                className="border-gray-300"
+                                placeholder="MonaPeach:L"
+                              />
+                            </td>
+                            {typeNames.map((tName) => (
+                              <td
+                                key={`${row.codeRow}-${tName}`}
+                                className="px-2"
+                              >
+                                <Input
+                                  className="border-gray-300"
+                                  value={row.attrs?.[tName] || ""}
+                                  onChange={(e) => {
+                                    const attrs = {
+                                      ...(row.attrs || {}),
+                                      [tName]: e.target.value,
+                                    };
+                                    const name = buildNameFromAttrs(
+                                      attrs,
+                                      typeNames,
+                                    );
+                                    updateRow(row.codeRow, { attrs, name });
+                                  }}
+                                  placeholder={tName}
+                                />
+                              </td>
+                            ))}
+                            <td className="px-2">
+                              <Input
+                                className="border-gray-300"
+                                value={row.name}
+                                onChange={(e) =>
+                                  updateRow(row.codeRow, {
+                                    name: e.target.value,
+                                  })
+                                }
+                                placeholder="Peach-L"
+                              />
+                            </td>
+                            <td className="px-2">
+                              <Input
+                                className="border-gray-300"
+                                type="number"
+                                value={row.stock || 0}
+                                onChange={(e) =>
+                                  updateRow(row.codeRow, {
+                                    stock: Number(e.target.value),
+                                  })
+                                }
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className="px-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenPriceModal(row)}
+                                className="cursor-pointer w-full"
+                              >
+                                <Settings className="h-4 w-4 mr-2" />
+                                Set Prices
+                              </Button>
+                            </td>
+                          </>
+                        )}
+                      </SortableVariantRow>
+                    ))}
+                  </SortableContext>
+                  {value.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={7 + typeNames.length}
+                        className="px-4 py-8 text-center text-muted-foreground"
                       >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Set Prices
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-                {value.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={7 + typeNames.length}
-                      className="px-4 py-8 text-center text-muted-foreground"
-                    >
-                      There are no variations yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                        There are no variations yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </DndContext>
           </div>
         </div>
       </div>

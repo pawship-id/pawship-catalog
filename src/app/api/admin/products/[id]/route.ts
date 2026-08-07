@@ -263,11 +263,17 @@ export async function PUT(req: NextRequest, { params }: Context) {
       }
     }
 
-    // Update or create variants
-    for (const variant of variantRows) {
+    // Update or create variants.
+    // position selalu diturunkan dari urutan baris di form (bukan dari nilai
+    // yang dikirim client) supaya urutan yang tersimpan persis sama dengan
+    // urutan baris yang dilihat admin saat menyimpan.
+    for (const [index, variant] of variantRows.entries()) {
+      const position = index + 1;
+
       if (variant._id) {
         // Update existing variant
         const updateData: any = {
+          position,
           name: variant.name,
           sku: variant.sku,
           price: variant.price,
@@ -328,6 +334,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
         // Create new variant
         await ProductVariant.create({
           ...variant,
+          position,
           stock:
             variant.stock === undefined ||
             variant.stock === null ||
@@ -426,7 +433,10 @@ export async function PATCH(req: NextRequest, { params }: Context) {
     await product.delete();
 
     // Cascade soft delete to all active variants and prefix their SKU
-    const activeVariants = await ProductVariant.find({ productId: id, deleted: { $ne: true } });
+    const activeVariants = await ProductVariant.find({
+      productId: id,
+      deleted: { $ne: true },
+    });
     for (const variant of activeVariants) {
       await ProductVariant.findByIdAndUpdate(variant._id, {
         deleted: true,

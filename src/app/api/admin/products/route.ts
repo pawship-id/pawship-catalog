@@ -190,14 +190,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const variantRowsData = variantRows.map((el: VariantRowForm) => ({
-      ...el,
-      stock:
-        el.stock === undefined || el.stock === null || isNaN(Number(el.stock))
-          ? 0
-          : Number(el.stock),
-      productId: product._id,
-    }));
+    const variantRowsData = variantRows.map(
+      (el: VariantRowForm, index: number) => ({
+        ...el,
+        // position selalu diturunkan dari urutan baris di form, bukan dari nilai
+        // yang dikirim client, supaya tidak pernah duplikat atau meloncat.
+        position: index + 1,
+        stock:
+          el.stock === undefined || el.stock === null || isNaN(Number(el.stock))
+            ? 0
+            : Number(el.stock),
+        productId: product._id,
+      }),
+    );
 
     await ProductVariant.insertMany(variantRowsData, {
       rawResult: false,

@@ -11,6 +11,7 @@
     "backfill:revenue": "node ./src/lib/migrations/backfillOrderRevenue.js",
     "backfill:money": "node ./src/lib/migrations/backfillOrderMoney.js",
     "backfill:pickup": "node ./src/lib/migrations/backfillOrderPickup.js",
+    "backfill:variant-position": "node ./src/lib/migrations/backfillVariantPosition.js",
     "price:bulk-update": "node ./scripts/bulk-update-price.js"
   },
   "dependencies": {
